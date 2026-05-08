@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+.search-page-header {
+  margin-bottom: 24px;
+}
+.search-page-header h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.search-bar-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 640px;
+}
+.search-bar-wrap svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+#search-input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s, background .15s;
+}
+#search-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+}
+.search-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  align-items: center;
+}
+.search-filters label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.search-filters select {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.search-filters select:focus { border-color: var(--accent); }
+
+.search-type-btns {
+  display: flex;
+  gap: 4px;
+}
+.type-btn {
+  padding: 5px 12px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .12s;
+  font-weight: 500;
+}
+.type-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.type-btn:not(.active):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#search-summary {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  margin-bottom: 16px;
+  min-height: 18px;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .12s, box-shadow .12s;
+  display: block;
+}
+.result-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(58,110,168,.08);
+}
+.result-card-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+.result-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.result-card-type {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  padding: 1px 8px;
+}
+.result-card-type.type-event {
+  color: var(--accent);
+  background: var(--accent-light);
+  border-color: #c2d5ec;
+}
+.result-card-breadcrumb {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 6px;
+}
+.result-card-snippet {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.result-card-snippet mark {
+  background: #fff3b0;
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.result-card-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.empty-search {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-faint);
+}
+.empty-search svg {
+  margin-bottom: 12px;
+  opacity: .35;
+}
+.empty-search p { font-size: 14px; margin-bottom: 4px; }
+.empty-search small { font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <div class="search-page-header">
+      <h1>Search</h1>
+      <div class="search-bar-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="search-input" type="text" placeholder="Search articles, events, tags…" autocomplete="off" autofocus>
+      </div>
+      <div class="search-filters">
+        <div class="search-type-btns">
+          <button class="type-btn active" data-type="all">All</button>
+          <button class="type-btn" data-type="articles">Articles</button>
+          <button class="type-btn" data-type="events">Events</button>
+        </div>
+        <label>
+          Category:
+          <select id="filter-category">
+            <option value="">Any</option>
+          </select>
+        </label>
+        <label>
+          Tag:
+          <select id="filter-tag">
+            <option value="">Any</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div id="search-summary"></div>
+    <div id="result-list" class="result-list"></div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(async () => {
+  await DB.init();
+  UI.init({ activePage: '' });
+
+  // ── Populate filter dropdowns ─────────────────────────────────────
+
+  // Categories: flat sorted list of all categories with breadcrumb
+  const catSel = document.getElementById('filter-category');
+  [...DB.categories]
+    .sort((a, b) => DB.getCatPath(a.id).localeCompare(DB.getCatPath(b.id)))
+    .forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = DB.getCatPath(c.id);
+      catSel.appendChild(opt);
+    });
+
+  // Tags: all unique tags across all articles
+  const allTags = [...new Set(DB.articles.flatMap(a => a.tags || []))].sort();
+  const tagSel = document.getElementById('filter-tag');
+  allTags.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    tagSel.appendChild(opt);
+  });
+
+  // ── Read URL params ───────────────────────────────────────────────
+  const params = new URLSearchParams(location.search);
+  const initQ   = params.get('q')   || '';
+  const initTag = params.get('tag') || '';
+
+  const searchInput = document.getElementById('search-input');
+  searchInput.value = initQ;
+  if (initTag) tagSel.value = initTag;
+
+  // ── Type filter buttons ───────────────────────────────────────────
+  let activeType = 'all';
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeType = btn.dataset.type;
+      runSearch();
+    });
+  });
+
+  // ── Live search ───────────────────────────────────────────────────
+  searchInput.addEventListener('input', runSearch);
+  catSel.addEventListener('change', runSearch);
+  tagSel.addEventListener('change', runSearch);
+
+  // Run on load if params provided
+  if (initQ || initTag) runSearch();
+  else renderEmpty('prompt');
+
+  function runSearch() {
+    const q       = searchInput.value.trim().toLowerCase();
+    const catId   = catSel.value;
+    const tagVal  = tagSel.value;
+
+    // Update URL without reloading
+    const newParams = new URLSearchParams();
+    if (q) newParams.set('q', searchInput.value.trim());
+    if (tagVal) newParams.set('tag', tagVal);
+    history.replaceState(null, '', '?' + newParams.toString() || location.pathname);
+
+    if (!q && !catId && !tagVal) { renderEmpty('prompt'); return; }
+
+    const results = [];
+
+    // ── Article matches ───────────────────────────────────────────
+    if (activeType === 'all' || activeType === 'articles') {
+      DB.articles.forEach(a => {
+        if (catId && a.categoryId !== catId) return;
+        if (tagVal && !(a.tags || []).includes(tagVal)) return;
+
+        const titleMatch   = q && (a.title || '').toLowerCase().includes(q);
+        const tagMatch     = q && (a.tags || []).some(t => t.toLowerCase().includes(q));
+        const contentMatch = q && (a.content || '').toLowerCase().includes(q);
+        const wikiboxMatch = q && (a.wikibox?.fields || []).some(f =>
+          (f.val || '').toLowerCase().includes(q) || (f.key || '').toLowerCase().includes(q)
+        );
+
+        if (!q || titleMatch || tagMatch || contentMatch || wikiboxMatch) {
+          results.push({
+            type: 'article',
+            id: a.id,
+            title: a.title || 'Untitled',
+            breadcrumb: DB.getCatPath(a.categoryId) || 'Uncategorized',
+            tags: a.tags || [],
+            snippet: q ? extractSnippet(a.content || '', q, 160) : '',
+            score: (titleMatch ? 3 : 0) + (tagMatch ? 2 : 0) + (contentMatch ? 1 : 0),
+          });
+        }
+      });
+    }
+
+    // ── Event matches ─────────────────────────────────────────────
+    if (activeType === 'all' || activeType === 'events') {
+      if (!catId && !tagVal) { // events have no category/tag, skip if filtered
+        DB.events.forEach(ev => {
+          const titleMatch = q && (ev.title || '').toLowerCase().includes(q);
+          const descMatch  = q && (ev.description || '').toLowerCase().includes(q);
+          if (!q || titleMatch || descMatch) {
+            // Find linked timeline name
+            const tl = DB.timelines.find(t => (ev.timelineIds || []).includes(t.id));
+            results.push({
+              type: 'event',
+              id: ev.id,
+              articleId: ev.articleId,
+              title: ev.title || 'Untitled Event',
+              breadcrumb: tl ? tl.name : 'Timeline Event',
+              tags: [],
+              snippet: q ? extractSnippet(ev.description || '', q, 160) : '',
+              score: (titleMatch ? 3 : 0) + (descMatch ? 1 : 0),
+            });
+          }
+        });
+      }
+    }
+
+    // Sort: higher score first, then alphabetical
+    results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+
+    renderResults(results, q);
+  }
+
+  function extractSnippet(html, q, maxLen) {
+    // Strip tags
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx < 0) return text.slice(0, maxLen) + (text.length > maxLen ? '…' : '');
+    const start = Math.max(0, idx - 60);
+    const end   = Math.min(text.length, idx + q.length + 100);
+    const raw   = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+    return raw;
+  }
+
+  function highlightSnippet(text, q) {
+    if (!q) return escHtml(text);
+    const safe = escHtml(text);
+    const safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return safe.replace(new RegExp(safeQ, 'gi'), m => `<mark>${m}</mark>`);
+  }
+
+  function renderResults(results, q) {
+    const summary = document.getElementById('search-summary');
+    const list    = document.getElementById('result-list');
+
+    if (!results.length) {
+      summary.textContent = '';
+      renderEmpty('noresults');
+      return;
+    }
+
+    const articleCount = results.filter(r => r.type === 'article').length;
+    const eventCount   = results.filter(r => r.type === 'event').length;
+    const parts = [];
+    if (articleCount) parts.push(`${articleCount} article${articleCount !== 1 ? 's' : ''}`);
+    if (eventCount)   parts.push(`${eventCount} event${eventCount !== 1 ? 's' : ''}`);
+    summary.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} — ${parts.join(', ')}`;
+
+    list.innerHTML = results.map(r => {
+      const snippet  = highlightSnippet(r.snippet, q);
+      const tagsHtml = r.tags.length
+        ? `<div class="result-card-tags">${r.tags.map(t =>
+            `<a href="search.html?tag=${encodeURIComponent(t)}" class="tag" onclick="event.stopPropagation()">${escHtml(t)}</a>`
+          ).join('')}</div>`
+        : '';
+      const href = r.type === 'article'
+        ? `article.html?id=${r.id}`
+        : (r.articleId ? `article.html?id=${r.articleId}` : `timeline.html`);
+      return `
+        <a class="result-card" href="${href}">
+          <div class="result-card-top">
+            <span class="result-card-title">${escHtml(r.title)}</span>
+            <span class="result-card-type ${r.type === 'event' ? 'type-event' : ''}">${r.type === 'event' ? 'Event' : 'Article'}</span>
+          </div>
+          <div class="result-card-breadcrumb">${escHtml(r.breadcrumb)}</div>
+          ${snippet ? `<div class="result-card-snippet">${snippet}</div>` : ''}
+          ${tagsHtml}
+        </a>`;
+    }).join('');
+  }
+
+  function renderEmpty(mode) {
+    document.getElementById('search-summary').textContent = '';
+    if (mode === 'prompt') {
+      document.getElementById('result-list').innerHTML = `
+        <div class="empty-search">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <p>Enter a search term above</p>
+          <small>Searches article titles, content, tags, and timeline events</small>
+        </div>`;
+    } else {
+      document.getElementById('result-list').innerHTML = `
+        <div class="empty-search">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <p>No results found</p>
+          <small>Try different keywords or clear the filters</small>
+        </div>`;
+    }
+  }
+})();
+</script>
+</body>
+</html>

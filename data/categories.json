@@ -3,14 +3,14 @@
     "id": "cat_1778221758985_cj4o",
     "name": "Locations",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {
     "id": "cat_1778221765054_tsjq",
     "name": "Planets",
     "parentId": "cat_1778221758985_cj4o",
-    "collapsed": true,
+    "collapsed": false,
     "_ddCollapsed": false
   },
   {
@@ -297,7 +297,7 @@
     "id": "cat_1778259255537_8o2s",
     "name": "Pre-Imperial",
     "parentId": "cat_1778259247300_83a2",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {

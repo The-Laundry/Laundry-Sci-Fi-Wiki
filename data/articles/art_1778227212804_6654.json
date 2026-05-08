@@ -1,9 +1,11 @@
 {
   "id": "art_1778227212804_6654",
   "title": "Proxima",
-  "content": "<p><strong>Proxima</strong>, also known as&nbsp;<strong>Proxima Centauri II&nbsp;</strong>or occasionally as <strong>Alpha Centauri C II</strong>, is the second planet in orbit around Proxima Centauri, a star within the Alpha Centauri system.</p><h1>Astronomical Information</h1><p>Proxima orbits its star, Proxima Centauri, at a distance of roughly 780 thousand kilometers (~0.048 AU). It is one of seven terrestrial planets in the Alpha Centauri system, and the only one to support life. Compared to most known naturally habitable worlds, Proxima sits incredibly close to it's parent star.</p><h3>Climate and Geography</h3><p>filler</p><h1>Flora and Fauna</h1><p>filler</p><h3>Human Settlement</h3><p>filler</p><p><br></p>",
+  "content": "<p><strong>Proxima</strong>, also known as&nbsp;<strong>Proxima Centauri II&nbsp;</strong>or occasionally as <strong>Alpha Centauri C II</strong>, is the second planet in orbit around Proxima Centauri, a star within the Alpha Centauri system.</p><h1>Astronomical Information</h1><p>Proxima orbits its star, Proxima Centauri, at a distance of roughly 780 thousand kilometers (~0.048 AU). It is one of seven terrestrial planets in the Alpha Centauri system, and the only one to support life. Compared to most known naturally habitable worlds, Proxima sits incredibly close to it's parent star.</p><h3>Climate and Geography</h3><p>filler</p><h1>Flora and Fauna</h1><p>filler</p><h3>Human Settlement</h3><p>filler</p>",
   "categoryId": "cat_1778221765054_tsjq",
-  "tags": [],
+  "tags": [
+    "Class-A World"
+  ],
   "wikibox": {
     "enabled": true,
     "title": "Proxima",
@@ -120,5 +122,5 @@
     ]
   },
   "created": 1778227212804,
-  "updated": 1778227212804
+  "updated": 1778281974757
 }

@@ -26,6 +26,20 @@
         <div class="article-body-wrap">
           <div id="view-wikibox"></div>
           <div id="view-content" class="article-content clearfix"></div>
+
+          <!-- Backlinks / cross-reference panel -->
+          <div id="backlinks-panel" style="display:none; margin-top:32px;">
+            <div class="backlinks-header" id="backlinks-toggle" onclick="toggleBacklinks()">
+              <span class="backlinks-title">Referenced by</span>
+              <span id="backlinks-count" class="backlinks-count"></span>
+              <span id="backlinks-chevron" class="backlinks-chevron">▼</span>
+            </div>
+            <div id="backlinks-body" class="backlinks-body">
+              <div id="backlinks-articles"></div>
+              <div id="backlinks-events"></div>
+            </div>
+          </div>
+
           <div class="article-footer">
             <div id="view-tags" class="article-tags"></div>
             <div class="article-actions" id="article-edit-actions">
@@ -84,7 +98,9 @@
   document.getElementById('view-title').textContent = art.title || 'Untitled';
 
   // Tags
-  document.getElementById('view-tags').innerHTML = (art.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+  document.getElementById('view-tags').innerHTML = (art.tags || []).map(t =>
+    `<a href="search.html?tag=${encodeURIComponent(t)}" class="tag">${escHtml(t)}</a>`
+  ).join('');
   document.getElementById('view-meta-tags').textContent = (art.tags || []).length ? 'Tags: ' + art.tags.join(', ') : '';
 
   // Wikibox
@@ -136,6 +152,9 @@
   const contentEl = document.getElementById('view-content');
   contentEl.innerHTML = processWikilinks(art.content || '');
   buildTOC(contentEl);
+
+  // Backlinks
+  buildBacklinks(art);
 })();
 
 function processWikilinks(html) {
@@ -177,6 +196,70 @@ function buildTOC(contentEl) {
     };
     nav.appendChild(a);
   });
+}
+
+function buildBacklinks(art) {
+  // Find all articles that contain [[art.title]] or [[art.title|anything]]
+  const titleLower = (art.title || '').toLowerCase();
+  const wikiRe = /\[\[([^\]]+)\]\]/g;
+
+  const mentioningArts = DB.articles.filter(a => {
+    if (a.id === art.id) return false;
+    const html = (a.content || '') + (a.wikibox?.fields?.map(f => f.val || '').join(' ') || '');
+    let m;
+    while ((m = wikiRe.exec(html)) !== null) {
+      const inner = m[1];
+      const name  = inner.includes('|') ? inner.slice(0, inner.indexOf('|')).trim() : inner.trim();
+      if (name.toLowerCase() === titleLower) return true;
+    }
+    // Reset lastIndex after while loop exits without match
+    wikiRe.lastIndex = 0;
+    return false;
+  });
+
+  // Timeline events linked to this article
+  const linkedEvents = DB.events.filter(ev => ev.articleId === art.id);
+
+  const total = mentioningArts.length + linkedEvents.length;
+  if (!total) return;
+
+  document.getElementById('backlinks-panel').style.display = 'block';
+  document.getElementById('backlinks-count').textContent = total;
+
+  // Articles sub-list
+  const artEl = document.getElementById('backlinks-articles');
+  if (mentioningArts.length) {
+    artEl.innerHTML = `<div class="backlinks-sub-label">Mentioned in articles</div>` +
+      mentioningArts.map(a => `
+        <a class="backlink-item" href="article.html?id=${a.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span class="backlink-title">${escHtml(a.title || 'Untitled')}</span>
+          <span class="backlink-cat">${escHtml(DB.getCatPath(a.categoryId) || 'Uncategorized')}</span>
+        </a>`).join('');
+  }
+
+  // Events sub-list
+  const evEl = document.getElementById('backlinks-events');
+  if (linkedEvents.length) {
+    evEl.innerHTML = `<div class="backlinks-sub-label" style="margin-top:${mentioningArts.length ? 12 : 0}px;">Related timeline events</div>` +
+      linkedEvents.map(ev => {
+        const tl = DB.timelines.find(t => (ev.timelineIds || []).includes(t.id));
+        return `
+          <a class="backlink-item" href="timeline.html${tl ? '?id=' + tl.id : ''}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:.5;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="backlink-title">${escHtml(ev.title || 'Untitled Event')}</span>
+            <span class="backlink-cat">${escHtml(tl ? tl.name : 'Timeline')}</span>
+          </a>`;
+      }).join('');
+  }
+}
+
+function toggleBacklinks() {
+  const body    = document.getElementById('backlinks-body');
+  const chevron = document.getElementById('backlinks-chevron');
+  const open    = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  chevron.style.transform = open ? 'rotate(-90deg)' : '';
 }
 
 async function deleteArticle() {

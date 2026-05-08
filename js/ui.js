@@ -24,6 +24,7 @@ const UI = {
     const pages = [
       { id: 'articles',  label: 'Articles',  href: DB.isReadOnly ? 'index.html' : 'manager.html' },
       { id: 'timelines', label: 'Timelines', href: 'timeline-manager.html' },
+      { id: 'search',    label: 'Search',    href: 'search.html' },
       { id: 'data',      label: 'Data',      href: 'data.html' },
       { id: 'help',      label: 'Help',      href: 'help.html' },
     ];
@@ -75,11 +76,16 @@ const UI = {
         <a class="sidebar-nav-item" href="index.html">🏠 Homepage</a>
         <a class="sidebar-nav-item" href="manager.html">📂 Article Manager</a>
         <a class="sidebar-nav-item" href="timeline-manager.html">📅 Timelines</a>
+        <a class="sidebar-nav-item" href="search.html">🔍 Search</a>
         <a class="sidebar-nav-item" href="help.html">❓ Help &amp; Guide</a>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Timelines</div>
         <div id="sidebar-timelines"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Tags</div>
+        <div id="sidebar-tags"></div>
       </div>
       <div class="sidebar-section" style="flex:1;">
         <div class="sidebar-label">Articles</div>
@@ -90,7 +96,31 @@ const UI = {
 
   renderSidebar() {
     this._renderSidebarTimelines();
+    this._renderSidebarTags();
     this._renderSidebarTree();
+  },
+
+  _renderSidebarTags() {
+    const el = document.getElementById('sidebar-tags');
+    if (!el) return;
+    const currentTag = new URLSearchParams(location.search).get('tag') || '';
+    const allTags = [...new Set(DB.articles.flatMap(a => a.tags || []))].sort();
+    el.innerHTML = '';
+    if (!allTags.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px;">No tags yet.</div>';
+      return;
+    }
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;padding:2px 0;';
+    allTags.forEach(t => {
+      const a = document.createElement('a');
+      a.className = 'tag' + (t === currentTag ? ' tag-active' : '');
+      a.href = `search.html?tag=${encodeURIComponent(t)}`;
+      a.textContent = t;
+      a.style.textDecoration = 'none';
+      wrap.appendChild(a);
+    });
+    el.appendChild(wrap);
   },
 
   _renderSidebarTimelines() {
@@ -282,6 +312,12 @@ const UI = {
   _bindSearch() {
     const input = document.getElementById('header-search');
     if (!input) return;
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const q = input.value.trim();
+        if (q) location.href = `search.html?q=${encodeURIComponent(q)}`;
+      }
+    });
     input.addEventListener('input', () => {
       const q = input.value.trim().toLowerCase();
       const res = document.getElementById('search-results');
@@ -290,14 +326,18 @@ const UI = {
         (a.title || '').toLowerCase().includes(q) ||
         (a.tags || []).some(t => t.toLowerCase().includes(q)) ||
         (a.content || '').toLowerCase().includes(q)
-      ).slice(0, 8);
-      res.innerHTML = matches.length
+      ).slice(0, 6);
+      const fullSearchLink = `<a class="search-result-item search-result-full" href="search.html?q=${encodeURIComponent(input.value.trim())}" style="border-top:1px solid var(--border-light);color:var(--accent);font-size:12.5px;padding:8px 14px;">
+        <span>🔍 Full search for <strong>${escHtml(input.value.trim())}</strong></span>
+      </a>`;
+      res.innerHTML = (matches.length
         ? matches.map(a => `
             <a class="search-result-item" href="article.html?id=${a.id}">
               <span class="search-result-title">${escHtml(a.title || 'Untitled')}</span>
               <span class="search-result-cat">${escHtml(DB.getCatPath(a.categoryId) || 'Uncategorized')}</span>
             </a>`).join('')
-        : '<div class="search-result-item" style="color:var(--text-faint);">No results found.</div>';
+        : '<div class="search-result-item" style="color:var(--text-faint);">No articles found.</div>')
+        + fullSearchLink;
       res.classList.add('open');
     });
     document.addEventListener('click', e => {

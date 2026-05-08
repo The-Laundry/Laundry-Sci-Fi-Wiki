@@ -568,3 +568,33 @@ body {
 .empty-state { padding: 48px 24px; text-align: center; color: var(--text-faint); font-size: 14px; }
 .page-title { font-family: var(--font-display); font-size: 28px; color: var(--text); margin-bottom: 4px; }
 .page-subtitle { color: var(--text-muted); font-size: 13.5px; }
+
+/* ── BACKLINKS PANEL ── */
+.backlinks-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .12s;
+}
+.backlinks-header:hover { border-color: var(--accent); }
+.backlinks-title { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.backlinks-count { font-size: 11px; font-weight: 600; background: var(--accent-light); color: var(--accent); border-radius: 20px; padding: 1px 8px; }
+.backlinks-chevron { margin-left: auto; font-size: 10px; color: var(--text-faint); transition: transform .15s; }
+.backlinks-body { padding: 12px 14px 8px; border: 1px solid var(--border-light); border-top: none; border-radius: 0 0 var(--radius) var(--radius); background: var(--bg-card); }
+.backlinks-sub-label { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 6px; }
+.backlink-item { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; text-decoration: none; color: inherit; border-bottom: 1px solid var(--border-light); }
+.backlink-item:last-child { border-bottom: none; }
+.backlink-item:hover .backlink-title { color: var(--accent); }
+.backlink-title { font-size: 13.5px; font-weight: 500; color: var(--text); transition: color .12s; }
+.backlink-cat { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .05em; margin-left: auto; white-space: nowrap; }
+
+/* ── CLICKABLE TAGS ── */
+a.tag { text-decoration: none; transition: background .12s, border-color .12s, color .12s; }
+a.tag:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+a.tag.tag-active { background: var(--accent); border-color: var(--accent); color: #fff; }
