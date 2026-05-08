@@ -127,7 +127,7 @@
           <div class="wb-panel-body">
             <div id="ai-draft-banner" class="ai-draft-banner" style="display:none;">
               <span>✨ This article was AI-generated.</span>
-              <button class="btn btn-ghost btn-sm" type="button" onclick="openRegenerateAIModal()">Regenerate…</button>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="openRegenerateAIPage()">Regenerate…</button>
             </div>
             <div class="field-row">
               <div class="field-label" style="display:flex;justify-content:space-between;align-items:center;gap:4px;">
@@ -348,9 +348,27 @@ async function regenerateSummary() {
   }
 }
 
-// Compact regenerate-with-AI modal (streams via AI.generateArticleStreaming)
-function openRegenerateAIModal() {
+// Regenerate button on the AI draft banner. The streaming modal that used to
+// live here has moved to the dedicated ai-generate.html page; this function
+// just navigates there with enough context for prefill. The page will hand
+// the resulting draft back via sessionStorage (draftKey) and we open the
+// editor with ?draftKey=… on return so the overwrite is seamless.
+function openRegenerateAIPage() {
   if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
+  if (!editingId) {
+    UI.toast('Save this article once before regenerating so the page can target it.');
+    return;
+  }
+  const params = new URLSearchParams();
+  params.set('mode', 'single');
+  params.set('regenerateFor', editingId);
+  params.set('returnTo', 'editor.html?id=' + encodeURIComponent(editingId));
+  location.href = 'ai-generate.html?' + params.toString();
+}
+
+// Legacy modal implementation — unreachable, kept for reference only.
+const _legacyEditorModal = false;
+if (_legacyEditorModal) {
   const spec = aiSourceSpec || {
     title: document.getElementById('editor-title').value.trim(),
     guidance: '',

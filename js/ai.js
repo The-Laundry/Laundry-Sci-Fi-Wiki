@@ -26,6 +26,13 @@
 //                                   { onContextReady, onPhase, onTitle, onSummary,
 //                                     onContentDelta, onRawDelta, onComplete, onError }
 //                                   honours settings.ai.streaming (default true).
+//   AI.generateTimelineEventsStreaming(spec, callbacks)
+//                                 — generates an array of timeline events as a streamed
+//                                   JSON object. spec: { timelineId, yearStart?, yearEnd?,
+//                                   count?, guidance?, relatedIds?, calendarKey? }.
+//                                   callbacks: { onPhase, onContextReady, onEvent,
+//                                   onRawDelta, onComplete, onError }. Returns the final
+//                                   normalized event array.
 //
 // The API key is stored ONLY in localStorage under 'eomt_ai_key' and is never
 // written to settings.json or exported. DB.exportAll() scrubs settings.ai.apiKey
@@ -599,6 +606,164 @@ const AI = {
   async generateArticle(spec) {
     return this.generateArticleStreaming(spec, {});
   },
+
+  // ── TIMELINE EVENT GENERATION ──────────────────────────────────────
+  //
+  // Generates a batch of timeline events as a single streamed JSON object.
+  // The model is instructed to emit `{ "events": [ {...}, {...} ] }`; the
+  // progressive array extractor fires `onEvent(normalizedEvent, rawObj, index)`
+  // as soon as each object's closing brace is seen, so the caller can render
+  // rows into a staging table as they arrive.
+  //
+  // spec:
+  //   {
+  //     timelineId?:  string,
+  //     yearStart?:   number,    // inclusive, CE integer (may be negative)
+  //     yearEnd?:     number,    // inclusive, CE integer
+  //     count?:       number,    // target event count (default 10, hard-capped at 25)
+  //     guidance?:    string,    // free-form user guidance
+  //     relatedIds?:  string[],  // explicit related articles for context
+  //     calendarKey?: string,    // display calendar key (cosmetic only; years are CE ints)
+  //   }
+  //
+  // callbacks (all optional):
+  //   onPhase(phase)              — 'context' | 'writing' | 'parsing' | 'done'
+  //   onContextReady(ctxBlock)    — { explicit, semantic, query, timeline, eras, existing }
+  //   onRawDelta(delta, accum)    — raw text tokens as they stream in
+  //   onEvent(evt, rawObj, idx)   — fired per completed event object inside "events"
+  //   onComplete(events)          — final normalized events array
+  //   onError(err)                — fatal error (still throws too)
+  //
+  // Returns the final normalized events array (same objects emitted via onEvent,
+  // in order). Each normalized event has:
+  //   { title, year, yearEnd|null, importance, description,
+  //     suggestStubArticle, stubTags: string[] }
+  async generateTimelineEventsStreaming(spec, callbacks = {}) {
+    const cb = {
+      onPhase:         typeof callbacks.onPhase === 'function'         ? callbacks.onPhase         : () => {},
+      onContextReady:  typeof callbacks.onContextReady === 'function'  ? callbacks.onContextReady  : () => {},
+      onRawDelta:      typeof callbacks.onRawDelta === 'function'      ? callbacks.onRawDelta      : () => {},
+      onEvent:         typeof callbacks.onEvent === 'function'         ? callbacks.onEvent         : () => {},
+      onComplete:      typeof callbacks.onComplete === 'function'      ? callbacks.onComplete      : () => {},
+      onError:         typeof callbacks.onError === 'function'         ? callbacks.onError         : () => {},
+    };
+
+    try {
+      if (!this.isConfigured()) throw new Error('AI is not configured.');
+      const c = this.getConfig();
+
+      const timeline = spec.timelineId
+        ? (DB.timelines.find(t => t.id === spec.timelineId) || null)
+        : null;
+      // Clamp count: 1..25, default 10
+      let count = typeof spec.count === 'number' ? Math.floor(spec.count) : 10;
+      if (!Number.isFinite(count) || count < 1) count = 10;
+      if (count > 25) count = 25;
+
+      // ── Phase 1: context gather ────────────────────────────────────
+      cb.onPhase('context');
+
+      // Article context (explicit + semantic) — reuses the article pipeline.
+      const ctxQuery = [
+        timeline?.name || '',
+        timeline?.description || '',
+        spec.guidance || '',
+      ].filter(Boolean).join('\n').trim();
+      const articleCtx = await this.gatherContext({
+        title: timeline?.name || '',
+        guidance: spec.guidance,
+        relatedIds: spec.relatedIds,
+        topK: c.topK,
+      });
+
+      // Timeline-specific context: eras + already-existing events in scope.
+      const eras = Array.isArray(DB.eras)
+        ? DB.eras.filter(e => !spec.timelineId || e.timelineId === spec.timelineId || !e.timelineId)
+        : [];
+      let existing = Array.isArray(DB.events) ? DB.events.slice() : [];
+      if (spec.timelineId) {
+        existing = existing.filter(e => Array.isArray(e.timelineIds) && e.timelineIds.includes(spec.timelineId));
+      }
+      if (typeof spec.yearStart === 'number') {
+        existing = existing.filter(e => (typeof e.year === 'number' ? e.year : -Infinity) >= spec.yearStart);
+      }
+      if (typeof spec.yearEnd === 'number') {
+        existing = existing.filter(e => (typeof e.year === 'number' ? e.year :  Infinity) <= spec.yearEnd);
+      }
+      // Cap existing-events detail so we don't blow the prompt window.
+      existing = existing.slice(0, 60);
+
+      cb.onContextReady({
+        explicit: articleCtx.explicit.map(x => ({ id: x.id, title: x.title, summary: x.summary, snippet: x.snippet })),
+        semantic: articleCtx.semantic.map(x => ({ id: x.id, title: x.title, summary: x.summary, snippet: x.snippet, score: x.score })),
+        query:    ctxQuery,
+        timeline: timeline ? { id: timeline.id, name: timeline.name, description: timeline.description || '' } : null,
+        eras:     eras.map(e => ({ id: e.id, name: e.name, startYear: e.startYear, endYear: e.endYear })),
+        existing: existing.map(e => ({ id: e.id, title: e.title, year: e.year, yearEnd: e.yearEnd })),
+      });
+
+      // ── Phase 2: streamed chat ─────────────────────────────────────
+      cb.onPhase('writing');
+      const messages = _buildTimelineEventsPromptMessages({
+        spec, timeline, count, eras, existing, context: articleCtx,
+      });
+
+      const outEvents = [];
+      const extractor = new _ProgressiveJsonArrayExtractor('events');
+      extractor.onItem = (rawObj) => {
+        const evt = _normalizeEvent(rawObj, { spec });
+        if (!evt) return;
+        outEvents.push(evt);
+        try { cb.onEvent(evt, rawObj, outEvents.length - 1); }
+        catch (e) { console.warn('onEvent cb threw:', e); }
+      };
+
+      let raw = '';
+      const onChunk = (delta, accumulated) => {
+        raw = accumulated;
+        cb.onRawDelta(delta, accumulated);
+        try { extractor.ingest(delta); } catch (e) { console.warn('progressive array extractor error:', e); }
+      };
+
+      // Timeline events are bounded; give it a generous but capped token budget.
+      const maxTokens = Math.min(c.maxTokens || 2000, Math.max(800, count * 180));
+      const chatOpts = { temperature: c.temperature, maxTokens, jsonMode: true };
+
+      if (c.streaming !== false) {
+        raw = await this.chatStream(messages, chatOpts, onChunk);
+      } else {
+        raw = await this.chat(messages, chatOpts);
+        onChunk(raw, raw);
+      }
+
+      // ── Phase 3: parse & normalize ─────────────────────────────────
+      cb.onPhase('parsing');
+      // If the streamed extractor didn't pick up any events (e.g. unusual output
+      // formatting), fall back to parsing the whole reply and walking the array.
+      if (outEvents.length === 0) {
+        const parsed = _extractJsonObject(raw);
+        const arr = parsed && Array.isArray(parsed.events) ? parsed.events : null;
+        if (arr) {
+          arr.forEach((rawObj, i) => {
+            const evt = _normalizeEvent(rawObj, { spec });
+            if (!evt) return;
+            outEvents.push(evt);
+            try { cb.onEvent(evt, rawObj, outEvents.length - 1); }
+            catch (e) { console.warn('onEvent cb threw (fallback):', e); }
+          });
+        } else {
+          throw new Error('AI returned no usable events. Raw reply:\n' + _truncateChars(raw, 400));
+        }
+      }
+
+      cb.onPhase('done');
+      cb.onComplete(outEvents);
+      return outEvents;
+    } catch (err) {
+      cb.onError(err);
+      throw err;
+    }
+  },
 };
 
 // ── PRIVATE HELPERS ────────────────────────────────────────────────────
@@ -632,14 +797,36 @@ function _DEFAULT_PROMPTS_BUILDER() {
     '',
     'NEVER wrap the JSON in triple-backtick fences or add commentary before/after it.',
   ];
+  const timelineSystemLines = [
+    'You are generating historical events for a worldbuilding timeline as a strict JSON object.',
+    '',
+    'OUTPUT CONTRACT — reply with EXACTLY ONE JSON object, nothing else, no prose, no markdown fences. The object MUST have this exact shape:',
+    '  { "events": [ { ... }, { ... } ] }',
+    '',
+    'Each event object MUST have these keys in this order (additional keys will be ignored):',
+    '  "title":              string — short, evocative event title under 80 characters. No trailing period.',
+    '  "year":               number — calendar year as a CE integer. Use NEGATIVE numbers for BCE / pre-epoch (e.g. -1000).',
+    '  "yearEnd":            number or null — for multi-year events, the ending year; otherwise null.',
+    '  "importance":         one of "milestone" | "notable" | "trivial" | "insignificant". Use "milestone" sparingly for only the most era-defining events.',
+    '  "description":        string — 1 to 4 sentences of plain text, in-universe, neutral encyclopedic tone. NO HTML, NO markdown, NO wikilinks.',
+    '  "suggestStubArticle": boolean — true if this event is significant enough to warrant its own encyclopedia article (usually milestone/notable).',
+    '  "stubTags":           string[] — 0 to 4 short lower-case tags for the stub article (used only when suggestStubArticle is true).',
+    '',
+    'STYLE: vary sentence structure and opening words across descriptions — do not repeat the same phrasing pattern. Anchor every event in the world that the timeline and context describe. Do not invent references to other settings or real-world history. If the user supplies a year range, spread events organically throughout it (unless the guidance specifically says otherwise).',
+    '',
+    'NEVER duplicate events already listed in EXISTING EVENTS. NEVER wrap the JSON in triple-backtick fences or add commentary before/after it.',
+  ];
   return {
     articleSystem:        articleSystemLines.join('\n'),
     articleUserPreamble:  'ARTICLE TITLE: {title}',
     articleGuidanceLabel: 'ADDITIONAL GUIDANCE FROM USER:',
+    batchArticlePreamble: 'This article is one of a batch of {count} articles being generated together as a cohesive set. The other titles in the batch are:\n{allTitles}\n\nKeep continuity and cross-references consistent across the whole set; where relevant, link to these titles using [[Wikilinks]].',
     summarySystem:        'You write short, factual, in-universe encyclopedia summaries. Output plain text only — no headings, no wikilinks, no HTML, no markdown. 1 to 3 sentences. Do not invent facts that are not present in the source.',
     summaryUserTemplate:  'Title: {title}\n\nArticle:\n{content}\n\nWrite a 1–3 sentence summary for search-index use.',
     testSystem:           'You are a terse connection-test echo.',
     testUser:             'Reply with the single word: PONG',
+    timelineSystem:       timelineSystemLines.join('\n'),
+    timelineUserPreamble: 'TIMELINE: {timelineName}\nTARGET EVENT COUNT: approximately {count}',
   };
 }
 
@@ -1090,3 +1277,329 @@ function _jsonUnescapeChar(ch) {
     default:  return ch;
   }
 }
+
+// ── TIMELINE PROMPT + NORMALIZATION ────────────────────────────────────
+
+function _buildTimelineEventsPromptMessages({ spec, timeline, count, eras, existing, context }) {
+  const system = AI.getPrompt('timelineSystem');
+  const preamble = AI.getPrompt('timelineUserPreamble', {
+    timelineName: timeline ? (timeline.name || 'Untitled timeline') : '(no specific timeline)',
+    count: String(count),
+  });
+
+  const parts = [preamble];
+
+  if (timeline && timeline.description) {
+    parts.push('TIMELINE DESCRIPTION:\n' + timeline.description);
+  }
+
+  // Year range hints
+  const hasStart = typeof spec.yearStart === 'number' && Number.isFinite(spec.yearStart);
+  const hasEnd   = typeof spec.yearEnd   === 'number' && Number.isFinite(spec.yearEnd);
+  if (hasStart || hasEnd) {
+    const s = hasStart ? String(spec.yearStart) : '(unbounded)';
+    const e = hasEnd   ? String(spec.yearEnd)   : '(unbounded)';
+    parts.push(`YEAR RANGE (CE integers; negative = BCE): ${s} to ${e}. Keep every event within this range.`);
+  } else {
+    parts.push('YEAR RANGE: not specified — choose years that fit the world context and are consistent with the supplied eras and existing events.');
+  }
+
+  // Eras (if any)
+  if (Array.isArray(eras) && eras.length) {
+    const lines = eras.map(e => {
+      const range = [
+        typeof e.startYear === 'number' ? e.startYear : '?',
+        typeof e.endYear   === 'number' ? e.endYear   : '?',
+      ].join('–');
+      return `  • ${e.name || 'Unnamed era'} (${range})`;
+    });
+    parts.push('ERAS (for temporal anchoring):\n' + lines.join('\n'));
+  }
+
+  // Existing events — must not be duplicated
+  if (Array.isArray(existing) && existing.length) {
+    const lines = existing.slice(0, 40).map(e => {
+      const yr = typeof e.year === 'number' ? e.year : '?';
+      const yrEnd = typeof e.yearEnd === 'number' ? ('–' + e.yearEnd) : '';
+      return `  • [${yr}${yrEnd}] ${e.title || 'Untitled'}`;
+    });
+    parts.push('EXISTING EVENTS (DO NOT DUPLICATE — generate distinct new events):\n' + lines.join('\n'));
+  }
+
+  // User guidance
+  if (spec.guidance && spec.guidance.trim()) {
+    parts.push('ADDITIONAL GUIDANCE FROM USER:\n' + spec.guidance.trim());
+  }
+
+  // Explicit related articles
+  if (context && context.explicit && context.explicit.length) {
+    parts.push('RELATED ARTICLES (explicitly chosen by the user — authoritative source material):');
+    context.explicit.forEach(it => {
+      parts.push(`• [[${it.title}]]\n    ${it.snippet}`);
+    });
+  }
+  if (context && context.semantic && context.semantic.length) {
+    parts.push('OTHER POTENTIALLY RELEVANT ARTICLES (retrieved by similarity):');
+    context.semantic.forEach(it => {
+      parts.push(`• [[${it.title}]]\n    ${it.snippet}`);
+    });
+  }
+
+  const user = parts.join('\n\n');
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user',   content: user },
+  ];
+}
+
+const _IMPORTANCE_VALUES = ['milestone', 'notable', 'trivial', 'insignificant'];
+
+function _normalizeEvent(raw, { spec }) {
+  if (!raw || typeof raw !== 'object') return null;
+  const title = typeof raw.title === 'string' ? raw.title.trim() : '';
+  if (!title) return null;
+
+  // Year: require a finite number. Accept strings that parse cleanly.
+  let year = raw.year;
+  if (typeof year === 'string') {
+    const parsed = parseInt(year, 10);
+    year = Number.isFinite(parsed) ? parsed : null;
+  }
+  if (typeof year !== 'number' || !Number.isFinite(year)) return null;
+  year = Math.trunc(year);
+
+  let yearEnd = raw.yearEnd;
+  if (typeof yearEnd === 'string') {
+    const p = parseInt(yearEnd, 10);
+    yearEnd = Number.isFinite(p) ? p : null;
+  }
+  if (typeof yearEnd !== 'number' || !Number.isFinite(yearEnd)) yearEnd = null;
+  else yearEnd = Math.trunc(yearEnd);
+  if (yearEnd !== null && yearEnd < year) yearEnd = null;
+
+  // Clamp to user-supplied range if present
+  if (typeof spec?.yearStart === 'number' && year < spec.yearStart) return null;
+  if (typeof spec?.yearEnd   === 'number' && year > spec.yearEnd)   return null;
+
+  const importance = (typeof raw.importance === 'string' && _IMPORTANCE_VALUES.includes(raw.importance))
+    ? raw.importance
+    : 'notable';
+
+  const description = typeof raw.description === 'string' ? raw.description.trim() : '';
+
+  const suggestStubArticle = !!raw.suggestStubArticle;
+  const stubTags = Array.isArray(raw.stubTags)
+    ? raw.stubTags
+        .map(t => String(t).trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 4)
+    : [];
+
+  return { title, year, yearEnd, importance, description, suggestStubArticle, stubTags };
+}
+
+// ── PROGRESSIVE JSON ARRAY EXTRACTOR ───────────────────────────────────
+//
+// Scans a streamed JSON body of the shape `{ "<key>": [ {...}, {...}, ... ] }`
+// and fires onItem(parsedObj) every time a balanced object inside the watched
+// array finishes arriving. Unlike _ProgressiveJsonExtractor this operates on
+// *whole objects*, not per-field deltas — callers parse the final object when
+// its closing brace appears.
+//
+// Limitations (all fine for our prompt contract):
+//   - Only watches a single top-level key whose value is an array of objects.
+//   - Objects inside the array may contain nested objects/arrays and strings
+//     with escaped quotes — the scanner tracks string+escape state.
+//   - Ignores (skips over) any other top-level keys that arrive before the
+//     watched key.
+//
+// All the character-level work happens inside the outer state machine's switch
+// loop — no inline while-loops that could desync if a chunk boundary falls
+// mid-string. Every call to .ingest() is safely resumable.
+function _ProgressiveJsonArrayExtractor(arrayKey) {
+  this._arrayKey = String(arrayKey);
+  this._buf = '';
+  this._i = 0;
+  // States:
+  //   'find-top'        — at top-level of the outer object, looking for a key's opening quote
+  //   'in-key'          — reading a key literal character-by-character
+  //   'after-key'       — key closed; waiting for ':'
+  //   'value-start'     — after ':' (watched or unwatched key); decides which branch below
+  //   'in-skip'         — skipping the value of an unwatched key
+  //   'in-array'        — inside the watched array, expecting next object or ']'
+  //   'in-arr-prim-str' — skipping a string primitive inside the watched array
+  //   'in-arr-prim'     — skipping a number/bool/null primitive inside the watched array
+  //   'in-obj'          — inside an object we intend to emit; buffered until balanced
+  //   'done'            — watched array closed (or parser gave up)
+  this._state = 'find-top';
+  this._keyBuf = '';
+  this._kEsc = false;
+  // Shared string+depth state (used by in-skip, in-obj, and primitive skipping)
+  this._inStr = false;
+  this._sEsc = false;
+  this._depth = 0;
+  this._objStart = -1;
+  this.onItem = null;
+}
+
+_ProgressiveJsonArrayExtractor.prototype.ingest = function (chunk) {
+  if (this._state === 'done') return;
+  if (!chunk) return;
+  this._buf += chunk;
+  this._drain();
+};
+
+_ProgressiveJsonArrayExtractor.prototype._drain = function () {
+  const buf = this._buf;
+  while (this._i < buf.length && this._state !== 'done') {
+    const ch = buf[this._i];
+
+    switch (this._state) {
+      case 'find-top': {
+        if (ch === '"') { this._i++; this._keyBuf = ''; this._kEsc = false; this._state = 'in-key'; break; }
+        if (ch === '}') { this._i++; this._state = 'done'; break; }
+        // Whitespace, '{', ',', ':' — just advance
+        this._i++;
+        break;
+      }
+
+      case 'in-key': {
+        if (this._kEsc) { this._keyBuf += _jsonUnescapeChar(ch); this._kEsc = false; this._i++; break; }
+        if (ch === '\\') { this._kEsc = true; this._i++; break; }
+        if (ch === '"')  { this._i++; this._state = 'after-key'; break; }
+        this._keyBuf += ch;
+        this._i++;
+        break;
+      }
+
+      case 'after-key': {
+        if (ch === ':') { this._i++; this._state = 'value-start'; break; }
+        if (/\s/.test(ch)) { this._i++; break; }
+        this._state = 'done'; // malformed
+        break;
+      }
+
+      case 'value-start': {
+        if (/\s/.test(ch)) { this._i++; break; }
+        const watched = this._keyBuf === this._arrayKey;
+        if (watched && ch === '[') { this._i++; this._state = 'in-array'; break; }
+        // Unwatched key OR watched-but-not-an-array value — skip it.
+        this._inStr = false; this._sEsc = false; this._depth = 0;
+        this._state = 'in-skip';
+        // Don't advance — let in-skip inspect this char.
+        break;
+      }
+
+      case 'in-skip': {
+        // Skip one JSON value (string / object / array / primitive), then
+        // return to 'find-top' so we can look for the next key.
+        if (this._inStr) {
+          if (this._sEsc) { this._sEsc = false; this._i++; break; }
+          if (ch === '\\') { this._sEsc = true; this._i++; break; }
+          if (ch === '"')  {
+            this._inStr = false; this._i++;
+            if (this._depth === 0) this._state = 'find-top';
+            break;
+          }
+          this._i++;
+          break;
+        }
+        if (ch === '"') { this._inStr = true; this._sEsc = false; this._i++; break; }
+        if (ch === '{' || ch === '[') { this._depth++; this._i++; break; }
+        if (ch === '}' || ch === ']') {
+          if (this._depth === 0) {
+            // The outer object closed before the value; treat as end.
+            this._state = 'done';
+            this._i++;
+            break;
+          }
+          this._depth--;
+          this._i++;
+          if (this._depth === 0) this._state = 'find-top';
+          break;
+        }
+        if (ch === ',' && this._depth === 0) { this._state = 'find-top'; break; }
+        // Primitive body char — keep consuming
+        this._i++;
+        break;
+      }
+
+      case 'in-array': {
+        if (/\s/.test(ch) || ch === ',') { this._i++; break; }
+        if (ch === ']') { this._i++; this._state = 'done'; break; }
+        if (ch === '{') {
+          this._objStart = this._i;
+          this._depth = 1;
+          this._inStr = false; this._sEsc = false;
+          this._i++;
+          this._state = 'in-obj';
+          break;
+        }
+        if (ch === '"') {
+          this._i++;
+          this._inStr = true; this._sEsc = false;
+          this._state = 'in-arr-prim-str';
+          break;
+        }
+        // Literal (true/false/null/number) — consume until , or ]
+        this._state = 'in-arr-prim';
+        break;
+      }
+
+      case 'in-arr-prim-str': {
+        if (this._sEsc) { this._sEsc = false; this._i++; break; }
+        if (ch === '\\') { this._sEsc = true; this._i++; break; }
+        if (ch === '"')  { this._inStr = false; this._i++; this._state = 'in-array'; break; }
+        this._i++;
+        break;
+      }
+
+      case 'in-arr-prim': {
+        if (ch === ',' || ch === ']') { this._state = 'in-array'; break; }
+        this._i++;
+        break;
+      }
+
+      case 'in-obj': {
+        if (this._inStr) {
+          if (this._sEsc) { this._sEsc = false; this._i++; break; }
+          if (ch === '\\') { this._sEsc = true; this._i++; break; }
+          if (ch === '"')  { this._inStr = false; this._i++; break; }
+          this._i++;
+          break;
+        }
+        if (ch === '"') { this._inStr = true; this._sEsc = false; this._i++; break; }
+        if (ch === '{' || ch === '[') { this._depth++; this._i++; break; }
+        if (ch === '}' || ch === ']') {
+          this._depth--;
+          this._i++;
+          if (this._depth === 0) {
+            const fragment = buf.slice(this._objStart, this._i);
+            try {
+              const parsed = JSON.parse(fragment);
+              if (typeof this.onItem === 'function') {
+                try { this.onItem(parsed); } catch (cbErr) { console.warn('onItem threw:', cbErr); }
+              }
+            } catch (_pe) {
+              // Malformed fragment — silently drop; the final full-parse
+              // fallback in generateTimelineEventsStreaming can still recover.
+            }
+            this._state = 'in-array';
+          }
+          break;
+        }
+        this._i++;
+        break;
+      }
+
+      default:
+        this._i++; // defensive
+    }
+  }
+};
+
+// Back-compat alias for older tests that referenced _scanIdx / _state names.
+Object.defineProperty(_ProgressiveJsonArrayExtractor.prototype, '_scanIdx', {
+  get() { return this._i; }, set(v) { this._i = v; },
+});

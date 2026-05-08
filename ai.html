@@ -203,6 +203,33 @@ details.prompt-advanced > summary:hover { color: var(--text); }
             <div class="prompt-hint">The model's reply is shown inline next to the Test Connection button.</div>
           </div>
 
+          <div class="prompt-row">
+            <div class="prompt-head">
+              <span class="prompt-label">Batch article — shared preamble</span>
+              <button type="button" class="btn btn-ghost btn-sm ro-hide" onclick="resetPrompt('batchArticlePreamble')" title="Reset this prompt to its default">↺ Reset</button>
+            </div>
+            <textarea id="prompt-batchArticlePreamble" class="prompt-input" spellcheck="false"></textarea>
+            <div class="prompt-hint">Prepended to the per-article guidance when generating a batch of articles together, so each call knows about its siblings. Placeholders: <code>{count}</code>, <code>{allTitles}</code>.</div>
+          </div>
+
+          <div class="prompt-row prompt-long">
+            <div class="prompt-head">
+              <span class="prompt-label">Timeline events — system prompt</span>
+              <button type="button" class="btn btn-ghost btn-sm ro-hide" onclick="resetPrompt('timelineSystem')" title="Reset this prompt to its default">↺ Reset</button>
+            </div>
+            <textarea id="prompt-timelineSystem" class="prompt-input" spellcheck="false"></textarea>
+            <div class="prompt-hint">Behavioral contract for the timeline-events generator. Controls the output JSON shape, year handling, tone, and the duplicate-avoidance rule.</div>
+          </div>
+
+          <div class="prompt-row">
+            <div class="prompt-head">
+              <span class="prompt-label">Timeline events — user preamble</span>
+              <button type="button" class="btn btn-ghost btn-sm ro-hide" onclick="resetPrompt('timelineUserPreamble')" title="Reset this prompt to its default">↺ Reset</button>
+            </div>
+            <textarea id="prompt-timelineUserPreamble" class="prompt-input" spellcheck="false" style="min-height:48px;"></textarea>
+            <div class="prompt-hint">First lines of the user message sent to the timeline generator. Placeholders: <code>{timelineName}</code>, <code>{count}</code>.</div>
+          </div>
+
         </div>
       </details>
 
@@ -308,7 +335,7 @@ async function testAIConnection() {
 
 // ── PROMPT EDITOR ────────────────────────────────────────────────
 
-// The seven prompt keys, in the order they appear in the UI.
+// Every prompt key in the order it appears in the UI.
 const PROMPT_KEYS = [
   'articleSystem',
   'summarySystem',
@@ -317,6 +344,9 @@ const PROMPT_KEYS = [
   'summaryUserTemplate',
   'testSystem',
   'testUser',
+  'batchArticlePreamble',
+  'timelineSystem',
+  'timelineUserPreamble',
 ];
 
 function promptTextareaFor(key) {

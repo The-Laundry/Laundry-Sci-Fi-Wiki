@@ -18,14 +18,26 @@ Also deployed on GitHub Pages as a read-only public view.
   dateToDays(), ceToDisplay(), formatDate(), calendarToCE().
 
 ## FILE MAP & LINE COUNTS (approximate, update after major rewrites)
-  article.html          ~430  Article viewer. Renders wikilinks, wikibox, TOC.
-                              Broken wikilinks open a choice modal (Manual vs AI-generate)
-                              plus the AI-generation modal (title/guidance/template/related).
-                              Modal now shows live streaming preview + context chips.
-  editor.html           ~915  Article editor. Quill.js WYSIWYG, custom cat dropdown,
+  article.html          ~250  Article viewer. Renders wikilinks, wikibox, TOC.
+                              Broken wikilinks open a small choice modal (Manual vs AI-generate).
+                              The AI button redirects to ai-generate.html?mode=single&title=…
+                              (the dedicated generator page took over from the in-page modal).
+  editor.html           ~1010 Article editor. Quill.js WYSIWYG, custom cat dropdown,
                               wikibox builder with contenteditable rich-text fields.
                               AI & Summary panel + draftKey hydration + auto-refresh on save.
-                              Regenerate modal streams live into a preview pane.
+                              Regenerate banner navigates to ai-generate.html?mode=single&regenerateFor=ID;
+                              old in-editor regenerate modal is parked behind
+                              `if (_legacyEditorModal)` (never executes).
+  ai-generate.html      ~900  Dedicated AI generator page. Three tabs: Single / Batch / Timeline.
+                              URL params: ?mode=single|batch|timeline, ?title=, ?regenerateFor=ID,
+                              ?timelineId=ID, ?returnTo=relative.html. Shared related-article
+                              chip picker across tabs. Single streams via AI.generateArticleStreaming
+                              and hands off to the editor via sessionStorage (or overwrites in
+                              place for regenerate). Batch loops sequentially with per-item status
+                              pills, pre-flight collision resolver (skip/suffix/overwrite), stop &
+                              retry. Timeline calls AI.generateTimelineEventsStreaming, renders an
+                              editable staging table as events stream in, commits to DB.events
+                              (+ optional stub articles) on Save All.
   manager.html          343   Article + category manager. Drag-drop tree, wikibox templates.
   index.html             93   Homepage. Stats, recent articles, cat list.
   timeline.html         992   Timeline viewer. FULL PAGE (not a scroll box). Fixed
@@ -43,12 +55,15 @@ Also deployed on GitHub Pages as a read-only public view.
                               Key methods: DB.init(), DB.save(articleId?), DB.exportAll(),
                               DB.deleteArticleFile(id), DB.clearAll().
                               Also loads/saves data/article-templates.json into DB.articleTemplates.
-  js/ai.js              ~925  AI helper for Infinite Wiki. AI.isConfigured(), AI.getConfig(),
+  js/ai.js              ~1400 AI helper for Infinite Wiki. AI.isConfigured(), AI.getConfig(),
                               AI.saveConfig(), AI.chat(), AI.chatStream(), AI.embed(),
                               AI.cosine(), AI.generateSummary(), AI.generateEmbedding(),
                               AI.reindexAll(), AI.gatherContext(), AI.generateArticle(),
-                              AI.generateArticleStreaming(). API key is stored ONLY
-                              in localStorage ('eomt_ai_key') — never in settings.json or exports.
+                              AI.generateArticleStreaming(), AI.generateTimelineEventsStreaming().
+                              Two progressive JSON extractors (per-field for articles,
+                              per-array-object for timeline events) feed live previews.
+                              API key is stored ONLY in localStorage ('eomt_ai_key') —
+                              never in settings.json or exports.
   js/calendar.js         46   ceToDisplay(), ceToCalendar(), calendarToCE(), formatDate(),
                               dateToDays(). CALENDARS object with all 5 calendars.
   js/ui.js              ~325  UI.init(), UI.renderSidebar(), UI.showModal(), UI.closeModal(),
@@ -104,7 +119,11 @@ articles/art_ID.json:     {id, title, content(HTML), categoryId, tags[],
                             imagePath(bool), imgCaption, fields:[{type, key, val(HTML)}]},
                             created, updated,
                             summary?, embedding?: number[], embeddingModel?,
-                            aiSourceSpec?: {title, guidance, templateId, relatedIds[]}}]
+                            aiSourceSpec?: {title, guidance, templateId, relatedIds[]} |
+                                           {source:'timelineEvent', eventId, timelineId?}}]
+events.json:              Each event may carry an optional `aiGenerated: true` flag when it
+                          was produced by the timeline generator. The timeline viewer ignores
+                          the flag; it's useful for reporting / bulk cleanup scripts.
 article-templates.json:   [{id, name, wikiboxTemplateId?, articlePrompt,
                             sectionOutline: string[], defaultTags: string[]}]
 settings.ai (in settings.json):
@@ -285,19 +304,88 @@ Re-index (ai.html → "Re-index All Articles…"):
   Iterates DB.articles, per-article: AI.generateSummary → AI.generateEmbedding → DB.save(id).
   Writes one file at a time so partial runs are safe. Has a Stop button.
 
+Dedicated generator page (ai-generate.html):
+  - Replaces the old in-page/in-editor modals. Three tabs share one shell:
+      • Single   — one title, template, guidance, related chips, live preview.
+                   Redirects to editor with sessionStorage draftKey, OR overwrites
+                   an existing article in place when ?regenerateFor=ID is set.
+      • Batch    — newline-separated titles + shared template/guidance/related.
+                   Pre-flight collision check presents a per-row picker
+                   (skip / suffix with " (2)"-style / overwrite). Sequential loop,
+                   Stop button, per-row status pills (pending/streaming/saved/
+                   failed/skipped), per-row Retry button on failures. Each item
+                   is saved to DB.articles individually as it finishes — no
+                   review-before-save step, by design.
+      • Timeline — picks a timeline + optional year range + count (≤25, default 10)
+                   + guidance + related chips. Uses AI.generateTimelineEventsStreaming
+                   which emits events as the JSON array arrives. Each event lands
+                   in an editable staging table (title / year / yearEnd / importance
+                   / description / "create stub article" toggle). Save All commits
+                   kept rows to DB.events (with event.aiGenerated=true marker),
+                   and optionally creates a stub article per row (aiSourceSpec =
+                   {source:'timelineEvent', eventId, timelineId}).
+  - URL params: ?mode=single|batch|timeline, ?title=…, ?regenerateFor=ID,
+    ?timelineId=ID, ?returnTo=relative.html (sanitized; absolute/protocol URLs
+    rejected). URL is kept in sync via history.replaceState() on tab switch.
+  - Entry points that navigate here:
+      • article.html broken-wikilink choice modal → ?mode=single&title=…&returnTo=…
+      • editor.html AI-draft banner Regenerate → ?mode=single&regenerateFor=ID&returnTo=…
+      • Sidebar "🪄 AI Generator" entry (hidden in read-only mode)
+
+Batch generation details:
+  - The batch loop calls AI.generateArticleStreaming sequentially — strictly 1
+    request in flight at a time, matching rate-limit tolerance on typical
+    endpoints. Each call re-uses the shared template + related + guidance, plus
+    a preamble from AI.getPrompt('batchArticlePreamble', {count, allTitles}) so
+    the model knows the siblings and can produce consistent cross-references.
+  - Pre-flight title collision: titles are matched case-insensitively against
+    DB.articles. Three resolutions per conflict:
+      • skip       — row is marked 'skipped', never calls the model.
+      • suffix     — title is auto-suffixed " (2)" (incrementing until unique).
+      • overwrite  — the existing article id is reused at commit time.
+  - On failure mid-batch, the loop keeps going; failed rows get a Retry button
+    that re-submits just that row (keeps saved/skipped neighbors untouched).
+  - Stop button sets State.batchAbort so the current in-flight request finishes
+    and the loop terminates on the next iteration. Aborts are cooperative only;
+    the fetch itself is not cancelled.
+
+Timeline event generation details:
+  - AI.generateTimelineEventsStreaming(spec, callbacks) is the entry point.
+    It asks for the JSON shape { "events": [ {title, year, yearEnd, importance,
+    description, suggestStubArticle, stubTags}, … ] }.
+  - Progressive parsing uses _ProgressiveJsonArrayExtractor (sibling to the
+    per-field extractor): it scans the stream for the watched top-level array
+    key, then emits each object via onItem() as soon as its closing brace
+    arrives. Falls back to a single _extractJsonObject() parse at the end if
+    the streamed extractor failed to pick up any events (e.g. model output
+    opened with an unexpected prefix).
+  - _normalizeEvent(raw, {spec}) validates each event: title required,
+    year coerced to integer, out-of-range years dropped, unknown importance
+    defaulted to 'notable', stubTags capped at 4 lower-case entries.
+  - Context assembled into the prompt includes: the timeline name/description,
+    year range, filtered list of existing events (max 40 shown) so the model
+    can avoid duplicates, the filtered era list, explicit-related articles,
+    and semantic-retrieved articles.
+
 Editable prompts (ai.html → Prompts section):
-  - AI.DEFAULT_PROMPTS holds the seven built-in prompt strings:
-    articleSystem, articleUserPreamble, articleGuidanceLabel,
-    summarySystem, summaryUserTemplate, testSystem, testUser.
+  - AI.DEFAULT_PROMPTS holds ten built-in prompt strings:
+      articleSystem, articleUserPreamble, articleGuidanceLabel,
+      summarySystem, summaryUserTemplate, testSystem, testUser,
+      batchArticlePreamble, timelineSystem, timelineUserPreamble.
   - User overrides live in DB.settings.ai.prompts (partial — any missing key
     falls back to default). AI.getPrompt(key, vars?) is the single read path
-    and handles {placeholder} substitution ({title}, {content}).
+    and handles {placeholder} substitution:
+      summaryUserTemplate   → {title}, {content}
+      articleUserPreamble   → {title}
+      batchArticlePreamble  → {count}, {allTitles}
+      timelineUserPreamble  → {timelineName}, {count}
   - AI.saveConfig({ prompts: {...} }) strips any entry equal to default or
     empty so settings.json stays minimal, and removes the prompts key entirely
     when the map is empty.
   - Call sites that read prompts: AI.generateSummary, AI.testConnection,
-    _buildArticlePromptMessages (the article generator's system + preamble +
-    guidance label — template/wikibox/context injections remain code-driven).
+    _buildArticlePromptMessages (article generator), _buildTimelineEventsPromptMessages
+    (timeline generator), and the batch tab in ai-generate.html
+    (AI.getPrompt('batchArticlePreamble', …)).
 
 Security note (repeat, because it matters):
   - localStorage key 'eomt_ai_key' holds the API key.

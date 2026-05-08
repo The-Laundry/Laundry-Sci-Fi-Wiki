@@ -116,6 +116,9 @@ const UI = {
   _injectSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
+    const aiGenLink = DB.isReadOnly
+      ? ''
+      : `<a class="sidebar-nav-item" href="ai-generate.html">🪄 AI Generator</a>`;
     sidebar.innerHTML = `
       <div class="sidebar-section">
         <div class="sidebar-label">Navigation</div>
@@ -123,6 +126,7 @@ const UI = {
         <a class="sidebar-nav-item" href="manager.html">📂 Article Manager</a>
         <a class="sidebar-nav-item" href="timeline-manager.html">📅 Timelines</a>
         <a class="sidebar-nav-item" href="article-templates.html">🧩 Article Templates</a>
+        ${aiGenLink}
         <a class="sidebar-nav-item" href="ai.html">🤖 AI Settings</a>
         <a class="sidebar-nav-item" href="help.html">❓ Help &amp; Guide</a>
       </div>
