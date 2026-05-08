@@ -82,6 +82,13 @@
           </span>
           <span class="ai-hint">When an article is saved, regenerate its summary and embedding in the background.</span>
         </label>
+
+        <label class="ai-field ai-field-full">
+          <span class="ai-label">
+            <input type="checkbox" id="ai-streaming"> Stream article generation (see text appear live)
+          </span>
+          <span class="ai-hint">Uses Server-Sent Events on <code>/chat/completions</code> with <code>stream:true</code>. Disable this if your endpoint doesn't support streaming; the generator will fall back to a single-shot request.</span>
+        </label>
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
@@ -166,6 +173,7 @@ function hydrateAISettings() {
   document.getElementById('ai-maxTokens').value           = c.maxTokens;
   document.getElementById('ai-topK').value                = c.topK;
   document.getElementById('ai-autoRefreshOnSave').checked = !!c.autoRefreshOnSave;
+  document.getElementById('ai-streaming').checked         = c.streaming !== false;
 
   // Reveal / clear key buttons
   const keyInput = document.getElementById('ai-apiKey');
@@ -190,6 +198,7 @@ async function saveAISettings() {
     maxTokens:         parseInt(document.getElementById('ai-maxTokens').value, 10)  || 2000,
     topK:              parseInt(document.getElementById('ai-topK').value, 10)        || 0,
     autoRefreshOnSave: document.getElementById('ai-autoRefreshOnSave').checked,
+    streaming:         document.getElementById('ai-streaming').checked,
   };
   const key = document.getElementById('ai-apiKey').value;
   AI.setApiKey(key); // localStorage only
@@ -203,13 +212,18 @@ async function testAIConnection() {
   await saveAISettings();
   resultEl.textContent = 'Testing…';
   resultEl.style.color = 'var(--text-muted)';
-  const { ok, reply, error } = await AI.testConnection();
-  if (ok) {
-    resultEl.textContent = '✓ Connected — reply: ' + (reply || '(empty)');
-    resultEl.style.color = 'var(--green)';
-  } else {
-    resultEl.textContent = '✕ ' + (error || 'Unknown error');
-    resultEl.style.color = 'var(--red)';
+  const busyId = UI.aiBusyBegin('Testing AI connection…');
+  try {
+    const { ok, reply, error } = await AI.testConnection();
+    if (ok) {
+      resultEl.textContent = '✓ Connected — reply: ' + (reply || '(empty)');
+      resultEl.style.color = 'var(--green)';
+    } else {
+      resultEl.textContent = '✕ ' + (error || 'Unknown error');
+      resultEl.style.color = 'var(--red)';
+    }
+  } finally {
+    UI.aiBusyEnd(busyId);
   }
 }
 
@@ -255,6 +269,7 @@ function openReindexDialog() {
           log.appendChild(d); log.scrollTop = log.scrollHeight;
         };
 
+        const busyId = UI.aiBusyBegin('Re-indexing articles…');
         try {
           // Custom loop so we can honor the Stop button.
           const total = DB.articles.length;
@@ -262,6 +277,7 @@ function openReindexDialog() {
           for (const art of DB.articles) {
             if (stop) break;
             status.textContent = `Summarizing ${art.title || 'Untitled'}…`;
+            UI.aiBusyUpdate(busyId, `Re-indexing ${done + 1}/${total}: ${art.title || 'Untitled'}`);
             try {
               art.summary = await AI.generateSummary(art);
               if (stop) break;
@@ -290,6 +306,8 @@ function openReindexDialog() {
         } catch (e) {
           status.textContent = 'Failed: ' + (e.message || e);
           status.style.color = 'var(--red)';
+        } finally {
+          UI.aiBusyEnd(busyId);
         }
       },
     },

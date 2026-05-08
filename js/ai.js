@@ -2,20 +2,30 @@
 // OpenAI-compatible AI helper used by the "Infinite Wiki" feature.
 //
 // Public surface:
-//   AI.isConfigured()           — chat is ready to call
-//   AI.isEmbeddingConfigured()  — embedding endpoint is ready to call
-//   AI.getConfig()              — returns { ...settings.ai, apiKey }
-//   AI.saveConfig(partial)      — patches settings.ai and persists, handles apiKey
+//   AI.isConfigured()             — chat is ready to call
+//   AI.isEmbeddingConfigured()    — embedding endpoint is ready to call
+//   AI.getConfig()                — returns { ...settings.ai, apiKey }
+//   AI.saveConfig(partial)        — patches settings.ai and persists, handles apiKey
 //   AI.getApiKey() / setApiKey(v) / clearApiKey()
-//   AI.chat(messages, opts)     — POST /chat/completions, returns the message content
-//   AI.embed(texts)             — POST /embeddings, returns number[][]
-//   AI.cosine(a, b)             — cosine similarity on two number[] vectors
-//   AI.testConnection()         — cheap chat ping, returns {ok, error?}
-//   AI.generateSummary(article) — returns a short summary string
+//   AI.chat(messages, opts)       — POST /chat/completions, returns the message content
+//   AI.chatStream(messages, opts, onChunk)
+//                                 — POST /chat/completions with stream:true; emits token
+//                                   deltas via onChunk(delta, accumulated). Falls back to
+//                                   AI.chat() transparently if the server rejects streaming.
+//   AI.embed(texts)               — POST /embeddings, returns number[][]
+//   AI.cosine(a, b)               — cosine similarity on two number[] vectors
+//   AI.testConnection()           — cheap chat ping, returns {ok, error?}
+//   AI.generateSummary(article)   — returns a short summary string
 //   AI.generateEmbedding(article) — returns { vector, model }
-//   AI.reindexAll(progressCb)   — rebuild summaries+embeddings for every article
-//   AI.gatherContext(spec)      — { relatedArticles, semanticMatches } for prompt
-//   AI.generateArticle(spec)    — returns a normalized article draft object
+//   AI.reindexAll(progressCb)     — rebuild summaries+embeddings for every article
+//   AI.gatherContext(spec)        — { relatedArticles, semanticMatches } for prompt
+//   AI.generateArticle(spec)      — returns a normalized article draft object (non-streaming
+//                                   convenience wrapper around generateArticleStreaming)
+//   AI.generateArticleStreaming(spec, callbacks)
+//                                 — runs context-gather + streamed chat; fires callbacks
+//                                   { onContextReady, onPhase, onTitle, onSummary,
+//                                     onContentDelta, onRawDelta, onComplete, onError }
+//                                   honours settings.ai.streaming (default true).
 //
 // The API key is stored ONLY in localStorage under 'eomt_ai_key' and is never
 // written to settings.json or exported. DB.exportAll() scrubs settings.ai.apiKey
@@ -53,13 +63,14 @@ const AI = {
       maxTokens:         typeof ai.maxTokens  === 'number' ? ai.maxTokens  : 2000,
       autoRefreshOnSave: ai.autoRefreshOnSave !== false,
       topK:              typeof ai.topK       === 'number' ? ai.topK       : 5,
+      streaming:         ai.streaming !== false, // default on
       apiKey:            this.getApiKey(),
     };
   },
 
   async saveConfig(partial) {
     if (!DB.settings.ai) DB.settings.ai = {};
-    const allowed = ['enabled','baseUrl','chatModel','embeddingModel','temperature','maxTokens','autoRefreshOnSave','topK'];
+    const allowed = ['enabled','baseUrl','chatModel','embeddingModel','temperature','maxTokens','autoRefreshOnSave','topK','streaming'];
     allowed.forEach(k => { if (k in partial) DB.settings.ai[k] = partial[k]; });
     // Defensive: never persist apiKey to disk.
     if ('apiKey' in DB.settings.ai) delete DB.settings.ai.apiKey;
@@ -141,6 +152,128 @@ const AI = {
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== 'string') throw new Error('Chat response has no text content.');
     return content;
+  },
+
+  // ── STREAMING CHAT ──────────────────────────────────────────────────
+
+  // Streamed variant of .chat(). Posts to /chat/completions with stream:true,
+  // consumes the SSE response body, and calls onChunk(deltaString, accumulatedString)
+  // for every new token fragment. Returns the final accumulated string.
+  //
+  // Falls back to the non-streaming .chat() transparently if:
+  //   • onChunk is not a function
+  //   • the server rejects the request (400 / "stream"/"unsupported")
+  //   • the environment lacks ReadableStream (extremely unlikely)
+  //
+  // opts: { model, temperature, maxTokens, jsonMode, stop, signal, timeoutMs }
+  async chatStream(messages, opts = {}, onChunk) {
+    if (typeof onChunk !== 'function') {
+      // No consumer for deltas — just use the regular chat path.
+      return this.chat(messages, opts);
+    }
+    const c = this.getConfig();
+    const body = {
+      model:       opts.model       || c.chatModel,
+      messages,
+      temperature: typeof opts.temperature === 'number' ? opts.temperature : c.temperature,
+      max_tokens:  typeof opts.maxTokens   === 'number' ? opts.maxTokens   : c.maxTokens,
+      stream:      true,
+    };
+    if (opts.stop) body.stop = opts.stop;
+    if (opts.jsonMode) body.response_format = { type: 'json_object' };
+
+    if (!c.baseUrl) throw new Error('AI base URL is not configured.');
+    if (!c.apiKey)  throw new Error('AI API key is not set.');
+    const url = this._joinUrl(c.baseUrl, '/chat/completions');
+
+    const timeoutMs = typeof opts.timeoutMs === 'number' ? opts.timeoutMs : 180000;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const signal = opts.signal || ctrl.signal;
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + c.apiKey,
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify(body),
+        signal,
+      });
+    } catch (e) {
+      clearTimeout(t);
+      throw e;
+    }
+
+    if (!res.ok) {
+      clearTimeout(t);
+      let detail = '';
+      try { detail = await res.text(); } catch (_e) {}
+      const msg = `HTTP ${res.status} ${res.statusText}${detail ? ': ' + detail.slice(0, 400) : ''}`;
+      // Attempt graceful fallback if the endpoint doesn't accept stream / response_format.
+      if (/stream|response_format|json_object|unsupported|invalid/i.test(msg)) {
+        const retryOpts = { ...opts };
+        // If jsonMode was the likely culprit we let .chat()'s own retry handle it.
+        const fallback = await this.chat(messages, retryOpts);
+        onChunk(fallback, fallback);
+        return fallback;
+      }
+      throw new Error(msg);
+    }
+    if (!res.body || typeof res.body.getReader !== 'function') {
+      clearTimeout(t);
+      // No streaming body — fallback to plain text parse.
+      const text = await res.text();
+      const parsed = _parseNonStreamChunk(text);
+      if (parsed) { onChunk(parsed, parsed); return parsed; }
+      // Last resort: re-call non-streaming.
+      const fallback = await this.chat(messages, opts);
+      onChunk(fallback, fallback);
+      return fallback;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let accumulated = '';
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE frames are separated by blank lines. Process whole frames only;
+        // any trailing partial frame stays in the buffer for the next chunk.
+        let sepIdx;
+        while ((sepIdx = _findSseFrameEnd(buffer)) !== -1) {
+          const frame = buffer.slice(0, sepIdx);
+          buffer = buffer.slice(sepIdx).replace(/^(\r?\n)+/, '');
+          const delta = _parseSseFrame(frame);
+          if (delta === '[DONE]') { /* end marker */ }
+          else if (delta) {
+            accumulated += delta;
+            try { onChunk(delta, accumulated); } catch (cbErr) { console.warn('chatStream onChunk threw:', cbErr); }
+          }
+        }
+      }
+      // Flush any residual buffer as a final frame.
+      if (buffer.trim()) {
+        const delta = _parseSseFrame(buffer);
+        if (delta && delta !== '[DONE]') {
+          accumulated += delta;
+          try { onChunk(delta, accumulated); } catch (cbErr) { console.warn('chatStream onChunk threw:', cbErr); }
+        }
+      }
+    } finally {
+      clearTimeout(t);
+      try { reader.releaseLock(); } catch (_e) {}
+    }
+
+    return accumulated;
   },
 
   // ── EMBEDDINGS ──────────────────────────────────────────────────────
@@ -300,49 +433,118 @@ const AI = {
 
   // ── ARTICLE GENERATION ─────────────────────────────────────────────
 
+  // Streaming article generation.
+  //
   // spec:
   //   { title, guidance?, templateId?, relatedIds?: string[] }
-  // Returns a normalized draft object:
-  //   { title, summary, contentHTML, tags: string[],
-  //     wikibox: { enabled, title, subtitle, imgCaption, fields: [{type,key,val}] } | null,
-  //     sourceSpec, contextUsed: { explicit, semantic } }
-  async generateArticle(spec) {
-    if (!this.isConfigured()) throw new Error('AI is not configured.');
-    const c = this.getConfig();
-
-    const template = (spec.templateId && DB.articleTemplates.find(t => t.id === spec.templateId)) || null;
-    const wbTemplate = template && template.wikiboxTemplateId
-      ? DB.wikiboxTemplates.find(w => w.id === template.wikiboxTemplateId) || null
-      : null;
-
-    const ctx = await this.gatherContext({
-      title: spec.title,
-      guidance: spec.guidance,
-      relatedIds: spec.relatedIds,
-      topK: c.topK,
-    });
-
-    const existingTitles = DB.articles.map(a => a.title).filter(Boolean).slice(0, 200);
-    const messages = _buildArticlePromptMessages({
-      spec, template, wbTemplate, context: ctx, existingTitles,
-    });
-
-    const raw = await this.chat(messages, {
-      temperature: c.temperature,
-      maxTokens: c.maxTokens,
-      jsonMode: true,
-    });
-
-    const parsed = _extractJsonObject(raw);
-    if (!parsed) throw new Error('AI returned no valid JSON object. Raw reply:\n' + _truncateChars(raw, 400));
-
-    const draft = _normalizeArticleDraft(parsed, { spec, template, wbTemplate });
-    draft.sourceSpec = { ...spec };
-    draft.contextUsed = {
-      explicit: ctx.explicit.map(x => ({ id: x.id, title: x.title })),
-      semantic: ctx.semantic.map(x => ({ id: x.id, title: x.title })),
+  //
+  // callbacks (all optional):
+  //   onPhase(phaseString)                — 'context' | 'writing' | 'parsing' | 'done'
+  //   onContextReady({ explicit, semantic, query })
+  //                                       — fired once, after context-gather finishes
+  //   onRawDelta(delta, accumulated)      — raw text tokens as they stream in
+  //   onTitle(fullTitleSoFar)             — partial title string as it's decoded
+  //   onSummary(fullSummarySoFar)         — partial summary string
+  //   onContentDelta(htmlSoFar, newChars) — partial contentHTML with newly-arrived chars
+  //   onComplete(draft)                   — final normalized draft
+  //   onError(err)                        — fatal error (still throws too)
+  //
+  // Returns the final normalized draft (same shape as the old AI.generateArticle).
+  async generateArticleStreaming(spec, callbacks = {}) {
+    const cb = {
+      onPhase:         typeof callbacks.onPhase === 'function'         ? callbacks.onPhase         : () => {},
+      onContextReady:  typeof callbacks.onContextReady === 'function'  ? callbacks.onContextReady  : () => {},
+      onRawDelta:      typeof callbacks.onRawDelta === 'function'      ? callbacks.onRawDelta      : () => {},
+      onTitle:         typeof callbacks.onTitle === 'function'         ? callbacks.onTitle         : () => {},
+      onSummary:       typeof callbacks.onSummary === 'function'       ? callbacks.onSummary       : () => {},
+      onContentDelta:  typeof callbacks.onContentDelta === 'function'  ? callbacks.onContentDelta  : () => {},
+      onComplete:      typeof callbacks.onComplete === 'function'      ? callbacks.onComplete      : () => {},
+      onError:         typeof callbacks.onError === 'function'         ? callbacks.onError         : () => {},
     };
-    return draft;
+
+    try {
+      if (!this.isConfigured()) throw new Error('AI is not configured.');
+      const c = this.getConfig();
+
+      const template = (spec.templateId && DB.articleTemplates.find(t => t.id === spec.templateId)) || null;
+      const wbTemplate = template && template.wikiboxTemplateId
+        ? DB.wikiboxTemplates.find(w => w.id === template.wikiboxTemplateId) || null
+        : null;
+
+      // ── Phase 1: context gather ───────────────────────────────────────
+      cb.onPhase('context');
+      const ctx = await this.gatherContext({
+        title: spec.title,
+        guidance: spec.guidance,
+        relatedIds: spec.relatedIds,
+        topK: c.topK,
+      });
+      cb.onContextReady({
+        explicit: ctx.explicit.map(x => ({ id: x.id, title: x.title, summary: x.summary, snippet: x.snippet })),
+        semantic: ctx.semantic.map(x => ({ id: x.id, title: x.title, summary: x.summary, snippet: x.snippet, score: x.score })),
+        query: ctx.query,
+      });
+
+      // ── Phase 2: streamed chat ────────────────────────────────────────
+      cb.onPhase('writing');
+      const existingTitles = DB.articles.map(a => a.title).filter(Boolean).slice(0, 200);
+      const messages = _buildArticlePromptMessages({
+        spec, template, wbTemplate, context: ctx, existingTitles,
+      });
+
+      const extractor = new _ProgressiveJsonExtractor();
+      extractor.onField = (field, partial, deltaChars) => {
+        if (field === 'title')       cb.onTitle(partial);
+        else if (field === 'summary') cb.onSummary(partial);
+        else if (field === 'contentHTML') cb.onContentDelta(partial, deltaChars);
+      };
+
+      let raw = '';
+      const onChunk = (delta, accumulated) => {
+        raw = accumulated;
+        cb.onRawDelta(delta, accumulated);
+        try { extractor.ingest(delta); } catch (e) { console.warn('progressive extractor error:', e); }
+      };
+
+      const chatOpts = {
+        temperature: c.temperature,
+        maxTokens: c.maxTokens,
+        jsonMode: true,
+      };
+      if (c.streaming !== false) {
+        raw = await this.chatStream(messages, chatOpts, onChunk);
+      } else {
+        // User disabled streaming — fall back to single-shot, then feed the whole
+        // reply through the extractor in one go so onContentDelta still fires once.
+        raw = await this.chat(messages, chatOpts);
+        onChunk(raw, raw);
+      }
+
+      // ── Phase 3: parse & normalize ────────────────────────────────────
+      cb.onPhase('parsing');
+      const parsed = _extractJsonObject(raw);
+      if (!parsed) throw new Error('AI returned no valid JSON object. Raw reply:\n' + _truncateChars(raw, 400));
+
+      const draft = _normalizeArticleDraft(parsed, { spec, template, wbTemplate });
+      draft.sourceSpec = { ...spec };
+      draft.contextUsed = {
+        explicit: ctx.explicit.map(x => ({ id: x.id, title: x.title })),
+        semantic: ctx.semantic.map(x => ({ id: x.id, title: x.title })),
+      };
+      cb.onPhase('done');
+      cb.onComplete(draft);
+      return draft;
+    } catch (err) {
+      cb.onError(err);
+      throw err;
+    }
+  },
+
+  // Convenience wrapper: non-streaming, returns just the final draft.
+  // Kept for back-compat with older call sites that don't need live deltas.
+  // spec: { title, guidance?, templateId?, relatedIds?: string[] }
+  async generateArticle(spec) {
+    return this.generateArticleStreaming(spec, {});
   },
 };
 
@@ -546,4 +748,267 @@ function _buildArticlePromptMessages({ spec, template, wbTemplate, context, exis
     { role: 'system', content: system },
     { role: 'user',   content: user },
   ];
+}
+
+// ── SSE + PROGRESSIVE JSON HELPERS ─────────────────────────────────────
+
+// Find the end of the next complete SSE frame in the buffer, or -1 if none.
+// A frame terminates at "\n\n" or "\r\n\r\n".
+function _findSseFrameEnd(buf) {
+  const i1 = buf.indexOf('\n\n');
+  const i2 = buf.indexOf('\r\n\r\n');
+  if (i1 === -1) return i2;
+  if (i2 === -1) return i1;
+  return Math.min(i1, i2);
+}
+
+// Parses a single SSE frame into its delta text.
+// A frame is one or more lines; the data: lines carry the payload JSON.
+// Returns the content delta string, '[DONE]' if that sentinel was sent,
+// or '' if the frame carried no usable data.
+function _parseSseFrame(frame) {
+  const lines = frame.split(/\r?\n/);
+  let out = '';
+  for (const line of lines) {
+    if (!line || line.startsWith(':')) continue; // comment / keepalive
+    const idx = line.indexOf(':');
+    const field = idx === -1 ? line : line.slice(0, idx);
+    let value   = idx === -1 ? ''   : line.slice(idx + 1);
+    if (value.startsWith(' ')) value = value.slice(1);
+    if (field !== 'data') continue;
+    if (value === '[DONE]') return '[DONE]';
+    if (!value) continue;
+    try {
+      const obj = JSON.parse(value);
+      const delta =
+        obj?.choices?.[0]?.delta?.content ??
+        obj?.choices?.[0]?.message?.content ??
+        '';
+      if (typeof delta === 'string') out += delta;
+    } catch (_e) {
+      // Some endpoints emit plain text after "data: "; treat it as literal.
+      out += value;
+    }
+  }
+  return out;
+}
+
+// For non-streaming responses that came back as a plain JSON body.
+// Extracts the final message content if possible.
+function _parseNonStreamChunk(text) {
+  try {
+    const obj = JSON.parse(text);
+    const c = obj?.choices?.[0]?.message?.content;
+    if (typeof c === 'string') return c;
+  } catch (_e) {}
+  return '';
+}
+
+// ── PROGRESSIVE JSON FIELD EXTRACTOR ───────────────────────────────────
+//
+// Consumes raw text as it streams in (a JSON object from an LLM) and fires
+// `onField(fieldName, partialValueSoFar, newDeltaChars)` whenever new
+// characters are appended to a watched top-level string field.
+//
+// Watched fields (hardcoded for the article contract): title, summary, contentHTML.
+//
+// Only handles the subset of JSON we actually expect: a single top-level object
+// with string/array/object values. It tracks string-escape state so `\"` and
+// `\\` inside string literals don't fool the boundary detector. Escape sequences
+// are resolved to their real characters before emission (`\n` → newline, etc.),
+// so the extractor's output is ready to render.
+function _ProgressiveJsonExtractor() {
+  this._buf = '';          // accumulated raw text
+  this._scanIdx = 0;       // next index in _buf we haven't inspected yet
+  this._state = 'seek';    // 'seek' | 'key' | 'afterKey' | 'beforeValue' | 'value-string' | 'value-skip'
+  this._depth = 0;         // nesting depth for non-watched values we're skipping over
+  this._inString = false;  // inside a string literal while skipping
+  this._escaped = false;   // previous char was a backslash inside a string
+  this._keyBuf = '';       // decoded current key
+  this._keyRaw = '';       // raw (still escaped) current key — used only for internal fsm state
+  this._currentField = null;
+  this._watched = new Set(['title', 'summary', 'contentHTML']);
+  this._partial = { title: '', summary: '', contentHTML: '' };
+  this.onField = null;
+}
+
+_ProgressiveJsonExtractor.prototype.ingest = function (chunk) {
+  if (!chunk) return;
+  this._buf += chunk;
+  this._drain();
+};
+
+_ProgressiveJsonExtractor.prototype._emit = function (field, delta) {
+  if (!delta) return;
+  this._partial[field] += delta;
+  if (typeof this.onField === 'function') {
+    try { this.onField(field, this._partial[field], delta); } catch (e) { console.warn(e); }
+  }
+};
+
+_ProgressiveJsonExtractor.prototype._drain = function () {
+  const buf = this._buf;
+  const n = buf.length;
+  while (this._scanIdx < n) {
+    const st = this._state;
+
+    if (st === 'seek') {
+      // Looking for an opening quote of a key, or the final '}' of the object.
+      // Skip whitespace, '{', ',', ':' (any separators at depth 0).
+      const ch = buf[this._scanIdx];
+      if (ch === '"') {
+        this._scanIdx++;
+        this._state = 'key';
+        this._keyBuf = '';
+        this._keyRaw = '';
+      } else {
+        // just advance past anything that isn't a key-opening quote
+        this._scanIdx++;
+      }
+      continue;
+    }
+
+    if (st === 'key') {
+      // Decode key characters until unescaped closing quote.
+      const ch = buf[this._scanIdx];
+      if (ch === undefined) return;
+      if (this._escaped) {
+        this._keyBuf += _jsonUnescapeChar(ch);
+        this._escaped = false;
+        this._scanIdx++;
+      } else if (ch === '\\') {
+        this._escaped = true;
+        this._scanIdx++;
+      } else if (ch === '"') {
+        this._scanIdx++;
+        this._state = 'afterKey';
+      } else {
+        this._keyBuf += ch;
+        this._scanIdx++;
+      }
+      continue;
+    }
+
+    if (st === 'afterKey') {
+      // Skip whitespace + colon.
+      const ch = buf[this._scanIdx];
+      if (ch === undefined) return;
+      if (ch === ':' || /\s/.test(ch)) { this._scanIdx++; continue; }
+      this._state = 'beforeValue';
+      continue;
+    }
+
+    if (st === 'beforeValue') {
+      // Decide: watched string field, unwatched string field, or non-string value.
+      const ch = buf[this._scanIdx];
+      if (ch === undefined) return;
+      if (/\s/.test(ch)) { this._scanIdx++; continue; }
+      if (ch === '"') {
+        this._scanIdx++;
+        if (this._watched.has(this._keyBuf)) {
+          this._currentField = this._keyBuf;
+          this._state = 'value-string';
+          this._escaped = false;
+        } else {
+          // Skip a non-watched string value.
+          this._state = 'value-skip';
+          this._depth = 0;
+          this._inString = true;
+          this._escaped = false;
+        }
+      } else {
+        // Non-string value (array, object, number, bool, null). Skip it entirely.
+        this._state = 'value-skip';
+        this._depth = 0;
+        this._inString = false;
+        this._escaped = false;
+        // Do NOT advance — let value-skip process this char.
+      }
+      continue;
+    }
+
+    if (st === 'value-string') {
+      // Watched field: emit decoded characters as we go. Terminates on unescaped ".
+      const ch = buf[this._scanIdx];
+      if (ch === undefined) return;
+      if (this._escaped) {
+        this._emit(this._currentField, _jsonUnescapeChar(ch));
+        this._escaped = false;
+        this._scanIdx++;
+      } else if (ch === '\\') {
+        // Need the next char to know what to emit; wait if we don't have it.
+        if (this._scanIdx + 1 >= n) return;
+        this._escaped = true;
+        this._scanIdx++;
+      } else if (ch === '"') {
+        this._scanIdx++;
+        this._currentField = null;
+        this._state = 'seek';
+      } else {
+        this._emit(this._currentField, ch);
+        this._scanIdx++;
+      }
+      continue;
+    }
+
+    if (st === 'value-skip') {
+      // Consume a value we don't care about (string, array, object, primitive).
+      const ch = buf[this._scanIdx];
+      if (ch === undefined) return;
+
+      if (this._inString) {
+        if (this._escaped) { this._escaped = false; this._scanIdx++; continue; }
+        if (ch === '\\')  { this._escaped = true; this._scanIdx++; continue; }
+        if (ch === '"')   {
+          this._inString = false;
+          this._scanIdx++;
+          if (this._depth === 0) { this._state = 'seek'; }
+          continue;
+        }
+        this._scanIdx++;
+        continue;
+      }
+      if (ch === '"') { this._inString = true; this._scanIdx++; continue; }
+      if (ch === '{' || ch === '[') { this._depth++; this._scanIdx++; continue; }
+      if (ch === '}' || ch === ']') {
+        if (this._depth === 0) {
+          // End of outer object or end of the value itself at depth 0 — either way,
+          // let the outer 'seek' state take over. Don't consume the '}' here; seek
+          // will skip past it.
+          this._state = 'seek';
+          continue;
+        }
+        this._depth--;
+        this._scanIdx++;
+        if (this._depth === 0) this._state = 'seek';
+        continue;
+      }
+      if (ch === ',' && this._depth === 0) {
+        this._state = 'seek';
+        continue;
+      }
+      // Any primitive char (numbers, true/false/null, whitespace) — consume.
+      this._scanIdx++;
+      continue;
+    }
+
+    // Fallback: advance to avoid an infinite loop if we ever end up here.
+    this._scanIdx++;
+  }
+};
+
+function _jsonUnescapeChar(ch) {
+  switch (ch) {
+    case 'n': return '\n';
+    case 't': return '\t';
+    case 'r': return '\r';
+    case 'b': return '\b';
+    case 'f': return '\f';
+    case '"': return '"';
+    case '\\': return '\\';
+    case '/': return '/';
+    // \uXXXX isn't perfectly supported here (we'd need to see 4 more chars).
+    // That's OK for live preview; the final strict JSON.parse handles it.
+    default:  return ch;
+  }
 }

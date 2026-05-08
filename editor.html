@@ -322,6 +322,7 @@ async function regenerateSummary() {
   const btn = document.getElementById('btn-gen-summary');
   const prev = btn.textContent;
   btn.disabled = true; btn.textContent = '…working';
+  const busyId = UI.aiBusyBegin('Generating summary…');
   try {
     // Sync any open value editors so the body is current
     document.querySelectorAll('.wb-value-editor').forEach(el => {
@@ -342,10 +343,11 @@ async function regenerateSummary() {
     UI.toast('Summary failed: ' + (e.message || e));
   } finally {
     btn.disabled = false; btn.textContent = prev;
+    UI.aiBusyEnd(busyId);
   }
 }
 
-// Compact regenerate-with-AI modal (uses the same AI.generateArticle flow)
+// Compact regenerate-with-AI modal (streams via AI.generateArticleStreaming)
 function openRegenerateAIModal() {
   if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
   const spec = aiSourceSpec || {
@@ -374,7 +376,19 @@ function openRegenerateAIModal() {
       </div>
       <div id="aig-progress" class="ai-progress-wrap" style="display:none;">
         <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
-        <div id="aig-progress-status" style="font-size:12.5px;color:var(--text-muted);margin-top:6px;">Working…</div>
+        <div id="aig-phase" class="ai-phase-line"><span class="ai-spinner"></span><span id="aig-phase-text">Working…</span></div>
+      </div>
+      <div id="aig-context" class="ai-ctx-wrap" style="display:none;"></div>
+      <div id="aig-stream-wrap" class="ai-stream-wrap" style="display:none;">
+        <div class="ai-stream-head">
+          <div class="ai-stream-title">
+            <span class="ai-spinner sm"></span>
+            <span id="aig-stream-title-text">Writing article…</span>
+          </div>
+          <div class="ai-stream-count"><span id="aig-stream-count">0</span> chars</div>
+        </div>
+        <div id="aig-stream-summary" class="ai-stream-summary" style="display:none;"></div>
+        <div id="aig-stream-preview" class="ai-stream-preview empty"></div>
       </div>
       <p style="font-size:12px;color:var(--text-faint);margin-top:8px;">This will overwrite the current title, body, wikibox, and tags. Related-article selection from the original request is preserved.</p>
     </div>
@@ -385,18 +399,59 @@ function openRegenerateAIModal() {
       const guidance = document.getElementById('aig-guidance').value.trim();
       const templateId = document.getElementById('aig-template').value || '';
       if (!title) { UI.toast('Please enter a title.'); return; }
-      const progress = document.getElementById('aig-progress');
-      const status = document.getElementById('aig-progress-status');
+
+      const form = document.querySelector('#modal-body .ai-gen-form');
+      if (form) form.classList.add('ai-streaming');
+
+      const progress  = document.getElementById('aig-progress');
+      const phaseText = document.getElementById('aig-phase-text');
+      const ctxWrap   = document.getElementById('aig-context');
+      const streamWrap= document.getElementById('aig-stream-wrap');
+      const streamEl  = document.getElementById('aig-stream-preview');
+      const streamTit = document.getElementById('aig-stream-title-text');
+      const streamSum = document.getElementById('aig-stream-summary');
+      const streamCount = document.getElementById('aig-stream-count');
+
       progress.style.display = 'block';
-      status.textContent = 'Calling model…';
+      phaseText.textContent = 'Gathering context…';
       document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = true);
+
+      const fullSpec = {
+        title, guidance, templateId,
+        relatedIds: (spec.relatedIds || []).slice(),
+      };
+      const busyId = UI.aiBusyBegin('Regenerating: ' + (title || 'article'));
+
       try {
-        const fullSpec = {
-          title, guidance, templateId,
-          relatedIds: (spec.relatedIds || []).slice(),
-        };
-        const draft = await AI.generateArticle(fullSpec);
-        // Overwrite current editor state
+        const draft = await AI.generateArticleStreaming(fullSpec, {
+          onPhase: (p) => {
+            if (p === 'context') phaseText.textContent = 'Gathering context…';
+            else if (p === 'writing') phaseText.textContent = 'Writing article…';
+            else if (p === 'parsing') phaseText.textContent = 'Parsing result…';
+            else if (p === 'done')    phaseText.textContent = 'Done.';
+            if (p === 'writing') UI.aiBusyUpdate(busyId, 'Streaming article…');
+          },
+          onContextReady: (ctx) => {
+            ctxWrap.innerHTML = renderCtxBlockEditor(ctx);
+            ctxWrap.style.display = 'block';
+            streamWrap.style.display = 'flex';
+            streamEl.classList.add('active');
+          },
+          onTitle: (t) => { if (t) streamTit.textContent = t; },
+          onSummary: (s) => {
+            if (s) { streamSum.textContent = s; streamSum.style.display = 'block'; }
+          },
+          onContentDelta: (html) => {
+            streamEl.classList.remove('empty');
+            streamEl.innerHTML = html;
+            streamCount.textContent = String(html.length);
+            streamEl.scrollTop = streamEl.scrollHeight;
+          },
+        });
+
+        streamEl.classList.remove('active');
+
+        // Overwrite current editor state with the final parsed draft
         document.getElementById('editor-title').value = draft.title || title;
         quillEditor.setText(''); // clear
         quillEditor.clipboard.dangerouslyPasteHTML(draft.contentHTML || '');
@@ -418,16 +473,46 @@ function openRegenerateAIModal() {
         isAiDraft = true;
         renderWbFields();
         refreshAIPanel();
+        UI.aiBusyEnd(busyId);
         UI.closeModal();
         UI.toast('Article regenerated.');
       } catch (e) {
-        status.textContent = 'Failed: ' + (e.message || e);
-        status.style.color = 'var(--red)';
+        streamEl.classList.remove('active');
+        const phaseLine = document.getElementById('aig-phase');
+        if (phaseLine) phaseLine.classList.add('error');
+        phaseText.textContent = 'Failed: ' + (e.message || e);
         document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = false);
+        UI.aiBusyEnd(busyId);
       }
     }},
     { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
   ]);
+}
+
+// Context-chip renderer for the regenerate modal — mirrors renderCtxBlock in article.html
+function renderCtxBlockEditor(ctx) {
+  const ex = Array.isArray(ctx && ctx.explicit) ? ctx.explicit : [];
+  const se = Array.isArray(ctx && ctx.semantic) ? ctx.semantic : [];
+  if (!ex.length && !se.length) {
+    return '<div class="ai-ctx-empty">No related articles found. The AI will write from scratch.</div>';
+  }
+  const chipHtml = (item, variant) => {
+    const tip = (item.summary || item.snippet || item.title || '').slice(0, 400);
+    const score = (variant === 'semantic' && typeof item.score === 'number')
+      ? `<span class="ai-ctx-score">${(item.score * 100).toFixed(0)}%</span>`
+      : '';
+    return `<span class="ai-ctx-chip ${variant}" title="${escHtml(tip)}">${escHtml(item.title || 'Untitled')}${score}</span>`;
+  };
+  let out = '';
+  if (ex.length) {
+    out += `<div class="ai-ctx-heading">Explicitly referenced (${ex.length})</div>`;
+    out += `<div class="ai-ctx-row">${ex.map(i => chipHtml(i, 'explicit')).join('')}</div>`;
+  }
+  if (se.length) {
+    out += `<div class="ai-ctx-heading">Auto-retrieved (${se.length})</div>`;
+    out += `<div class="ai-ctx-row">${se.map(i => chipHtml(i, 'semantic')).join('')}</div>`;
+  }
+  return out;
 }
 
 // ── QUILL INIT ───────────────────────────────────────────────────
@@ -882,11 +967,14 @@ async function saveArticle() {
 async function _backgroundRefreshAI(articleId) {
   const art = DB.articles.find(a => a.id === articleId);
   if (!art) return;
+  const busyId = UI.aiBusyBegin('Refreshing summary + embedding…');
   try {
     // Only regenerate summary if user didn't supply one manually.
     if (!art.summary || !art.summary.trim()) {
+      UI.aiBusyUpdate(busyId, 'Generating summary…');
       art.summary = await AI.generateSummary(art);
     }
+    UI.aiBusyUpdate(busyId, 'Computing embedding…');
     const { vector, model } = await AI.generateEmbedding(art);
     art.embedding = vector;
     art.embeddingModel = model;
@@ -896,6 +984,8 @@ async function _backgroundRefreshAI(articleId) {
   } catch (e) {
     console.warn('AI auto-refresh failed:', e);
     UI.toast('AI auto-refresh failed: ' + (e.message || e));
+  } finally {
+    UI.aiBusyEnd(busyId);
   }
 }
 </script>
