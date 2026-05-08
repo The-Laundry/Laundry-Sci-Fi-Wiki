@@ -4,6 +4,18 @@
 
 'use strict';
 
+// Apply persisted theme as early as possible to avoid a flash of the wrong
+// palette. This runs during script parse, before paint in most cases.
+(function applyThemeEarly() {
+  try {
+    const saved = localStorage.getItem('emt_theme');
+    const theme = (saved === 'dark' || saved === 'light')
+      ? saved
+      : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (_) { /* ignore */ }
+})();
+
 const UI = {
 
   // ── SHELL INJECTION ──────────────────────────────────────────────────
@@ -16,6 +28,32 @@ const UI = {
     this._bindSearch();
     this._bindModalClose();
     this._updateFolderStatus();
+    this._updateThemeToggle();
+  },
+
+  // ── THEME ────────────────────────────────────────────────────────────
+
+  getTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'light';
+  },
+
+  setTheme(theme) {
+    const t = (theme === 'dark') ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('emt_theme', t); } catch (_) {}
+    this._updateThemeToggle();
+  },
+
+  toggleTheme() {
+    this.setTheme(this.getTheme() === 'dark' ? 'light' : 'dark');
+  },
+
+  _updateThemeToggle() {
+    const btn = document.getElementById('theme-toggle-btn');
+    if (!btn) return;
+    const isDark = this.getTheme() === 'dark';
+    btn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+    btn.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
   },
 
   _injectHeader(activePage) {
@@ -64,6 +102,10 @@ const UI = {
         ${folderBtn}
         ${readOnlyBadge}
         ${newArticleBtn}
+        <button class="theme-toggle" id="theme-toggle-btn" onclick="UI.toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
         <span class="ai-busy-indicator" id="ai-busy-indicator" title="AI is working…">
           <span class="ai-spinner sm"></span>
           <span class="ai-busy-label" id="ai-busy-label">AI…</span>
