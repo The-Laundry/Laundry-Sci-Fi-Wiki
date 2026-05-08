@@ -24,6 +24,81 @@
       <div id="folder-info"></div>
     </div>
 
+    <!-- AI Settings -->
+    <div class="data-section" id="ai-section">
+      <h2>🤖 AI (Infinite Wiki)</h2>
+      <p>Connect an OpenAI-compatible endpoint to generate new articles from broken wikilinks, auto-write summaries, and build an embedding index for context search. The <strong>API key is stored only in your browser's localStorage</strong> — it is never written to <code>settings.json</code> or included in exports.</p>
+
+      <div class="ai-grid">
+        <label class="ai-field ai-field-full">
+          <span class="ai-label">
+            <input type="checkbox" id="ai-enabled"> Enable AI features
+          </span>
+          <span class="ai-hint">Turns on AI-generation and auto-refresh of summaries/embeddings on article save.</span>
+        </label>
+
+        <label class="ai-field ai-field-full">
+          <span class="ai-label">Base URL</span>
+          <input id="ai-baseUrl" type="text" class="field-input" placeholder="https://api.openai.com/v1">
+          <span class="ai-hint">Any OpenAI-compatible endpoint. Must expose <code>/chat/completions</code> and <code>/embeddings</code>.</span>
+        </label>
+
+        <label class="ai-field ai-field-full">
+          <span class="ai-label">API Key</span>
+          <div style="display:flex;gap:6px;">
+            <input id="ai-apiKey" type="password" class="field-input" placeholder="sk-..." autocomplete="off" style="flex:1;font-family:var(--font-mono);">
+            <button class="btn btn-ghost btn-sm" type="button" id="ai-key-reveal" title="Show / hide">👁</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="ai-key-clear" title="Clear stored key">✕</button>
+          </div>
+          <span class="ai-hint">Stored only in <code>localStorage</code> (key <code>eomt_ai_key</code>). Never written to disk.</span>
+        </label>
+
+        <label class="ai-field">
+          <span class="ai-label">Chat model</span>
+          <input id="ai-chatModel" type="text" class="field-input" placeholder="gpt-4o-mini">
+        </label>
+        <label class="ai-field">
+          <span class="ai-label">Embedding model</span>
+          <input id="ai-embeddingModel" type="text" class="field-input" placeholder="text-embedding-3-small">
+        </label>
+
+        <label class="ai-field">
+          <span class="ai-label">Temperature</span>
+          <input id="ai-temperature" type="number" min="0" max="2" step="0.05" class="field-input">
+        </label>
+        <label class="ai-field">
+          <span class="ai-label">Max output tokens</span>
+          <input id="ai-maxTokens" type="number" min="256" max="32768" step="32" class="field-input">
+        </label>
+
+        <label class="ai-field">
+          <span class="ai-label">Semantic top-K</span>
+          <input id="ai-topK" type="number" min="0" max="20" step="1" class="field-input">
+          <span class="ai-hint">How many related articles to auto-retrieve for context.</span>
+        </label>
+        <label class="ai-field">
+          <span class="ai-label">
+            <input type="checkbox" id="ai-autoRefreshOnSave"> Auto-refresh summary + embedding on save
+          </span>
+          <span class="ai-hint">When an article is saved, regenerate its summary and embedding in the background.</span>
+        </label>
+
+        <label class="ai-field ai-field-full">
+          <span class="ai-label">
+            <input type="checkbox" id="ai-streaming"> Stream article generation (see text appear live)
+          </span>
+          <span class="ai-hint">Uses Server-Sent Events on <code>/chat/completions</code> with <code>stream:true</code>. Disable this if your endpoint doesn't support streaming; the generator will fall back to a single-shot request.</span>
+        </label>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+        <button class="btn btn-primary" type="button" onclick="saveAISettings()">Save AI Settings</button>
+        <button class="btn btn-secondary" type="button" onclick="testAIConnection()">Test Connection</button>
+        <button class="btn btn-secondary" type="button" onclick="openReindexDialog()">Re-index All Articles…</button>
+        <span id="ai-test-result" style="align-self:center;font-size:13px;color:var(--text-muted);"></span>
+      </div>
+    </div>
+
     <div class="data-section">
       <h2>Export All Data</h2>
       <p>Download a JSON file containing all articles, categories, timelines, events, and settings. Works as a universal backup regardless of storage mode.</p>
@@ -56,6 +131,7 @@
 <script src="js/db.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
 <script>
 (async () => {
   await DB.init();
@@ -88,7 +164,164 @@
   sel.innerHTML = DB.articles.length
     ? DB.articles.map(a => `<option value="${a.id}">${escHtml(a.title || 'Untitled')}</option>`).join('')
     : '<option disabled>No articles yet</option>';
+
+  // Populate AI fields from current config
+  hydrateAISettings();
 })();
+
+// ── AI SETTINGS ──────────────────────────────────────────────────
+function hydrateAISettings() {
+  const c = AI.getConfig();
+  document.getElementById('ai-enabled').checked           = !!c.enabled;
+  document.getElementById('ai-baseUrl').value             = c.baseUrl;
+  document.getElementById('ai-apiKey').value              = c.apiKey;
+  document.getElementById('ai-chatModel').value           = c.chatModel;
+  document.getElementById('ai-embeddingModel').value      = c.embeddingModel;
+  document.getElementById('ai-temperature').value         = c.temperature;
+  document.getElementById('ai-maxTokens').value           = c.maxTokens;
+  document.getElementById('ai-topK').value                = c.topK;
+  document.getElementById('ai-autoRefreshOnSave').checked = !!c.autoRefreshOnSave;
+  document.getElementById('ai-streaming').checked         = c.streaming !== false;
+
+  // Reveal / clear key buttons
+  const keyInput = document.getElementById('ai-apiKey');
+  document.getElementById('ai-key-reveal').onclick = () => {
+    keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+  };
+  document.getElementById('ai-key-clear').onclick = () => {
+    if (!confirm('Clear the stored API key from this browser?')) return;
+    AI.clearApiKey();
+    keyInput.value = '';
+    UI.toast('API key cleared from localStorage.');
+  };
+}
+
+async function saveAISettings() {
+  const partial = {
+    enabled:           document.getElementById('ai-enabled').checked,
+    baseUrl:           document.getElementById('ai-baseUrl').value.trim() || 'https://api.openai.com/v1',
+    chatModel:         document.getElementById('ai-chatModel').value.trim() || 'gpt-4o-mini',
+    embeddingModel:    document.getElementById('ai-embeddingModel').value.trim() || 'text-embedding-3-small',
+    temperature:       parseFloat(document.getElementById('ai-temperature').value) || 0,
+    maxTokens:         parseInt(document.getElementById('ai-maxTokens').value, 10)  || 2000,
+    topK:              parseInt(document.getElementById('ai-topK').value, 10)        || 0,
+    autoRefreshOnSave: document.getElementById('ai-autoRefreshOnSave').checked,
+    streaming:         document.getElementById('ai-streaming').checked,
+  };
+  const key = document.getElementById('ai-apiKey').value;
+  AI.setApiKey(key); // localStorage only
+  await AI.saveConfig(partial);
+  UI.toast('AI settings saved.');
+}
+
+async function testAIConnection() {
+  const resultEl = document.getElementById('ai-test-result');
+  // Stash current form values first so we test what the user is currently seeing
+  await saveAISettings();
+  resultEl.textContent = 'Testing…';
+  resultEl.style.color = 'var(--text-muted)';
+  const busyId = UI.aiBusyBegin('Testing AI connection…');
+  try {
+    const { ok, reply, error } = await AI.testConnection();
+    if (ok) {
+      resultEl.textContent = '✓ Connected — reply: ' + (reply || '(empty)');
+      resultEl.style.color = 'var(--green)';
+    } else {
+      resultEl.textContent = '✕ ' + (error || 'Unknown error');
+      resultEl.style.color = 'var(--red)';
+    }
+  } finally {
+    UI.aiBusyEnd(busyId);
+  }
+}
+
+function openReindexDialog() {
+  if (!AI.isConfigured() || !AI.isEmbeddingConfigured()) {
+    UI.toast('Save AI settings with a valid API key and chat+embedding models first.');
+    return;
+  }
+  const total = DB.articles.length;
+  if (total === 0) { UI.toast('No articles to index.'); return; }
+
+  const body = `
+    <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:14px;">
+      This will regenerate the summary and embedding vector for every article (${total} total).
+      Articles are saved one-by-one, so you can stop at any time without losing progress.
+    </p>
+    <div class="ai-progress-wrap">
+      <div class="ai-progress-bar"><div id="reidx-bar" class="ai-progress-fill" style="width:0%"></div></div>
+      <div id="reidx-status" style="font-size:12.5px;color:var(--text-muted);margin-top:6px;">Ready.</div>
+      <div id="reidx-log" style="font-size:11.5px;color:var(--text-faint);margin-top:8px;max-height:120px;overflow-y:auto;font-family:var(--font-mono);"></div>
+    </div>`;
+  let stop = false;
+  UI.showModal('Re-index all articles', body, [
+    {
+      label: 'Start',
+      cls: 'btn-primary',
+      action: async () => {
+        // Disable start / swap to Stop
+        const actions = document.getElementById('modal-actions');
+        actions.innerHTML = '';
+        const stopBtn = document.createElement('button');
+        stopBtn.className = 'btn btn-danger'; stopBtn.textContent = 'Stop';
+        stopBtn.onclick = () => { stop = true; stopBtn.disabled = true; stopBtn.textContent = 'Stopping…'; };
+        actions.appendChild(stopBtn);
+
+        const bar = document.getElementById('reidx-bar');
+        const status = document.getElementById('reidx-status');
+        const log = document.getElementById('reidx-log');
+        const logLine = (s, cls) => {
+          const d = document.createElement('div');
+          d.textContent = s;
+          if (cls) d.style.color = cls;
+          log.appendChild(d); log.scrollTop = log.scrollHeight;
+        };
+
+        const busyId = UI.aiBusyBegin('Re-indexing articles…');
+        try {
+          // Custom loop so we can honor the Stop button.
+          const total = DB.articles.length;
+          let done = 0, errors = 0;
+          for (const art of DB.articles) {
+            if (stop) break;
+            status.textContent = `Summarizing ${art.title || 'Untitled'}…`;
+            UI.aiBusyUpdate(busyId, `Re-indexing ${done + 1}/${total}: ${art.title || 'Untitled'}`);
+            try {
+              art.summary = await AI.generateSummary(art);
+              if (stop) break;
+              status.textContent = `Embedding ${art.title || 'Untitled'}…`;
+              const { vector, model } = await AI.generateEmbedding(art);
+              art.embedding = vector;
+              art.embeddingModel = model;
+              art.updated = Date.now();
+              await DB.save(art.id);
+              logLine(`✓ ${art.title || 'Untitled'}`, 'var(--green)');
+            } catch (e) {
+              errors++;
+              logLine(`✕ ${art.title || 'Untitled'} — ${String(e.message || e).slice(0, 140)}`, 'var(--red)');
+            }
+            done++;
+            bar.style.width = ((done / total) * 100).toFixed(1) + '%';
+          }
+          status.textContent = stop
+            ? `Stopped. Indexed ${done - errors} of ${total}. ${errors ? errors + ' error(s).' : ''}`
+            : `Done. Indexed ${done - errors} of ${total}. ${errors ? errors + ' error(s).' : ''}`;
+          actions.innerHTML = '';
+          const closeBtn = document.createElement('button');
+          closeBtn.className = 'btn btn-secondary'; closeBtn.textContent = 'Close';
+          closeBtn.onclick = () => UI.closeModal();
+          actions.appendChild(closeBtn);
+        } catch (e) {
+          status.textContent = 'Failed: ' + (e.message || e);
+          status.style.color = 'var(--red)';
+        } finally {
+          UI.aiBusyEnd(busyId);
+        }
+      },
+    },
+    { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+  ]);
+}
 
 function doExport() { DB.exportAll(); UI.toast('Export downloaded.'); }
 

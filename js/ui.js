@@ -63,6 +63,18 @@ const UI = {
         ${folderBtn}
         ${readOnlyBadge}
         ${newArticleBtn}
+        <span class="ai-busy-indicator" id="ai-busy-indicator" title="AI is working…">
+          <span class="ai-spinner sm"></span>
+          <span class="ai-busy-label" id="ai-busy-label">AI…</span>
+        </span>
+        <button class="folder-status" id="folder-status-btn" onclick="UI.handleFolderClick()">
+          <span class="dot"></span>
+          <span id="folder-status-label">No folder</span>
+        </button>
+        <a href="editor.html?id=new" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Article
+        </a>
       </div>`;
   },
 
@@ -75,6 +87,7 @@ const UI = {
         <a class="sidebar-nav-item" href="index.html">🏠 Homepage</a>
         <a class="sidebar-nav-item" href="manager.html">📂 Article Manager</a>
         <a class="sidebar-nav-item" href="timeline-manager.html">📅 Timelines</a>
+        <a class="sidebar-nav-item" href="article-templates.html">🧩 Article Templates</a>
         <a class="sidebar-nav-item" href="help.html">❓ Help &amp; Guide</a>
       </div>
       <div class="sidebar-section">
@@ -241,6 +254,56 @@ const UI = {
     el.classList.add('show');
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  },
+
+  // ── AI ACTIVITY INDICATOR ────────────────────────────────────────────
+  // Reference-counted busy state: every aiBusyBegin() must be paired with
+  // aiBusyEnd(). The indicator stays visible as long as any counter is live,
+  // and shows the label of the most recent Begin call. Use aiBusyUpdate()
+  // from inside a running operation to change the tooltip (e.g. mid-phase).
+  //
+  // These are safe to call before UI.init() — they quietly no-op until the
+  // header element exists.
+
+  _aiBusy: { count: 0, labels: [] },
+
+  aiBusyBegin(label) {
+    const id = ++this._aiBusy._seq || (this._aiBusy._seq = 1);
+    this._aiBusy.count++;
+    this._aiBusy.labels.push({ id, label: String(label || 'AI working…') });
+    this._aiBusyRender();
+    return id;
+  },
+
+  aiBusyUpdate(id, label) {
+    const ent = this._aiBusy.labels.find(x => x.id === id);
+    if (ent) { ent.label = String(label || ent.label); this._aiBusyRender(); }
+  },
+
+  aiBusyEnd(id) {
+    if (this._aiBusy.count <= 0) return;
+    this._aiBusy.count = Math.max(0, this._aiBusy.count - 1);
+    if (id != null) {
+      const i = this._aiBusy.labels.findIndex(x => x.id === id);
+      if (i >= 0) this._aiBusy.labels.splice(i, 1);
+    } else if (this._aiBusy.labels.length) {
+      this._aiBusy.labels.pop();
+    }
+    this._aiBusyRender();
+  },
+
+  _aiBusyRender() {
+    const el = document.getElementById('ai-busy-indicator');
+    if (!el) return;
+    const lbl = document.getElementById('ai-busy-label');
+    const on = this._aiBusy.count > 0;
+    el.classList.toggle('on', on);
+    if (on) {
+      const top = this._aiBusy.labels[this._aiBusy.labels.length - 1];
+      const text = (top && top.label) || 'AI working…';
+      if (lbl) lbl.textContent = text;
+      el.title = text + (this._aiBusy.count > 1 ? `  (+${this._aiBusy.count - 1} more)` : '');
+    }
   },
 
   // ── FOLDER STATUS ─────────────────────────────────────────────────────
