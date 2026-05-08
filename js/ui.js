@@ -65,6 +65,7 @@ const UI = {
         <a class="sidebar-nav-item" href="index.html">🏠 Homepage</a>
         <a class="sidebar-nav-item" href="manager.html">📂 Article Manager</a>
         <a class="sidebar-nav-item" href="timeline-manager.html">📅 Timelines</a>
+        <a class="sidebar-nav-item" href="article-templates.html">🧩 Article Templates</a>
         <a class="sidebar-nav-item" href="help.html">❓ Help &amp; Guide</a>
       </div>
       <div class="sidebar-section">

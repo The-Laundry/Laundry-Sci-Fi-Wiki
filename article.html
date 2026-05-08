@@ -59,6 +59,7 @@
 <script src="js/db.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
 <script>
 (async () => {
   await DB.init();
@@ -144,11 +145,199 @@ function processWikilinks(html) {
     const name    = pipeIdx >= 0 ? inner.slice(0, pipeIdx).trim() : inner.trim();
     const display = pipeIdx >= 0 ? inner.slice(pipeIdx + 1).trim() : name;
     const t = DB.articles.find(a => a.title && a.title.toLowerCase() === name.toLowerCase());
-    return t
-      ? `<a href="article.html?id=${t.id}">${escHtml(display)}</a>`
-      : `<a href="editor.html?id=new&title=${encodeURIComponent(name)}" class="broken-link" title="Click to create: ${escHtml(name)}">${escHtml(display)}</a>`;
+    if (t) {
+      return `<a href="article.html?id=${t.id}">${escHtml(display)}</a>`;
+    }
+    // Broken link: intercept clicks so the user can pick manual-create vs AI-generate.
+    return `<a href="#" class="broken-link" data-broken-name="${escHtml(name)}" title="Click to create: ${escHtml(name)}">${escHtml(display)}</a>`;
   });
 }
+
+// Delegate clicks on any .broken-link in the article view / wikibox into the choice modal.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a.broken-link');
+  if (!a) return;
+  const name = a.getAttribute('data-broken-name');
+  if (!name) return;
+  e.preventDefault();
+  openBrokenLinkChoice(name);
+});
+
+// ── BROKEN LINK CHOICE MODAL ──────────────────────────────────────
+function openBrokenLinkChoice(name) {
+  const aiReady = (typeof AI !== 'undefined') && AI.isConfigured();
+  const body = `
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">
+      The article <strong>${escHtml(name)}</strong> doesn't exist yet. How would you like to create it?
+    </p>
+    <div class="choice-grid">
+      <button class="choice-card" id="choice-manual">
+        <div class="choice-icon">✎</div>
+        <div class="choice-title">Create Manually</div>
+        <div class="choice-desc">Open a blank editor with this title pre-filled.</div>
+      </button>
+      <button class="choice-card" id="choice-ai" ${aiReady ? '' : 'disabled title="AI is not configured. Enable it in Data → AI."'}>
+        <div class="choice-icon">✨</div>
+        <div class="choice-title">Generate with AI</div>
+        <div class="choice-desc">${aiReady ? 'Draft an article using context from your existing wiki.' : 'Configure AI in Data to enable this option.'}</div>
+      </button>
+    </div>`;
+  UI.showModal('Create "' + name + '"', body, [
+    { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+  ]);
+  document.getElementById('choice-manual').onclick = () => {
+    UI.closeModal();
+    location.href = 'editor.html?id=new&title=' + encodeURIComponent(name);
+  };
+  const aiBtn = document.getElementById('choice-ai');
+  if (aiBtn && !aiBtn.disabled) aiBtn.onclick = () => { UI.closeModal(); openAIGenerateModal(name); };
+}
+
+// ── AI GENERATION MODAL ───────────────────────────────────────────
+function openAIGenerateModal(prefillTitle, prefillSpec) {
+  if (!AI.isConfigured()) {
+    UI.toast('AI is not configured. See Data → AI (Infinite Wiki).');
+    return;
+  }
+  const spec = prefillSpec || { title: prefillTitle || '', guidance: '', templateId: '', relatedIds: [] };
+
+  const templateOptions = ['<option value="">— No template (generic) —</option>']
+    .concat(DB.articleTemplates.map(t =>
+      `<option value="${t.id}" ${t.id === spec.templateId ? 'selected' : ''}>${escHtml(t.name)}</option>`
+    )).join('');
+
+  const body = `
+    <div class="ai-gen-form">
+      <div class="ai-form-row">
+        <label>Article Title</label>
+        <input type="text" id="aig-title" class="field-input" value="${escHtml(spec.title || '')}" placeholder="e.g. Admiral Veya Solis">
+      </div>
+
+      <div class="ai-form-row">
+        <label>Template</label>
+        <select id="aig-template" class="field-input">${templateOptions}</select>
+        <div class="ai-hint">Gives the AI a structural hint and, optionally, a wikibox to fill. Manage on the <a href="article-templates.html" target="_blank">Article Templates</a> page.</div>
+      </div>
+
+      <div class="ai-form-row">
+        <label>Additional Guidance <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+        <textarea id="aig-guidance" class="field-input" placeholder="Key facts, tone, era, relationships, anything you want the AI to know…">${escHtml(spec.guidance || '')}</textarea>
+      </div>
+
+      <div class="ai-form-row">
+        <label>Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional — auto-retrieval will fill in the rest)</span></label>
+        <div id="aig-related-chips" class="chips-row"></div>
+        <input type="text" id="aig-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+        <div id="aig-related-results" class="aig-results" style="display:none;"></div>
+      </div>
+
+      <div id="aig-progress" class="ai-progress-wrap" style="display:none;">
+        <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+        <div id="aig-progress-status" style="font-size:12.5px;color:var(--text-muted);margin-top:6px;">Working…</div>
+      </div>
+    </div>
+  `;
+
+  UI.showModal('Generate with AI', body, [
+    { label: 'Generate', cls: 'btn-primary', action: runGenerate },
+    { label: 'Cancel',   cls: 'btn-secondary', action: () => UI.closeModal() },
+  ]);
+
+  // Wire up the related-articles picker
+  const chips = spec.relatedIds ? spec.relatedIds.slice() : [];
+  const chipsEl = document.getElementById('aig-related-chips');
+  const searchEl = document.getElementById('aig-related-search');
+  const resultsEl = document.getElementById('aig-related-results');
+
+  function renderChips() {
+    chipsEl.innerHTML = chips.map(id => {
+      const a = DB.articles.find(x => x.id === id);
+      if (!a) return '';
+      return `<span class="chip" data-id="${a.id}">${escHtml(a.title || 'Untitled')} <button type="button" class="chip-x" data-rm="${a.id}" title="Remove">✕</button></span>`;
+    }).join('');
+  }
+  chipsEl.onclick = (e) => {
+    const rm = e.target.getAttribute('data-rm');
+    if (!rm) return;
+    const i = chips.indexOf(rm);
+    if (i >= 0) chips.splice(i, 1);
+    renderChips();
+  };
+  renderChips();
+
+  searchEl.oninput = () => {
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+    const matches = DB.articles
+      .filter(a => !chips.includes(a.id))
+      .filter(a => (a.title || '').toLowerCase().includes(q) ||
+                   (a.tags || []).some(t => t.toLowerCase().includes(q)))
+      .slice(0, 8);
+    if (!matches.length) {
+      resultsEl.innerHTML = '<div class="aig-result-empty">No matches.</div>';
+    } else {
+      resultsEl.innerHTML = matches.map(a =>
+        `<div class="aig-result" data-id="${a.id}">
+           <div class="aig-result-title">${escHtml(a.title || 'Untitled')}</div>
+           <div class="aig-result-cat">${escHtml(DB.getCatPath(a.categoryId) || 'Uncategorized')}</div>
+         </div>`
+      ).join('');
+    }
+    resultsEl.style.display = 'block';
+  };
+  resultsEl.onclick = (e) => {
+    const row = e.target.closest('.aig-result');
+    if (!row) return;
+    const id = row.getAttribute('data-id');
+    if (id && !chips.includes(id)) chips.push(id);
+    searchEl.value = '';
+    resultsEl.style.display = 'none';
+    renderChips();
+  };
+
+  async function runGenerate() {
+    const title    = document.getElementById('aig-title').value.trim();
+    const guidance = document.getElementById('aig-guidance').value.trim();
+    const templateId = document.getElementById('aig-template').value || '';
+    if (!title) { UI.toast('Please enter a title.'); return; }
+
+    const progress = document.getElementById('aig-progress');
+    const status = document.getElementById('aig-progress-status');
+    progress.style.display = 'block';
+    status.textContent = 'Gathering context…';
+    // Disable action buttons while running
+    document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = true);
+
+    const fullSpec = { title, guidance, templateId, relatedIds: chips.slice() };
+
+    try {
+      status.textContent = 'Calling model…';
+      const draft = await AI.generateArticle(fullSpec);
+      status.textContent = 'Saving draft…';
+
+      // Stash in sessionStorage so the editor can pick it up
+      const draftKey = 'eomt_ai_draft_' + Date.now().toString(36);
+      try {
+        sessionStorage.setItem(draftKey, JSON.stringify(draft));
+      } catch (e) {
+        UI.toast('Draft too large for sessionStorage.');
+        document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = false);
+        progress.style.display = 'none';
+        return;
+      }
+      UI.closeModal();
+      location.href = 'editor.html?id=new&draftKey=' + encodeURIComponent(draftKey);
+    } catch (e) {
+      status.textContent = 'Failed: ' + (e.message || e);
+      status.style.color = 'var(--red)';
+      // Re-enable so user can tweak and retry
+      document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = false);
+    }
+  }
+}
+
+// Expose globally so the editor's "Regenerate" banner can call back into this flow
+window.openAIGenerateModal = openAIGenerateModal;
 
 function toggleWbSection(sid) {
   const tog  = document.getElementById(sid + '_tog');

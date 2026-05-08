@@ -17,24 +17,37 @@ no frameworks. Runs via `python -m http.server 8000`, uses File System Access AP
   dateToDays(), ceToDisplay(), formatDate(), calendarToCE().
 
 ## FILE MAP & LINE COUNTS (approximate, update after major rewrites)
-  article.html          190   Article viewer. Renders wikilinks, wikibox, TOC.
-  editor.html           628   Article editor. Quill.js WYSIWYG, custom cat dropdown,
+  article.html          ~300  Article viewer. Renders wikilinks, wikibox, TOC.
+                              Broken wikilinks open a choice modal (Manual vs AI-generate)
+                              plus the AI-generation modal (title/guidance/template/related).
+  editor.html           ~870  Article editor. Quill.js WYSIWYG, custom cat dropdown,
                               wikibox builder with contenteditable rich-text fields.
+                              AI & Summary panel + draftKey hydration + auto-refresh on save.
   manager.html          381   Article + category manager. Drag-drop tree, wikibox templates.
   index.html            104   Homepage. Stats, recent articles, cat list.
   timeline.html         977   Timeline viewer. FULL PAGE (not a scroll box). Fixed
                               toolbar, detail panel, minimap, nav bar — all viewport-fixed.
   timeline-manager.html 315   Timeline/era/event-category manager. Importance color settings.
-  data.html             125   Export/import/clear.
+  article-templates.html ~170 CRUD manager for data/article-templates.json. Each template:
+                              name, optional wikiboxTemplateId, articlePrompt, sectionOutline,
+                              defaultTags.
+  data.html             ~300  Export/import/clear + AI (Infinite Wiki) settings + Re-index All.
   help.html             110   Usage guide.
-  css/main.css          570   All shared styles + timeline styles + color picker styles.
-  js/db.js              338   DB object. Two backends: FileSystem API + localStorage.
+  css/main.css          ~670  All shared styles + timeline + color picker + AI modals/panel.
+  js/db.js              ~370  DB object. Two backends: FileSystem API + localStorage.
                               Key methods: DB.init(), DB.save(articleId?), DB.exportAll(),
                               DB.deleteArticleFile(id), DB.clearAll().
+                              Also loads/saves data/article-templates.json into DB.articleTemplates.
+  js/ai.js              ~350  AI helper for Infinite Wiki. AI.isConfigured(), AI.getConfig(),
+                              AI.saveConfig(), AI.chat(), AI.embed(), AI.cosine(),
+                              AI.generateSummary(), AI.generateEmbedding(), AI.reindexAll(),
+                              AI.gatherContext(), AI.generateArticle(). API key is stored ONLY
+                              in localStorage ('eomt_ai_key') — never in settings.json or exports.
   js/calendar.js         52   ceToDisplay(), ceToCalendar(), calendarToCE(), formatDate(),
                               dateToDays(). CALENDARS object with all 5 calendars.
-  js/ui.js              306   UI.init(), UI.renderSidebar(), UI.showModal(), UI.closeModal(),
+  js/ui.js              ~310  UI.init(), UI.renderSidebar(), UI.showModal(), UI.closeModal(),
                               UI.toast(), UI.handleFolderClick(). Injects header+sidebar+modal.
+                              Sidebar now includes an "Article Templates" nav item.
 
 ## DATA SCHEMA
 All files in data/ directory. Connected via File System Access API.
@@ -52,7 +65,16 @@ wikibox-templates.json:   [{id, name, fields:[{type:'field'|'section', key}]}]
 articles/art_ID.json:     [{id, title, content(HTML), categoryId, tags[],
                             wikibox:{enabled, title, subtitle, image(b64 or path),
                             imagePath(bool), imgCaption, fields:[{type, key, val(HTML)}]},
-                            created, updated}]
+                            created, updated,
+                            summary?, embedding?: number[], embeddingModel?,
+                            aiSourceSpec?: {title, guidance, templateId, relatedIds[]}}]
+article-templates.json:   [{id, name, wikiboxTemplateId?, articlePrompt,
+                            sectionOutline: string[], defaultTags: string[]}]
+settings.ai (in settings.json):
+                          { enabled, baseUrl, chatModel, embeddingModel,
+                            temperature, maxTokens, autoRefreshOnSave, topK }
+                          — apiKey is NEVER stored here. It lives in
+                            localStorage under the key 'eomt_ai_key'.
 
 ## CALENDAR SYSTEM
 All dates stored as CE integers. Display is cosmetic conversion only.
@@ -101,6 +123,57 @@ Key JS functions in timeline.html:
   openColorPicker()    — reusable popover, hex+RGB inputs, swatch grid
   _bd                  — cached {minD, span, totalH, PAD} from last renderTL() call
 
+## INFINITE WIKI (AI) ARCHITECTURE
+Everything sits behind DB (data) and AI (js/ai.js). Load order on every page is:
+  db.js → calendar.js → ui.js → ai.js
+so pages can freely reference AI.* once DB.init() has run.
+
+Article generation flow:
+  1. User clicks a broken [[Wikilink]] in article.html.
+  2. processWikilinks() now renders broken links as <a class="broken-link" data-broken-name="…"
+     href="#">. A delegated click handler in article.html catches these and calls
+     openBrokenLinkChoice(name).
+  3. Choice modal offers Manual (→ editor.html?id=new&title=…) or AI (→ openAIGenerateModal).
+     The AI button is disabled when !AI.isConfigured().
+  4. AI modal collects {title, guidance, templateId, relatedIds[]}, calls AI.generateArticle(),
+     validates the JSON, stashes a draft under a random sessionStorage key 'eomt_ai_draft_XXX',
+     and navigates to editor.html?id=new&draftKey=XXX.
+  5. The editor hydrates from sessionStorage (and sessionStorage.removeItem's the key) so a
+     refresh doesn't re-inject an already-used draft. The "AI & Summary" panel shows an
+     "AI-generated" banner with a Regenerate… button that opens a compact version of the
+     same AI modal inside the editor.
+  6. On save, if settings.ai.enabled && autoRefreshOnSave && AI.isEmbeddingConfigured(),
+     _backgroundRefreshAI() regenerates summary (only if blank) + embedding and writes the
+     article file again. Navigation waits for the background refresh to finish.
+
+Context gathering (AI.gatherContext in js/ai.js):
+  - Explicit: user-selected related article IDs — their summaries/snippets are included verbatim.
+  - Semantic: when the embedding endpoint is configured, AI.embed the query (title + guidance),
+    cosine-search against article.embedding vectors of matching dimension, take top K.
+  - Lexical fallback: articles without embeddings get a simple title/tags/summary keyword match.
+  - Top K comes from settings.ai.topK (default 5).
+
+Prompt contract (AI.generateArticle):
+  The chat model must return a single JSON object:
+    { title, summary, contentHTML, tags: string[],
+      wikibox: null | { enabled, title, subtitle, imgCaption,
+                        fields: [{type:'field'|'section', key, val}] } }
+  - contentHTML uses [[wikilink]] syntax (not <a> tags) — article.html's processWikilinks
+    handles resolution at render time.
+  - Do not emit the article title as <h1> at the top (viewer shows it separately).
+  - We ask for response_format: {type:'json_object'} and retry without it if the server
+    rejects that field. _extractJsonObject() strips code fences and tolerates a little extra
+    prose around the JSON.
+
+Re-index (data.html → "Re-index All Articles…"):
+  Iterates DB.articles, per-article: AI.generateSummary → AI.generateEmbedding → DB.save(id).
+  Writes one file at a time so partial runs are safe. Has a Stop button.
+
+Security note (repeat, because it matters):
+  - localStorage key 'eomt_ai_key' holds the API key.
+  - DB._ensureDefaults() and DB.exportAll() both scrub settings.ai.apiKey defensively.
+  - The "Clear API Key" button in data.html is the only way to remove it.
+
 ## KNOWN ISSUES / RECENT HISTORY
 - Timeline page underwent major architectural rewrite (full-page layout, fixed panels).
   The nav bar, minimap, and detail panel positions were the main focus.
@@ -110,6 +183,8 @@ Key JS functions in timeline.html:
 - Category dropdown in editor uses custom div-based tree (not a <select>) to support collapsing.
 - Wikibox field values are contenteditable divs with execCommand formatting (bold/italic/underline)
   and a floating mini-toolbar. Shift+Enter inserts <br>.
+- Infinite Wiki (AI generation of broken wikilinks) added 2026-xx: vanilla fetch to any
+  OpenAI-compatible endpoint; no streaming yet; apiKey lives only in localStorage.
 
 ## EDITING CONVENTIONS
 - Always use str_replace for targeted edits. Full rewrites only when >60% of file changes.

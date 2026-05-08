@@ -121,6 +121,25 @@
           </div>
         </div>
 
+        <!-- AI & Summary panel -->
+        <div class="wb-panel" id="ai-panel">
+          <div class="wb-panel-head">AI &amp; Summary</div>
+          <div class="wb-panel-body">
+            <div id="ai-draft-banner" class="ai-draft-banner" style="display:none;">
+              <span>✨ This article was AI-generated.</span>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="openRegenerateAIModal()">Regenerate…</button>
+            </div>
+            <div class="field-row">
+              <div class="field-label" style="display:flex;justify-content:space-between;align-items:center;gap:4px;">
+                <span>Summary <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:10px;">(1–3 sentences, used for AI context)</span></span>
+                <button class="btn btn-secondary btn-sm" type="button" id="btn-gen-summary" onclick="regenerateSummary()" title="Generate a summary with AI">✨ Generate</button>
+              </div>
+              <textarea id="editor-summary" class="field-input" placeholder="Short plain-text summary used when other articles cite this one…" style="min-height:70px;resize:vertical;font-family:var(--font-body);"></textarea>
+            </div>
+            <div id="ai-embedding-status" style="font-size:11px;color:var(--text-faint);"></div>
+          </div>
+        </div>
+
         <!-- Insert image into article -->
         <div class="wb-panel">
           <div class="wb-panel-head">Insert Image</div>
@@ -153,6 +172,7 @@
 <script src="js/db.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
 <script>
 // ── WIKIBOX TEMPLATES ────────────────────────────────────────────
 const WB_TEMPLATES = {
@@ -172,6 +192,11 @@ let wbImageData  = null; // base64 or path string
 let wbImageIsPath = false;
 let editingId    = null;
 let selectedCategoryId = null;
+let currentSummary       = '';
+let currentEmbedding     = null;   // number[] | null
+let currentEmbeddingModel= '';
+let aiSourceSpec         = null;   // { title, guidance, templateId, relatedIds } or null
+let isAiDraft            = false;
 
 // ── INIT ─────────────────────────────────────────────────────────
 (async () => {
@@ -183,6 +208,7 @@ let selectedCategoryId = null;
   const params = new URLSearchParams(location.search);
   editingId = params.get('id');
   const prefillTitle = params.get('title') || '';
+  const draftKey = params.get('draftKey');
 
   if (editingId && editingId !== 'new') {
     const art = DB.articles.find(a => a.id === editingId);
@@ -214,8 +240,53 @@ let selectedCategoryId = null;
         document.getElementById('wb-img-clear').style.display = 'inline-flex';
         if (wbImageIsPath) document.getElementById('wb-img-path').value = wbImageData;
       }
+      // AI fields
+      currentSummary        = art.summary || '';
+      currentEmbedding      = Array.isArray(art.embedding) ? art.embedding : null;
+      currentEmbeddingModel = art.embeddingModel || '';
+      aiSourceSpec          = art.aiSourceSpec || null;
+      isAiDraft             = !!aiSourceSpec;
       document.getElementById('cancel-btn').onclick = () => location.href = `article.html?id=${editingId}`;
     }
+  } else if (draftKey) {
+    // Hydrate from AI-generated draft stashed in sessionStorage
+    editingId = null;
+    document.title = 'New AI Draft — Encyclopedia of Many Things';
+    document.getElementById('editor-mode-label').textContent = 'New AI-Generated Article';
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) {
+        const d = JSON.parse(raw);
+        document.getElementById('editor-title').value = d.title || '';
+        quillEditor.clipboard.dangerouslyPasteHTML(d.contentHTML || '');
+        document.getElementById('editor-tags').value = Array.isArray(d.tags) ? d.tags.join(', ') : '';
+        currentSummary = d.summary || '';
+        if (d.wikibox) {
+          const wb = d.wikibox;
+          document.getElementById('wikibox-enabled').checked = wb.enabled !== false;
+          document.getElementById('wb-title').value    = wb.title    || d.title || '';
+          document.getElementById('wb-subtitle').value = wb.subtitle || '';
+          document.getElementById('wb-img-caption').value = wb.imgCaption || '';
+          wbFields = (wb.fields || []).map(f => ({
+            type: f.type === 'section' ? 'section' : 'field',
+            key: f.key || '',
+            val: f.val || '',
+          }));
+          wbImageData = wb.image || null;
+          wbImageIsPath = !!wb.imagePath;
+        }
+        aiSourceSpec = d.sourceSpec || null;
+        isAiDraft = true;
+      } else {
+        UI.toast('AI draft not found in session (already used?).');
+      }
+      // Consume the draft so refreshes don't recreate it
+      sessionStorage.removeItem(draftKey);
+    } catch (e) {
+      console.warn('Failed to hydrate AI draft:', e);
+      UI.toast('Failed to load AI draft.');
+    }
+    document.getElementById('cancel-btn').onclick = () => history.back();
   } else {
     editingId = null;
     document.title = 'New Article — Encyclopedia of Many Things';
@@ -226,7 +297,138 @@ let selectedCategoryId = null;
   buildCategoryDropdown(selectedCategoryId);
   populateWbTemplateSelect();
   renderWbFields();
+  refreshAIPanel();
 })();
+
+// ── AI PANEL ─────────────────────────────────────────────────────
+function refreshAIPanel() {
+  document.getElementById('editor-summary').value = currentSummary || '';
+  const banner = document.getElementById('ai-draft-banner');
+  banner.style.display = isAiDraft ? 'flex' : 'none';
+  const genBtn = document.getElementById('btn-gen-summary');
+  const aiReady = (typeof AI !== 'undefined') && AI.isConfigured();
+  genBtn.disabled = !aiReady;
+  genBtn.title = aiReady ? 'Generate a summary with AI' : 'Enable AI in Data → AI to use this';
+  const st = document.getElementById('ai-embedding-status');
+  if (currentEmbedding && currentEmbedding.length) {
+    st.textContent = `Embedding: ${currentEmbedding.length}-dim (${currentEmbeddingModel || 'unknown model'})`;
+  } else {
+    st.textContent = 'No embedding yet — will be generated on save if AI auto-refresh is on.';
+  }
+}
+
+async function regenerateSummary() {
+  if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
+  const btn = document.getElementById('btn-gen-summary');
+  const prev = btn.textContent;
+  btn.disabled = true; btn.textContent = '…working';
+  try {
+    // Sync any open value editors so the body is current
+    document.querySelectorAll('.wb-value-editor').forEach(el => {
+      const idx = parseInt(el.dataset.idx);
+      if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
+    });
+    const articleLike = {
+      id: editingId || 'draft',
+      title: document.getElementById('editor-title').value.trim(),
+      content: quillEditor.root.innerHTML,
+      tags: document.getElementById('editor-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    };
+    const s = await AI.generateSummary(articleLike);
+    currentSummary = s;
+    document.getElementById('editor-summary').value = s;
+    UI.toast('Summary generated.');
+  } catch (e) {
+    UI.toast('Summary failed: ' + (e.message || e));
+  } finally {
+    btn.disabled = false; btn.textContent = prev;
+  }
+}
+
+// Compact regenerate-with-AI modal (uses the same AI.generateArticle flow)
+function openRegenerateAIModal() {
+  if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
+  const spec = aiSourceSpec || {
+    title: document.getElementById('editor-title').value.trim(),
+    guidance: '',
+    templateId: '',
+    relatedIds: [],
+  };
+  const templateOptions = ['<option value="">— No template (generic) —</option>']
+    .concat(DB.articleTemplates.map(t =>
+      `<option value="${t.id}" ${t.id === spec.templateId ? 'selected' : ''}>${escHtml(t.name)}</option>`
+    )).join('');
+  const body = `
+    <div class="ai-gen-form">
+      <div class="ai-form-row">
+        <label>Article Title</label>
+        <input type="text" id="aig-title" class="field-input" value="${escHtml(spec.title || '')}">
+      </div>
+      <div class="ai-form-row">
+        <label>Template</label>
+        <select id="aig-template" class="field-input">${templateOptions}</select>
+      </div>
+      <div class="ai-form-row">
+        <label>Additional Guidance</label>
+        <textarea id="aig-guidance" class="field-input" placeholder="Adjust/nudge the AI…">${escHtml(spec.guidance || '')}</textarea>
+      </div>
+      <div id="aig-progress" class="ai-progress-wrap" style="display:none;">
+        <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+        <div id="aig-progress-status" style="font-size:12.5px;color:var(--text-muted);margin-top:6px;">Working…</div>
+      </div>
+      <p style="font-size:12px;color:var(--text-faint);margin-top:8px;">This will overwrite the current title, body, wikibox, and tags. Related-article selection from the original request is preserved.</p>
+    </div>
+  `;
+  UI.showModal('Regenerate with AI', body, [
+    { label: 'Generate', cls: 'btn-primary', action: async () => {
+      const title = document.getElementById('aig-title').value.trim();
+      const guidance = document.getElementById('aig-guidance').value.trim();
+      const templateId = document.getElementById('aig-template').value || '';
+      if (!title) { UI.toast('Please enter a title.'); return; }
+      const progress = document.getElementById('aig-progress');
+      const status = document.getElementById('aig-progress-status');
+      progress.style.display = 'block';
+      status.textContent = 'Calling model…';
+      document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = true);
+      try {
+        const fullSpec = {
+          title, guidance, templateId,
+          relatedIds: (spec.relatedIds || []).slice(),
+        };
+        const draft = await AI.generateArticle(fullSpec);
+        // Overwrite current editor state
+        document.getElementById('editor-title').value = draft.title || title;
+        quillEditor.setText(''); // clear
+        quillEditor.clipboard.dangerouslyPasteHTML(draft.contentHTML || '');
+        document.getElementById('editor-tags').value = Array.isArray(draft.tags) ? draft.tags.join(', ') : '';
+        currentSummary = draft.summary || '';
+        if (draft.wikibox) {
+          const wb = draft.wikibox;
+          document.getElementById('wikibox-enabled').checked = wb.enabled !== false;
+          document.getElementById('wb-title').value    = wb.title    || draft.title || '';
+          document.getElementById('wb-subtitle').value = wb.subtitle || '';
+          document.getElementById('wb-img-caption').value = wb.imgCaption || '';
+          wbFields = (wb.fields || []).map(f => ({
+            type: f.type === 'section' ? 'section' : 'field',
+            key: f.key || '',
+            val: f.val || '',
+          }));
+        }
+        aiSourceSpec = draft.sourceSpec || fullSpec;
+        isAiDraft = true;
+        renderWbFields();
+        refreshAIPanel();
+        UI.closeModal();
+        UI.toast('Article regenerated.');
+      } catch (e) {
+        status.textContent = 'Failed: ' + (e.message || e);
+        status.style.color = 'var(--red)';
+        document.querySelectorAll('#modal-actions .btn').forEach(b => b.disabled = false);
+      }
+    }},
+    { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+  ]);
+}
 
 // ── QUILL INIT ───────────────────────────────────────────────────
 function initQuill() {
@@ -643,20 +845,57 @@ async function saveArticle() {
     imgCaption: document.getElementById('wb-img-caption').value.trim(),
     fields:     wbFields.filter(f => f.type === 'section' || f.key || f.val),
   };
+  const summary = document.getElementById('editor-summary').value.trim();
   const now = Date.now();
 
+  let savedId;
   if (editingId) {
     const art = DB.articles.find(a => a.id === editingId);
     Object.assign(art, { title, content, categoryId, tags, wikibox, updated: now });
+    art.summary = summary;
+    if (aiSourceSpec) art.aiSourceSpec = aiSourceSpec;
+    if (currentEmbedding) { art.embedding = currentEmbedding; art.embeddingModel = currentEmbeddingModel; }
     await DB.save(editingId);
-    UI.toast('Article saved.');
-    location.href = `article.html?id=${editingId}`;
+    savedId = editingId;
   } else {
-    const id = mkId('art');
-    DB.articles.push({ id, title, content, categoryId, tags, wikibox, created: now, updated: now });
-    await DB.save(id);
-    UI.toast('Article created.');
-    location.href = `article.html?id=${id}`;
+    savedId = mkId('art');
+    const payload = { id: savedId, title, content, categoryId, tags, wikibox, created: now, updated: now };
+    if (summary)      payload.summary = summary;
+    if (aiSourceSpec) payload.aiSourceSpec = aiSourceSpec;
+    DB.articles.push(payload);
+    await DB.save(savedId);
+  }
+  UI.toast(editingId ? 'Article saved.' : 'Article created.');
+
+  // Optional AI auto-refresh of summary + embedding.
+  const cfg = (typeof AI !== 'undefined') ? AI.getConfig() : null;
+  if (cfg && cfg.enabled && cfg.autoRefreshOnSave && cfg.apiKey && AI.isEmbeddingConfigured()) {
+    _backgroundRefreshAI(savedId).finally(() => {
+      location.href = `article.html?id=${savedId}`;
+    });
+    UI.toast('AI refresh running in background…');
+  } else {
+    location.href = `article.html?id=${savedId}`;
+  }
+}
+
+async function _backgroundRefreshAI(articleId) {
+  const art = DB.articles.find(a => a.id === articleId);
+  if (!art) return;
+  try {
+    // Only regenerate summary if user didn't supply one manually.
+    if (!art.summary || !art.summary.trim()) {
+      art.summary = await AI.generateSummary(art);
+    }
+    const { vector, model } = await AI.generateEmbedding(art);
+    art.embedding = vector;
+    art.embeddingModel = model;
+    art.updated = Date.now();
+    await DB.save(articleId);
+    UI.toast('AI summary + embedding updated.');
+  } catch (e) {
+    console.warn('AI auto-refresh failed:', e);
+    UI.toast('AI auto-refresh failed: ' + (e.message || e));
   }
 }
 </script>
