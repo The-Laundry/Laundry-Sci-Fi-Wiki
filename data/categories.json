@@ -3,8 +3,8 @@
     "id": "cat_1778221758985_cj4o",
     "name": "Locations",
     "parentId": null,
-    "collapsed": true,
-    "_ddCollapsed": true
+    "collapsed": false,
+    "_ddCollapsed": false
   },
   {
     "id": "cat_1778221765054_tsjq",
@@ -17,14 +17,14 @@
     "id": "cat_1778227717518_y80p",
     "name": "Civilizations",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
     "id": "cat_1778227723000_6fzg",
     "name": "Human",
     "parentId": "cat_1778227717518_y80p",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
@@ -94,15 +94,15 @@
     "id": "cat_1778228700918_na3c",
     "name": "Astrogeography",
     "parentId": "cat_1778221758985_cj4o",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {
     "id": "cat_1778228729951_xd42",
     "name": "Vehicles",
     "parentId": null,
-    "collapsed": false,
-    "_ddCollapsed": false
+    "collapsed": true,
+    "_ddCollapsed": true
   },
   {
     "id": "cat_1778228738726_nfhg",
@@ -171,8 +171,8 @@
     "id": "cat_1778228892394_h75m",
     "name": "Organizations",
     "parentId": null,
-    "collapsed": true,
-    "_ddCollapsed": true
+    "collapsed": false,
+    "_ddCollapsed": false
   },
   {
     "id": "cat_1778228899327_r0iw",
@@ -206,7 +206,7 @@
     "id": "cat_1778244834465_l45m",
     "name": "Equestrian",
     "parentId": "cat_1778227717518_y80p",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {
@@ -290,7 +290,7 @@
     "id": "cat_1778259247300_83a2",
     "name": "Equestrian",
     "parentId": "cat_1778228794993_62pj",
-    "collapsed": true,
+    "collapsed": false,
     "_ddCollapsed": false
   },
   {
@@ -311,6 +311,41 @@
     "id": "cat_1778259272715_2xaz",
     "name": "Post-Imperial",
     "parentId": "cat_1778259247300_83a2",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778279951022_v0wp",
+    "name": "Galactic Republic",
+    "parentId": "cat_1778227717518_y80p",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778279966691_ns9i",
+    "name": "Government",
+    "parentId": "cat_1778279951022_v0wp",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778279975546_dc17",
+    "name": "Military",
+    "parentId": "cat_1778279951022_v0wp",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778280055999_qfxf",
+    "name": "Solar Empire's Wars",
+    "parentId": "cat_1778228925910_qife",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778280702777_jyvv",
+    "name": "Stations and Habitats",
+    "parentId": "cat_1778221758985_cj4o",
     "collapsed": false,
     "_ddCollapsed": false
   }
