@@ -39,6 +39,19 @@ const AI = {
 
   _KEY_STORAGE: 'eomt_ai_key',
 
+  // ── PROMPT DEFAULTS ─────────────────────────────────────────────────
+  //
+  // These are the built-in prompt strings the AI helper uses. Users can
+  // override any subset of them via DB.settings.ai.prompts (edited on the
+  // AI settings page). An override that matches the default (or is empty)
+  // is treated as "no override" so settings.json stays minimal.
+  //
+  // Supported placeholders per prompt:
+  //   summaryUserTemplate  → {title}, {content}
+  //   articleUserPreamble  → {title}
+  //   (all other prompts are literal strings, no substitutions.)
+  DEFAULT_PROMPTS: _DEFAULT_PROMPTS_BUILDER(),
+
   getApiKey() {
     try { return localStorage.getItem(this._KEY_STORAGE) || ''; } catch (e) { return ''; }
   },
@@ -54,6 +67,13 @@ const AI = {
 
   getConfig() {
     const ai = (DB.settings && DB.settings.ai) || {};
+    // Merge saved prompt overrides over defaults so callers see a complete set.
+    const savedPrompts = (ai.prompts && typeof ai.prompts === 'object') ? ai.prompts : {};
+    const prompts = {};
+    Object.keys(this.DEFAULT_PROMPTS).forEach(k => {
+      const v = savedPrompts[k];
+      prompts[k] = (typeof v === 'string' && v.length > 0) ? v : this.DEFAULT_PROMPTS[k];
+    });
     return {
       enabled:           !!ai.enabled,
       baseUrl:           ai.baseUrl           || 'https://api.openai.com/v1',
@@ -64,14 +84,47 @@ const AI = {
       autoRefreshOnSave: ai.autoRefreshOnSave !== false,
       topK:              typeof ai.topK       === 'number' ? ai.topK       : 5,
       streaming:         ai.streaming !== false, // default on
+      prompts,
       apiKey:            this.getApiKey(),
     };
+  },
+
+  // Returns the effective prompt string for `key`, applying {placeholder}
+  // substitutions from the optional `vars` map. Falls back to the built-in
+  // default when no override is set (or the override is empty).
+  getPrompt(key, vars) {
+    const fallback = this.DEFAULT_PROMPTS[key] || '';
+    const saved = ((DB.settings && DB.settings.ai && DB.settings.ai.prompts) || {})[key];
+    const str = (typeof saved === 'string' && saved.length > 0) ? saved : fallback;
+    return vars ? _applyTemplate(str, vars) : str;
   },
 
   async saveConfig(partial) {
     if (!DB.settings.ai) DB.settings.ai = {};
     const allowed = ['enabled','baseUrl','chatModel','embeddingModel','temperature','maxTokens','autoRefreshOnSave','topK','streaming'];
     allowed.forEach(k => { if (k in partial) DB.settings.ai[k] = partial[k]; });
+
+    // Prompts: accept a partial map, merge into settings.ai.prompts, and
+    // strip any entry that equals the default or is empty so settings.json
+    // stays minimal. If the resulting map is empty, delete the key entirely.
+    if (partial && partial.prompts && typeof partial.prompts === 'object') {
+      if (!DB.settings.ai.prompts || typeof DB.settings.ai.prompts !== 'object') {
+        DB.settings.ai.prompts = {};
+      }
+      Object.keys(partial.prompts).forEach(k => {
+        if (!(k in this.DEFAULT_PROMPTS)) return; // ignore unknown keys
+        const v = partial.prompts[k];
+        if (typeof v !== 'string' || v.length === 0 || v === this.DEFAULT_PROMPTS[k]) {
+          delete DB.settings.ai.prompts[k];
+        } else {
+          DB.settings.ai.prompts[k] = v;
+        }
+      });
+      if (Object.keys(DB.settings.ai.prompts).length === 0) {
+        delete DB.settings.ai.prompts;
+      }
+    }
+
     // Defensive: never persist apiKey to disk.
     if ('apiKey' in DB.settings.ai) delete DB.settings.ai.apiKey;
     await DB.save();
@@ -311,8 +364,8 @@ const AI = {
     try {
       const reply = await this.chat(
         [
-          { role: 'system', content: 'You are a terse connection-test echo.' },
-          { role: 'user',   content: 'Reply with the single word: PONG' },
+          { role: 'system', content: this.getPrompt('testSystem') },
+          { role: 'user',   content: this.getPrompt('testUser') },
         ],
         { temperature: 0, maxTokens: 8 }
       );
@@ -329,11 +382,11 @@ const AI = {
     const plain = _stripHtml(article?.content || '').trim();
     const truncated = _truncateChars(plain, 3500);
     const title = (article?.title || 'Untitled').trim();
-    const system = 'You write short, factual, in-universe encyclopedia summaries. Output plain text only — no headings, no wikilinks, no HTML, no markdown. 1 to 3 sentences. Do not invent facts that are not present in the source.';
-    const user =
-      `Title: ${title}\n\n` +
-      `Article:\n${truncated || '(no body yet)'}\n\n` +
-      `Write a 1–3 sentence summary for search-index use.`;
+    const system = this.getPrompt('summarySystem');
+    const user = this.getPrompt('summaryUserTemplate', {
+      title,
+      content: truncated || '(no body yet)',
+    });
     const reply = await this.chat(
       [
         { role: 'system', content: system },
@@ -550,6 +603,46 @@ const AI = {
 
 // ── PRIVATE HELPERS ────────────────────────────────────────────────────
 
+// Simple {key} substitution. Unknown keys are left untouched so placeholder-
+// like text inside a prompt body (e.g. example JSON fragments) isn't mangled.
+function _applyTemplate(str, vars) {
+  if (!str || !vars) return str || '';
+  return String(str).replace(/\{(\w+)\}/g, (m, k) =>
+    Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m);
+}
+
+// Builds the AI.DEFAULT_PROMPTS object. Defined as a function so the long
+// strings (which contain ``` fences and other tricky characters) can live
+// down here with the rest of the private helpers instead of cluttering the
+// top of the AI object literal.
+function _DEFAULT_PROMPTS_BUILDER() {
+  const articleSystemLines = [
+    'You are an in-universe worldbuilding encyclopedist for a wiki. Your job is to generate a single new article as a strict JSON object.',
+    '',
+    'OUTPUT CONTRACT — reply with EXACTLY ONE JSON object, nothing else, no prose, no markdown fences. The object MUST have these keys:',
+    '  "title":       string — the article title.',
+    '  "summary":     string — 1 to 3 sentences, plain text, no markdown/HTML/wikilinks. Good for search-index use.',
+    '  "contentHTML": string — the article body as valid HTML. Use <h1>/<h2>/<h3> for sections, <p> for paragraphs, <ul><li> for lists, <strong>/<em>/<u> for inline emphasis. Do NOT include the article title as an <h1> at the top (the viewer shows it separately). Do NOT include images. Do NOT use markdown.',
+    '  "tags":        string[] — 0–6 short lower-case tag strings.',
+    '  "wikibox":     object or null — if present, it MUST match this shape: { "enabled": true, "title": string, "subtitle": string, "imgCaption": string, "fields": [ { "type": "field"|"section", "key": string, "val": string } ] }. Only include the "wikibox" key if the template provides a wikibox shape; otherwise set it to null.',
+    '',
+    'WIKILINKS: inside contentHTML and wikibox field values, link to other articles using [[Article Name]] syntax (double square brackets) — NOT HTML <a> tags. Linked articles do not need to exist yet. Use [[Name|display text]] when you want different display text. Link generously to entities the reader might want to read more about (people, places, factions, events, species).',
+    '',
+    'STYLE: third person, neutral encyclopedic tone, in-universe (do not mention "the user", "this article", "AI", "writer", or the real world). Stay consistent with facts given in the CONTEXT section. Do not contradict existing articles. If a fact is unknown, either omit it or be clearly vague ("details are lost to history").',
+    '',
+    'NEVER wrap the JSON in triple-backtick fences or add commentary before/after it.',
+  ];
+  return {
+    articleSystem:        articleSystemLines.join('\n'),
+    articleUserPreamble:  'ARTICLE TITLE: {title}',
+    articleGuidanceLabel: 'ADDITIONAL GUIDANCE FROM USER:',
+    summarySystem:        'You write short, factual, in-universe encyclopedia summaries. Output plain text only — no headings, no wikilinks, no HTML, no markdown. 1 to 3 sentences. Do not invent facts that are not present in the source.',
+    summaryUserTemplate:  'Title: {title}\n\nArticle:\n{content}\n\nWrite a 1–3 sentence summary for search-index use.',
+    testSystem:           'You are a terse connection-test echo.',
+    testUser:             'Reply with the single word: PONG',
+  };
+}
+
 function _stripHtml(html) {
   if (!html) return '';
   const tmp = document.createElement('div');
@@ -679,27 +772,12 @@ function _normalizeArticleDraft(raw, { spec, template, wbTemplate }) {
 }
 
 function _buildArticlePromptMessages({ spec, template, wbTemplate, context, existingTitles }) {
-  const system = [
-    'You are an in-universe worldbuilding encyclopedist for a wiki. Your job is to generate a single new article as a strict JSON object.',
-    '',
-    'OUTPUT CONTRACT — reply with EXACTLY ONE JSON object, nothing else, no prose, no markdown fences. The object MUST have these keys:',
-    '  "title":       string — the article title.',
-    '  "summary":     string — 1 to 3 sentences, plain text, no markdown/HTML/wikilinks. Good for search-index use.',
-    '  "contentHTML": string — the article body as valid HTML. Use <h1>/<h2>/<h3> for sections, <p> for paragraphs, <ul><li> for lists, <strong>/<em>/<u> for inline emphasis. Do NOT include the article title as an <h1> at the top (the viewer shows it separately). Do NOT include images. Do NOT use markdown.',
-    '  "tags":        string[] — 0–6 short lower-case tag strings.',
-    '  "wikibox":     object or null — if present, it MUST match this shape: { "enabled": true, "title": string, "subtitle": string, "imgCaption": string, "fields": [ { "type": "field"|"section", "key": string, "val": string } ] }. Only include the "wikibox" key if the template provides a wikibox shape; otherwise set it to null.',
-    '',
-    'WIKILINKS: inside contentHTML and wikibox field values, link to other articles using [[Article Name]] syntax (double square brackets) — NOT HTML <a> tags. Linked articles do not need to exist yet. Use [[Name|display text]] when you want different display text. Link generously to entities the reader might want to read more about (people, places, factions, events, species).',
-    '',
-    'STYLE: third person, neutral encyclopedic tone, in-universe (do not mention "the user", "this article", "AI", "writer", or the real world). Stay consistent with facts given in the CONTEXT section. Do not contradict existing articles. If a fact is unknown, either omit it or be clearly vague ("details are lost to history").',
-    '',
-    'NEVER wrap the JSON in ``` fences or add commentary before/after it.',
-  ].join('\n');
+  const system = AI.getPrompt('articleSystem');
 
   const parts = [];
-  parts.push(`ARTICLE TITLE: ${spec.title || '(untitled)'}`);
+  parts.push(AI.getPrompt('articleUserPreamble', { title: spec.title || '(untitled)' }));
   if (spec.guidance && spec.guidance.trim()) {
-    parts.push('ADDITIONAL GUIDANCE FROM USER:\n' + spec.guidance.trim());
+    parts.push(AI.getPrompt('articleGuidanceLabel') + '\n' + spec.guidance.trim());
   }
 
   if (template) {

@@ -24,6 +24,7 @@ const UI = {
     const pages = [
       { id: 'articles',  label: 'Articles',  href: DB.isReadOnly ? 'index.html' : 'manager.html' },
       { id: 'timelines', label: 'Timelines', href: 'timeline-manager.html' },
+      { id: 'ai',        label: 'AI',        href: 'ai.html' },
       { id: 'data',      label: 'Data',      href: 'data.html' },
       { id: 'help',      label: 'Help',      href: 'help.html' },
     ];
@@ -80,6 +81,7 @@ const UI = {
         <a class="sidebar-nav-item" href="manager.html">📂 Article Manager</a>
         <a class="sidebar-nav-item" href="timeline-manager.html">📅 Timelines</a>
         <a class="sidebar-nav-item" href="article-templates.html">🧩 Article Templates</a>
+        <a class="sidebar-nav-item" href="ai.html">🤖 AI Settings</a>
         <a class="sidebar-nav-item" href="help.html">❓ Help &amp; Guide</a>
       </div>
       <div class="sidebar-section">

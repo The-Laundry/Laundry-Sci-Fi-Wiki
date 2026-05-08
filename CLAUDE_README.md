@@ -267,7 +267,7 @@ Global AI-busy indicator (js/ui.js):
   - UI.aiBusyUpdate(id, label) — change the label (e.g. mid-phase "Streaming article…").
   - UI.aiBusyEnd(id) — decrement. Indicator hides when count hits 0.
   - Wired into: the article-page generate flow, the editor regenerate flow + summary
-    regenerate + _backgroundRefreshAI, the data-page testAIConnection + re-index loop.
+    regenerate + _backgroundRefreshAI, the ai-page testAIConnection + re-index loop.
 
 Prompt contract (AI.generateArticle / AI.generateArticleStreaming):
   The chat model must return a single JSON object:
@@ -281,9 +281,23 @@ Prompt contract (AI.generateArticle / AI.generateArticleStreaming):
     rejects that field. _extractJsonObject() strips code fences and tolerates a little extra
     prose around the JSON.
 
-Re-index (data.html → "Re-index All Articles…"):
+Re-index (ai.html → "Re-index All Articles…"):
   Iterates DB.articles, per-article: AI.generateSummary → AI.generateEmbedding → DB.save(id).
   Writes one file at a time so partial runs are safe. Has a Stop button.
+
+Editable prompts (ai.html → Prompts section):
+  - AI.DEFAULT_PROMPTS holds the seven built-in prompt strings:
+    articleSystem, articleUserPreamble, articleGuidanceLabel,
+    summarySystem, summaryUserTemplate, testSystem, testUser.
+  - User overrides live in DB.settings.ai.prompts (partial — any missing key
+    falls back to default). AI.getPrompt(key, vars?) is the single read path
+    and handles {placeholder} substitution ({title}, {content}).
+  - AI.saveConfig({ prompts: {...} }) strips any entry equal to default or
+    empty so settings.json stays minimal, and removes the prompts key entirely
+    when the map is empty.
+  - Call sites that read prompts: AI.generateSummary, AI.testConnection,
+    _buildArticlePromptMessages (the article generator's system + preamble +
+    guidance label — template/wikibox/context injections remain code-driven).
 
 Security note (repeat, because it matters):
   - localStorage key 'eomt_ai_key' holds the API key.
