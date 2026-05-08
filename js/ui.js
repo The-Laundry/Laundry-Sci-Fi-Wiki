@@ -22,11 +22,28 @@ const UI = {
     const header = document.getElementById('app-header');
     if (!header) return;
     const pages = [
-      { id: 'articles',  label: 'Articles',  icon: 'M3 6h18M3 12h18M3 18h18',   href: 'manager.html' },
-      { id: 'timelines', label: 'Timelines', icon: 'M12 20V4M8 8l4-4 4 4M4 12h16', href: 'timeline-manager.html' },
-      { id: 'data',      label: 'Data',      icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z', href: 'data.html' },
-      { id: 'help',      label: 'Help',      icon: 'M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm2-1.645A3.502 3.502 0 0 0 12 6.5a3.501 3.501 0 0 0-3.433 2.813l1.962.393A1.5 1.5 0 1 1 12 11.5a1 1 0 0 0-1 1V14h2v-.645z', href: 'help.html' },
+      { id: 'articles',  label: 'Articles',  href: DB.isReadOnly ? 'index.html' : 'manager.html' },
+      { id: 'timelines', label: 'Timelines', href: 'timeline-manager.html' },
+      { id: 'data',      label: 'Data',      href: 'data.html' },
+      { id: 'help',      label: 'Help',      href: 'help.html' },
     ];
+    const readOnlyBadge = DB.isReadOnly
+      ? `<div style="display:flex;align-items:center;gap:5px;padding:4px 10px;background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);font-size:11.5px;font-weight:600;color:var(--accent);flex-shrink:0;">
+           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+           Read Only
+         </div>`
+      : '';
+    const folderBtn = DB.isReadOnly ? '' : `
+        <div class="header-divider"></div>
+        <button class="folder-status" id="folder-status-btn" onclick="UI.handleFolderClick()">
+          <span class="dot"></span>
+          <span id="folder-status-label">No folder</span>
+        </button>`;
+    const newArticleBtn = DB.isReadOnly ? '' : `
+        <a href="editor.html?id=new" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Article
+        </a>`;
     header.innerHTML = `
       <a class="header-brand" href="index.html">
         <span class="corp">Phodd Communications</span>
@@ -41,18 +58,11 @@ const UI = {
       <div class="header-actions">
         ${pages.map(p => `
           <a href="${p.href}" class="btn btn-ghost ${activePage === p.id ? 'active' : ''}" style="${activePage === p.id ? 'color:var(--accent);' : ''}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${p.icon}"/></svg>
             ${p.label}
           </a>`).join('')}
-        <div class="header-divider"></div>
-        <button class="folder-status" id="folder-status-btn" onclick="UI.handleFolderClick()">
-          <span class="dot"></span>
-          <span id="folder-status-label">No folder</span>
-        </button>
-        <a href="editor.html?id=new" class="btn btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Article
-        </a>
+        ${folderBtn}
+        ${readOnlyBadge}
+        ${newArticleBtn}
       </div>`;
   },
 

@@ -30,21 +30,21 @@
       <button class="btn btn-primary" onclick="doExport()">Download JSON Backup</button>
     </div>
 
-    <div class="data-section">
+    <div class="data-section ro-hide">
       <h2>Import Data</h2>
       <p>Load a previously exported JSON file. <strong style="color:var(--red);">Warning: this replaces all current data.</strong></p>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
       <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Choose File &amp; Import</button>
     </div>
 
-    <div class="data-section">
+    <div class="data-section ro-hide">
       <h2>Export Single Article</h2>
       <p>Export one article as a standalone JSON file.</p>
       <select id="export-single-select" class="editor-select" style="margin-bottom:12px;min-width:220px;"></select><br>
       <button class="btn btn-secondary" onclick="exportSingle()">Export Article</button>
     </div>
 
-    <div class="data-section" style="border-color:#e0b0b0;">
+    <div class="data-section ro-hide" style="border-color:#e0b0b0;">
       <h2 style="color:var(--red);">Clear All Data</h2>
       <p>Permanently delete all articles, categories, timelines, and events. This cannot be undone.</p>
       <button class="btn btn-danger" onclick="doClear()">Clear Everything</button>
@@ -63,6 +63,14 @@
 
   // Folder info panel
   const fi = document.getElementById('folder-info');
+  if (DB.isReadOnly) {
+    fi.innerHTML = `
+      <p>This is a <strong>read-only</strong> view hosted on GitHub Pages. Data is loaded directly from the repository.</p>
+      <p style="color:var(--text-muted);font-size:13px;">To edit content, clone the repository and run it locally with <code style="background:var(--bg);padding:1px 5px;border-radius:3px;border:1px solid var(--border);">python -m http.server 8000</code>.</p>`;
+    // Hide edit-only sections
+    document.querySelectorAll('.ro-hide').forEach(el => el.style.display = 'none');
+    return;
+  }
   if (DB.isConnected) {
     fi.innerHTML = `
       <p>Connected to folder: <strong>${escHtml(DB.folderName)}</strong></p>

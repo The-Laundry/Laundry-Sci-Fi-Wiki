@@ -176,6 +176,7 @@ let selectedCategoryId = null;
 // ── INIT ─────────────────────────────────────────────────────────
 (async () => {
   await DB.init();
+  if (DB.isReadOnly) { location.replace('index.html'); return; }
   UI.init({ activePage: '' });
   initQuill();
   initMiniToolbar();

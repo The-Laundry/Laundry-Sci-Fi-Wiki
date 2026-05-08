@@ -58,6 +58,7 @@ let dragState = null;
 
 (async () => {
   await DB.init();
+  if (DB.isReadOnly) { location.replace('index.html'); return; }
   UI.init({ activePage: 'articles' });
   renderManager();
   renderWbTemplateList();

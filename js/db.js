@@ -1,7 +1,8 @@
 // js/db.js
-// Data layer with two backends:
+// Data layer with three backends:
 //   1. File System Access API  — reads/writes real .json files in a chosen folder
-//   2. localStorage fallback   — used on GitHub Pages or when no folder is connected
+//   2. localStorage fallback   — used when no folder is connected
+//   3. Static fetch (read-only) — used on GitHub Pages; loads data/ files via fetch()
 
 'use strict';
 
@@ -16,19 +17,31 @@ const DB = {
   wikiboxTemplates: [],
   settings: { homeDesc: '', activeCalendar: 'hcc', importanceColors: {} },
 
-  // File system handles (null when using localStorage)
+  // File system handles (null when using localStorage or static)
   _dirHandle: null,
   _articlesHandle: null,
-  _mode: 'localStorage', // 'filesystem' | 'localStorage'
+  _mode: 'localStorage', // 'filesystem' | 'localStorage' | 'static'
+
+  // ── READ-ONLY DETECTION ──────────────────────────────────────────────
+
+  get isReadOnly() {
+    const h = window.location.hostname;
+    return h !== 'localhost' && h !== '127.0.0.1' && h !== '';
+  },
 
   // ── INITIALISATION ──────────────────────────────────────────────────
 
   async init() {
+    // GitHub Pages or any non-local host → static read-only mode
+    if (this.isReadOnly) {
+      await this._loadFromStatic();
+      return;
+    }
+
     // Try to restore a previously granted directory handle
     try {
       const stored = localStorage.getItem('eomt_dir_handle');
       if (stored) {
-        // IndexedDB stores the handle; we use localStorage as a flag only
         const handle = await this._restoreHandle();
         if (handle) {
           const perm = await handle.queryPermission({ mode: 'readwrite' });
@@ -42,6 +55,48 @@ const DB = {
 
     // Fallback: load from localStorage
     this._loadFromLocalStorage();
+  },
+
+  // ── STATIC FETCH BACKEND ─────────────────────────────────────────────
+
+  async _loadFromStatic() {
+    this._mode = 'static';
+
+    const fetchJson = async (path, fallback) => {
+      try {
+        const res = await fetch(path);
+        if (!res.ok) return fallback;
+        return await res.json();
+      } catch (e) { return fallback; }
+    };
+
+    // Determine base path (handles subdirectory deployments e.g. /repo-name/)
+    const base = window.location.pathname.replace(/\/[^/]*$/, '') + '/';
+
+    this.settings           = await fetchJson(base + 'data/settings.json',            { homeDesc: '', activeCalendar: 'hcc', importanceColors: {} });
+    this.categories         = await fetchJson(base + 'data/categories.json',          []);
+    this.timelines          = await fetchJson(base + 'data/timelines.json',           []);
+    this.events             = await fetchJson(base + 'data/events.json',              []);
+    this.eras               = await fetchJson(base + 'data/eras.json',                []);
+    this.timelineCategories = await fetchJson(base + 'data/timeline-categories.json', []);
+    this.wikiboxTemplates   = await fetchJson(base + 'data/wikibox-templates.json',   []);
+
+    // Load article index then individual article files
+    // First try a manifest, then fall back to the bulk export format
+    const artIndex = await fetchJson(base + 'data/articles/index.json', null);
+    if (artIndex && Array.isArray(artIndex)) {
+      // index.json lists all article IDs
+      const arts = await Promise.all(
+        artIndex.map(id => fetchJson(base + `data/articles/${id}.json`, null))
+      );
+      this.articles = arts.filter(Boolean);
+    } else {
+      // No index — try to load articles from the bulk backup if present
+      const bulk = await fetchJson(base + 'data/articles.json', null);
+      this.articles = bulk || [];
+    }
+
+    this._migrate();
   },
 
   // ── FOLDER CONNECTION ────────────────────────────────────────────────
@@ -80,6 +135,7 @@ const DB = {
   },
 
   get isConnected() { return this._mode === 'filesystem'; },
+  get isStatic()    { return this._mode === 'static'; },
   get folderName()  { return this._dirHandle?.name || null; },
 
   // ── HANDLE PERSISTENCE (IndexedDB) ──────────────────────────────────
@@ -215,6 +271,7 @@ const DB = {
   // ── SAVE ─────────────────────────────────────────────────────────────
 
   async save(changedArticleId = null) {
+    if (this._mode === 'static') return; // read-only on GitHub Pages
     if (this._mode === 'filesystem') {
       await this._saveToFilesystem(changedArticleId);
     } else {
@@ -245,6 +302,13 @@ const DB = {
         this._writeJson(this._articlesHandle, `${a.id}.json`, a)
       ));
     }
+
+    // Always keep index.json current so GitHub Pages can discover articles
+    await this._writeJson(
+      this._articlesHandle,
+      'index.json',
+      this.articles.map(a => a.id)
+    );
   },
 
   async deleteArticleFile(id) {

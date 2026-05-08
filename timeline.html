@@ -373,6 +373,7 @@ let _mmScrollBound = null; // remove old listener
   document.title = `${tl.name} — Encyclopedia of Many Things`;
   document.getElementById('tl-title-label').textContent = tl.name;
   document.getElementById('tl-cal-sel').value = DB.settings.activeCalendar || 'hcc';
+  if (DB.isReadOnly) { const eb = document.getElementById('tl-edit-btns'); if (eb) eb.style.display = 'none'; }
 
   const catSel = document.getElementById('tl-filter-cat');
   DB.timelineCategories.forEach(c => {

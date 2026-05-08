@@ -63,8 +63,8 @@
   await DB.init();
   UI.init({ activePage: 'home' });
 
-  // Show folder prompt if not connected
-  if (!DB.isConnected) {
+  // Show folder prompt if not connected (local only)
+  if (!DB.isReadOnly && !DB.isConnected) {
     document.getElementById('folder-prompt').style.display = 'block';
   }
 
@@ -75,8 +75,16 @@
 
   // Description
   const descEl = document.getElementById('home-desc-edit');
-  descEl.value = DB.settings.homeDesc || '';
-  descEl.oninput = async () => { DB.settings.homeDesc = descEl.value; await DB.save(); };
+  if (DB.isReadOnly) {
+    // Replace textarea with plain text
+    const p = document.createElement('p');
+    p.style.cssText = 'font-size:14.5px;color:var(--text-muted);line-height:1.7;';
+    p.textContent = DB.settings.homeDesc || '';
+    descEl.replaceWith(p);
+  } else {
+    descEl.value = DB.settings.homeDesc || '';
+    descEl.oninput = async () => { DB.settings.homeDesc = descEl.value; await DB.save(); };
+  }
 
   // Recent articles
   const sorted = [...DB.articles].sort((a, b) => (b.updated || 0) - (a.updated || 0)).slice(0, 8);
