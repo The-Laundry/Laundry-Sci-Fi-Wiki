@@ -67,14 +67,6 @@ const UI = {
           <span class="ai-spinner sm"></span>
           <span class="ai-busy-label" id="ai-busy-label">AI…</span>
         </span>
-        <button class="folder-status" id="folder-status-btn" onclick="UI.handleFolderClick()">
-          <span class="dot"></span>
-          <span id="folder-status-label">No folder</span>
-        </button>
-        <a href="editor.html?id=new" class="btn btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Article
-        </a>
       </div>`;
   },
 
