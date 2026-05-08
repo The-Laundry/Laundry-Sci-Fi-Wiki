@@ -101,7 +101,7 @@
     "id": "cat_1778228729951_xd42",
     "name": "Vehicles",
     "parentId": null,
-    "collapsed": true,
+    "collapsed": false,
     "_ddCollapsed": false
   },
   {
@@ -185,7 +185,7 @@
     "id": "cat_1778228914079_yvvg",
     "name": "Events",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
@@ -290,7 +290,7 @@
     "id": "cat_1778259247300_83a2",
     "name": "Equestrian",
     "parentId": "cat_1778228794993_62pj",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {

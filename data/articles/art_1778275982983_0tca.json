@@ -1,0 +1,18 @@
+{
+  "id": "art_1778275982983_0tca",
+  "title": "Argos-class Escort",
+  "content": "<p>Put the text here</p><h1><strong>Characteristics</strong></h1><h2><u>Dimensions</u></h2><p>aaa</p><h2><u>Crew and cargo</u></h2><p>aaa</p><h2><u>Power and propulsion systems</u></h2><p>aaa</p><h2><u>Weapons and armament</u></h2><p>aaa</p><h2><u>Armor and defense</u></h2><p>aaa</p><h1><strong>History</strong></h1><p>aaa</p><h1><strong>Notable vessels</strong></h1><ul><li><strong><em>ESS XXXXXX</em></strong>: aaaaaa.</li></ul><p><br></p>",
+  "categoryId": "cat_1778259255537_8o2s",
+  "tags": [],
+  "wikibox": {
+    "enabled": false,
+    "title": "",
+    "subtitle": "",
+    "image": null,
+    "imagePath": false,
+    "imgCaption": "",
+    "fields": []
+  },
+  "created": 1778275982983,
+  "updated": 1778275982983
+}
