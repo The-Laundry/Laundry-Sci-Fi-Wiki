@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ec_1778268785696_u9hl",
+    "name": "War",
+    "color": "#9f0500",
+    "defaultColor": "#9f0500"
+  },
+  {
+    "id": "ec_1778268807499_2lne",
+    "name": "Battle",
+    "color": "#d33115",
+    "defaultColor": "#d33115"
+  },
+  {
+    "id": "ec_1778268831069_urqg",
+    "name": "Military Occupation",
+    "color": "#f05c43",
+    "defaultColor": "#f05c43"
+  },
+  {
+    "id": "ec_1778268856866_7010",
+    "name": "Rebellion",
+    "color": "#ee6d3a",
+    "defaultColor": "#ee6d3a"
+  },
+  {
+    "id": "ec_1778268873273_clvr",
+    "name": "Diplomatic Action",
+    "color": "#006330",
+    "defaultColor": "#006330"
+  },
+  {
+    "id": "ec_1778268927387_38ij",
+    "name": "Magical Event",
+    "color": "#7d529f",
+    "defaultColor": "#7d529f"
+  }
+]

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editor — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<!-- Floating mini-toolbar for wikibox value formatting -->
+<div class="wb-mini-toolbar" id="wb-mini-toolbar">
+  <button class="wb-mini-btn" data-cmd="bold"      title="Bold (Ctrl+B)"><b>B</b></button>
+  <button class="wb-mini-btn" data-cmd="italic"    title="Italic (Ctrl+I)"><i>I</i></button>
+  <button class="wb-mini-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+  <div style="width:1px;background:rgba(255,255,255,.3);height:14px;margin:0 2px;"></div>
+  <button class="wb-mini-btn" data-cmd="br"        title="Line break (Shift+Enter)">↵</button>
+</div>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <div style="margin-bottom:24px;">
+      <div id="editor-mode-label" style="font-size:11px;color:var(--text-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;">New Article</div>
+      <input id="editor-title" type="text" class="editor-title-input" placeholder="Article title…">
+    </div>
+
+    <div class="editor-meta-row">
+      <!-- Custom category dropdown replaces the plain <select> -->
+      <div class="cat-dropdown-wrap" id="cat-dropdown-wrap" style="min-width:180px;flex-shrink:0;">
+        <div class="cat-dropdown-display" id="cat-dropdown-display" tabindex="0">
+          <span id="cat-dropdown-label">— No Category —</span>
+          <span class="cat-dd-arrow">▼</span>
+        </div>
+        <div class="cat-dropdown-menu" id="cat-dropdown-menu"></div>
+      </div>
+      <input id="editor-tags" type="text" class="editor-input" placeholder="Tags (comma-separated)" style="flex:1;">
+      <select id="editor-wikibox-template" class="editor-select" onchange="loadWikiboxTemplate()">
+        <option value="">— Wikibox Template —</option>
+        <option value="person">Person</option>
+        <option value="place">Place / Location</option>
+        <option value="faction">Faction / Organization</option>
+        <option value="species">Species / Creature</option>
+        <option value="technology">Technology / Object</option>
+        <option value="event">Historical Event</option>
+        <option value="custom">Custom (blank)</option>
+      </select>
+    </div>
+
+    <div class="editor-layout">
+      <div class="editor-main">
+        <div id="quill-editor"></div>
+      </div>
+      <div class="editor-side">
+
+        <!-- Wikibox -->
+        <div class="wb-panel">
+          <div class="wb-panel-head">
+            Wikibox
+            <label style="font-size:12px;font-weight:400;cursor:pointer;display:flex;align-items:center;gap:5px;">
+              <input type="checkbox" id="wikibox-enabled"> Enabled
+            </label>
+          </div>
+          <div class="wb-panel-body">
+
+            <!-- Title -->
+            <div class="field-row">
+              <div class="field-label">Title</div>
+              <input id="wb-title" type="text" class="field-input" placeholder="e.g. Character name">
+            </div>
+
+            <!-- Subtitle (optional, above image) -->
+            <div class="field-row">
+              <div class="field-label">Subtitle <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:10px;">(optional)</span></div>
+              <input id="wb-subtitle" type="text" class="field-input" placeholder="e.g. The Red Admiral">
+            </div>
+
+            <!-- Image -->
+            <div class="field-row">
+              <div class="field-label">Image</div>
+              <!-- Path-based option -->
+              <div style="display:flex;gap:6px;margin-bottom:6px;">
+                <input id="wb-img-path" type="text" class="field-input" placeholder="data/images/filename.jpg" style="font-size:12px;">
+                <button class="btn btn-secondary btn-sm" onclick="applyImgPath()" title="Use this path">Use</button>
+              </div>
+              <div style="font-size:11px;color:var(--text-faint);margin-bottom:6px;">or upload:</div>
+              <div class="upload-area" onclick="document.getElementById('wb-img-file').click()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 4px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Upload image
+              </div>
+              <input type="file" id="wb-img-file" accept="image/*" style="display:none" onchange="handleWbImage(event)">
+              <img id="wb-img-preview" class="img-preview">
+              <button id="wb-img-clear" class="btn btn-ghost btn-sm" style="display:none;margin-top:4px;" onclick="clearWbImage()">✕ Remove image</button>
+            </div>
+
+            <!-- Image caption (optional) -->
+            <div class="field-row">
+              <div class="field-label">Image Caption <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:10px;">(optional)</span></div>
+              <input id="wb-img-caption" type="text" class="field-input" placeholder="Caption below the image">
+            </div>
+
+            <!-- Fields / Sections -->
+            <div class="field-row">
+              <div class="field-label" style="display:flex;justify-content:space-between;align-items:center;gap:4px;">
+                <span>Fields</span>
+                <div style="display:flex;gap:4px;">
+                  <button class="btn btn-secondary btn-sm" onclick="addWikiboxSection()" title="Add a collapsible section header">+ Section</button>
+                  <button class="btn btn-secondary btn-sm" onclick="addWikiboxField()">+ Field</button>
+                </div>
+              </div>
+              <div id="wikibox-fields-list" class="wb-fields-list"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Insert image into article -->
+        <div class="wb-panel">
+          <div class="wb-panel-head">Insert Image</div>
+          <div class="wb-panel-body">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Upload &amp; insert at cursor position:</div>
+            <div class="upload-area" onclick="document.getElementById('article-img-file').click()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 4px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Upload &amp; insert
+            </div>
+            <input type="file" id="article-img-file" accept="image/*" style="display:none" onchange="insertArticleImage(event)">
+            <div style="font-size:11px;color:var(--text-faint);margin-top:6px;">Images saved in <code style="background:var(--bg);padding:1px 4px;border-radius:2px;border:1px solid var(--border);">data/images/</code></div>
+          </div>
+        </div>
+
+        <!-- Save / Cancel -->
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="saveArticle()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Article
+          </button>
+          <button class="btn btn-secondary" id="cancel-btn">Cancel</button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+// ── WIKIBOX TEMPLATES ────────────────────────────────────────────
+const WB_TEMPLATES = {
+  person:     [['Full Name',''],['Born',''],['Died',''],['Species',''],['Affiliation',''],['Role / Title',''],['Status','']],
+  place:      [['Type',''],['System / Region',''],['Population',''],['Government',''],['Founded',''],['Allegiance','']],
+  faction:    [['Type',''],['Founded',''],['Headquarters',''],['Leader',''],['Members',''],['Allegiance','']],
+  species:    [['Classification',''],['Home World',''],['Avg. Lifespan',''],['Notable Traits','']],
+  technology: [['Type',''],['Manufacturer',''],['Era',''],['Status',''],['Affiliation','']],
+  event:      [['Date',''],['Location',''],['Participants',''],['Outcome',''],['Significance','']],
+  custom:     [],
+};
+
+// ── STATE ────────────────────────────────────────────────────────
+let quillEditor  = null;
+let wbFields     = [];   // [{type:'field'|'section', key, val, collapsed?}]
+let wbImageData  = null; // base64 or path string
+let wbImageIsPath = false;
+let editingId    = null;
+let selectedCategoryId = null;
+
+// ── INIT ─────────────────────────────────────────────────────────
+(async () => {
+  await DB.init();
+  UI.init({ activePage: '' });
+  initQuill();
+  initMiniToolbar();
+
+  const params = new URLSearchParams(location.search);
+  editingId = params.get('id');
+  const prefillTitle = params.get('title') || '';
+
+  if (editingId && editingId !== 'new') {
+    const art = DB.articles.find(a => a.id === editingId);
+    if (art) {
+      document.title = `Editing: ${art.title || 'Untitled'} — Encyclopedia of Many Things`;
+      document.getElementById('editor-mode-label').textContent = `Editing: ${art.title || 'Untitled'}`;
+      document.getElementById('editor-title').value = art.title || '';
+      quillEditor.clipboard.dangerouslyPasteHTML(art.content || '');
+      document.getElementById('editor-tags').value = (art.tags || []).join(', ');
+      selectedCategoryId = art.categoryId || null;
+
+      const wb = art.wikibox || {};
+      document.getElementById('wikibox-enabled').checked = !!wb.enabled;
+      document.getElementById('wb-title').value    = wb.title    || '';
+      document.getElementById('wb-subtitle').value = wb.subtitle || '';
+      document.getElementById('wb-img-caption').value = wb.imgCaption || '';
+      wbFields = wb.fields ? JSON.parse(JSON.stringify(wb.fields)) : [];
+      // Migrate old plain-string fields to new schema
+      wbFields = wbFields.map(f => {
+        if (!f.type) f.type = 'field';
+        return f;
+      });
+      wbImageData   = wb.image   || null;
+      wbImageIsPath = wb.imagePath || false;
+      if (wbImageData) {
+        const prev = document.getElementById('wb-img-preview');
+        prev.src = wbImageIsPath ? wbImageData : wbImageData;
+        prev.style.display = 'block';
+        document.getElementById('wb-img-clear').style.display = 'inline-flex';
+        if (wbImageIsPath) document.getElementById('wb-img-path').value = wbImageData;
+      }
+      document.getElementById('cancel-btn').onclick = () => location.href = `article.html?id=${editingId}`;
+    }
+  } else {
+    editingId = null;
+    document.title = 'New Article — Encyclopedia of Many Things';
+    document.getElementById('editor-title').value = prefillTitle;
+    document.getElementById('cancel-btn').onclick = () => history.back();
+  }
+
+  buildCategoryDropdown(selectedCategoryId);
+  populateWbTemplateSelect();
+  renderWbFields();
+})();
+
+// ── QUILL INIT ───────────────────────────────────────────────────
+function initQuill() {
+  const Inline = Quill.import('blots/inline');
+  class Sup extends Inline {} Sup.blotName = 'superscript'; Sup.tagName = 'sup';
+  class Sub extends Inline {} Sub.blotName = 'subscript';   Sub.tagName = 'sub';
+  Quill.register(Sup); Quill.register(Sub);
+  const BlockEmbed = Quill.import('blots/block/embed');
+  class HR extends BlockEmbed {} HR.blotName = 'divider'; HR.tagName = 'hr';
+  Quill.register(HR);
+
+  quillEditor = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: 'Write your article here… Use [[Article Name]] for wikilinks.',
+    modules: {
+      toolbar: {
+        container: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ align: [] }],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          [{ indent: '-1' }, { indent: '+1' }],
+          ['blockquote', 'code-block'],
+          [{ script: 'super' }, { script: 'sub' }],
+          ['link'],
+          ['divider', 'clean'],
+        ],
+        handlers: {
+          divider() {
+            const r = this.quill.getSelection(true);
+            this.quill.insertEmbed(r.index, 'divider', true, 'user');
+            this.quill.setSelection(r.index + 1, 0, 'user');
+          },
+        },
+      },
+    },
+  });
+
+  setTimeout(() => {
+    const btn = document.querySelector('.ql-divider');
+    if (btn) { btn.title = 'Insert Horizontal Rule'; btn.innerHTML = '<span style="font-size:11px;font-weight:700;">HR</span>'; }
+  }, 0);
+
+  quillEditor.keyboard.addBinding({ key: 'Tab' }, function(range) {
+    this.quill.format('indent', '+1', 'user'); return false;
+  });
+  quillEditor.keyboard.addBinding({ key: 'Tab', shiftKey: true }, function(range) {
+    this.quill.format('indent', '-1', 'user'); return false;
+  });
+}
+
+// ── CUSTOM CATEGORY DROPDOWN ─────────────────────────────────────
+function buildCategoryDropdown(selectedId) {
+  selectedCategoryId = selectedId || null;
+  const display = document.getElementById('cat-dropdown-display');
+  const menu    = document.getElementById('cat-dropdown-menu');
+  const label   = document.getElementById('cat-dropdown-label');
+
+  const openDropdown  = () => { display.classList.add('open'); menu.classList.add('open'); };
+  const closeDropdown = () => { display.classList.remove('open'); menu.classList.remove('open'); };
+
+  const updateLabel = () => {
+    if (!selectedCategoryId) {
+      label.textContent = '— No Category —';
+      label.style.color = 'var(--text-faint)';
+    } else {
+      label.textContent = DB.getCatPath(selectedCategoryId) || DB.getCatName(selectedCategoryId);
+      label.style.color = 'var(--text)';
+    }
+  };
+  updateLabel();
+
+  const renderItems = (parentId, depth, container) => {
+    const cats = DB.categories
+      .filter(c => c.parentId === (parentId || null))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    cats.forEach(cat => {
+      const children = DB.categories.filter(c => c.parentId === cat.id);
+      const hasKids  = children.length > 0;
+      // Use a per-cat flag on the object; default open (false = not collapsed)
+      if (cat._ddCollapsed === undefined) cat._ddCollapsed = false;
+
+      const wrap = document.createElement('div');
+
+      // Child container declared first so the toggle closure can reference it
+      const childWrap = document.createElement('div');
+      childWrap.className = 'cat-dd-children' + (!cat._ddCollapsed ? ' open' : '');
+      if (hasKids) renderItems(cat.id, depth + 1, childWrap);
+
+      const row = document.createElement('div');
+      row.className = 'cat-dd-item' + (cat.id === selectedCategoryId ? ' selected' : '');
+      row.style.paddingLeft = (10 + depth * 16) + 'px';
+
+      const tog = document.createElement('span');
+      tog.className = 'cat-dd-toggle' + (hasKids ? (!cat._ddCollapsed ? ' open' : '') : ' leaf');
+      tog.textContent = hasKids ? '▶' : '';
+      if (hasKids) {
+        tog.onclick = e => {
+          e.stopPropagation();
+          cat._ddCollapsed = !cat._ddCollapsed;
+          tog.classList.toggle('open', !cat._ddCollapsed);
+          childWrap.classList.toggle('open', !cat._ddCollapsed);
+        };
+      }
+
+      const icon = document.createElement('span');
+      icon.textContent = '📁';
+      icon.style.cssText = 'font-size:12px;margin-right:4px;flex-shrink:0;';
+
+      const nameEl = document.createElement('span');
+      nameEl.textContent = cat.name;
+      nameEl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+
+      row.appendChild(tog);
+      row.appendChild(icon);
+      row.appendChild(nameEl);
+      row.onclick = () => {
+        selectedCategoryId = cat.id;
+        updateLabel();
+        menu.querySelectorAll('.cat-dd-item').forEach(el => el.classList.remove('selected'));
+        row.classList.add('selected');
+        closeDropdown();
+      };
+
+      wrap.appendChild(row);
+      wrap.appendChild(childWrap);
+      container.appendChild(wrap);
+    });
+  };
+
+  menu.innerHTML = '';
+
+  // "No category" option
+  const noneItem = document.createElement('div');
+  noneItem.className = 'cat-dd-item cat-dd-none' + (!selectedCategoryId ? ' selected' : '');
+  noneItem.style.paddingLeft = '10px';
+  noneItem.textContent = '— No Category —';
+  noneItem.onclick = () => {
+    selectedCategoryId = null;
+    updateLabel();
+    menu.querySelectorAll('.cat-dd-item').forEach(el => el.classList.remove('selected'));
+    noneItem.classList.add('selected');
+    closeDropdown();
+  };
+  menu.appendChild(noneItem);
+  renderItems(null, 0, menu);
+
+  display.onclick = e => {
+    e.stopPropagation();
+    display.classList.contains('open') ? closeDropdown() : openDropdown();
+  };
+  display.onkeydown = e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      display.classList.contains('open') ? closeDropdown() : openDropdown();
+    }
+    if (e.key === 'Escape') closeDropdown();
+  };
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('cat-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('cat-dropdown-display')?.classList.remove('open');
+    document.getElementById('cat-dropdown-menu')?.classList.remove('open');
+  }
+});
+
+// ── WIKIBOX TEMPLATE SELECT ──────────────────────────────────────
+function populateWbTemplateSelect() {
+  const sel = document.getElementById('editor-wikibox-template');
+  [...sel.options].filter(o => o.dataset.custom).forEach(o => o.remove());
+  if (DB.wikiboxTemplates.length) {
+    const div = document.createElement('option'); div.disabled = true;
+    div.textContent = '── Custom Templates ──'; div.dataset.custom = '1'; sel.appendChild(div);
+    DB.wikiboxTemplates.forEach(t => {
+      const o = document.createElement('option'); o.value = 'custom_' + t.id;
+      o.textContent = t.name; o.dataset.custom = '1'; sel.appendChild(o);
+    });
+  }
+}
+
+function loadWikiboxTemplate() {
+  const val = document.getElementById('editor-wikibox-template').value;
+  if (!val) return;
+  if (val.startsWith('custom_')) {
+    const t = DB.wikiboxTemplates.find(t => t.id === val.slice(7));
+    if (t) wbFields = t.fields.map(f => ({ type: f.type || 'field', key: f.key, val: '' }));
+  } else if (WB_TEMPLATES[val]) {
+    wbFields = WB_TEMPLATES[val].map(([k, v]) => ({ type: 'field', key: k, val: v }));
+  }
+  document.getElementById('wikibox-enabled').checked = true;
+  renderWbFields();
+}
+
+// ── WIKIBOX FIELDS ───────────────────────────────────────────────
+function addWikiboxField()   { wbFields.push({ type: 'field',   key: '', val: '' }); renderWbFields(); }
+function addWikiboxSection() { wbFields.push({ type: 'section', key: 'Section', collapsed: false }); renderWbFields(); }
+function removeWbField(i)    { wbFields.splice(i, 1); renderWbFields(); }
+
+let _wbDragIdx = null;
+
+function renderWbFields() {
+  const list = document.getElementById('wikibox-fields-list');
+  // Sync open value editors using data-idx (not forEach position — they may be reordered)
+  list.querySelectorAll('.wb-value-editor').forEach((el) => {
+    const idx = parseInt(el.dataset.idx);
+    if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
+  });
+  list.innerHTML = '';
+
+  wbFields.forEach((f, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.draggable = true;
+    wrapper.dataset.idx = i;
+    wrapper.style.cssText = 'display:flex;align-items:flex-start;gap:4px;margin-bottom:4px;';
+    // Drag handle
+    const handle = document.createElement('div');
+    handle.textContent = '⠿';
+    handle.title = 'Drag to reorder';
+    handle.style.cssText = 'cursor:grab;color:var(--text-faint);font-size:14px;padding:6px 2px;flex-shrink:0;user-select:none;';
+    wrapper.appendChild(handle);
+
+    wrapper.ondragstart = e => {
+      // Flush any active contenteditable immediately before drag begins
+      if (_activeValueEl && _activeValueIdx >= 0) {
+        wbFields[_activeValueIdx].val = _activeValueEl.innerHTML;
+        _activeValueEl = null; _activeValueIdx = -1;
+      }
+      // Also sync all visible value editors synchronously
+      document.querySelectorAll('.wb-value-editor').forEach(el => {
+        const idx = parseInt(el.dataset.idx);
+        if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
+      });
+      _wbDragIdx = i; e.dataTransfer.effectAllowed = 'move'; wrapper.style.opacity = '.4';
+    };
+    wrapper.ondragend   = () => { wrapper.style.opacity = '1'; _wbDragIdx = null; };
+    wrapper.ondragover  = e => { e.preventDefault(); wrapper.style.background = 'var(--accent-light)'; };
+    wrapper.ondragleave = () => { wrapper.style.background = ''; };
+    wrapper.ondrop      = e => {
+      e.preventDefault(); wrapper.style.background = '';
+      if (_wbDragIdx === null || _wbDragIdx === i) return;
+      const moved = wbFields.splice(_wbDragIdx, 1)[0];
+      wbFields.splice(i, 0, moved);
+      renderWbFields();
+    };
+
+    if (f.type === 'section') {
+      const row = document.createElement('div');
+      row.className = 'wb-section-row';
+      row.style.flex = '1';
+      row.innerHTML = `
+        <input type="text" value="${escHtml(f.key || 'Section')}" placeholder="Section name"
+          oninput="wbFields[${i}].key=this.value">
+        <button class="wb-del-btn" onclick="removeWbField(${i})" title="Remove section">✕</button>`;
+      wrapper.appendChild(row);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'wb-field-row';
+      row.style.flex = '1';
+      row.innerHTML = `
+        <div class="wb-field-row-inner">
+          <input type="text" class="field-input" placeholder="Label" style="font-size:12px;padding:4px 7px;"
+            value="${escHtml(f.key || '')}" oninput="wbFields[${i}].key=this.value">
+          <div class="wb-value-editor" contenteditable="true"
+            data-placeholder="Value…" data-idx="${i}"
+            onfocus="onValueFocus(this,${i})"
+            onblur="onValueBlur(this,${i})"
+            onkeydown="onValueKeydown(event,this,${i})"
+          >${f.val || ''}</div>
+        </div>
+        <button class="wb-del-btn" onclick="removeWbField(${i})" title="Remove field">✕</button>`;
+      wrapper.appendChild(row);
+    }
+    list.appendChild(wrapper);
+  });
+}
+
+// ── WIKIBOX VALUE RICH-TEXT ──────────────────────────────────────
+let _activeValueEl = null;
+let _activeValueIdx = -1;
+let _savedSelection = null;
+
+function onValueFocus(el, idx) {
+  _activeValueEl  = el;
+  _activeValueIdx = idx;
+}
+function onValueBlur(el, idx) {
+  // If a drag is in progress, the ondragstart already flushed values — skip the delayed save
+  setTimeout(() => {
+    if (_wbDragIdx !== null) return;
+    if (!document.getElementById('wb-mini-toolbar').matches(':hover')) {
+      wbFields[idx].val = el.innerHTML;
+      _activeValueEl = null;
+    }
+  }, 100);
+}
+function onValueKeydown(e, el, idx) {
+  if (e.key === 'b' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('bold');      wbFields[idx].val = el.innerHTML; }
+  if (e.key === 'i' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('italic');    wbFields[idx].val = el.innerHTML; }
+  if (e.key === 'u' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('underline'); wbFields[idx].val = el.innerHTML; }
+  if (e.key === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    document.execCommand('insertHTML', false, '<br>');
+    wbFields[idx].val = el.innerHTML;
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault(); // Don't create new paragraphs inside field value
+  }
+}
+
+function initMiniToolbar() {
+  const tb = document.getElementById('wb-mini-toolbar');
+  tb.querySelectorAll('.wb-mini-btn').forEach(btn => {
+    btn.onmousedown = e => {
+      e.preventDefault(); // Don't steal focus from contenteditable
+      const cmd = btn.dataset.cmd;
+      if (_activeValueEl) {
+        _activeValueEl.focus();
+        if (cmd === 'br') {
+          document.execCommand('insertHTML', false, '<br>');
+        } else {
+          document.execCommand(cmd);
+        }
+        if (_activeValueIdx >= 0) wbFields[_activeValueIdx].val = _activeValueEl.innerHTML;
+      }
+    };
+  });
+
+  // Show toolbar near focused value editor
+  document.addEventListener('selectionchange', () => {
+    if (!_activeValueEl) { hideMiniToolbar(); return; }
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !_activeValueEl.contains(sel.anchorNode)) {
+      hideMiniToolbar(); return;
+    }
+    const range = sel.getRangeAt(0);
+    const rect  = range.getBoundingClientRect();
+    if (!rect.width) { hideMiniToolbar(); return; }
+    tb.style.left = Math.max(0, rect.left + window.scrollX - 4) + 'px';
+    tb.style.top  = rect.top + window.scrollY - 38 + 'px';
+    tb.classList.add('visible');
+  });
+}
+
+function hideMiniToolbar() {
+  document.getElementById('wb-mini-toolbar').classList.remove('visible');
+}
+
+// ── IMAGE HANDLING ───────────────────────────────────────────────
+function applyImgPath() {
+  const path = document.getElementById('wb-img-path').value.trim();
+  if (!path) return;
+  wbImageData   = path;
+  wbImageIsPath = true;
+  const prev = document.getElementById('wb-img-preview');
+  prev.src = path; prev.style.display = 'block';
+  document.getElementById('wb-img-clear').style.display = 'inline-flex';
+}
+function handleWbImage(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    wbImageData   = ev.target.result;
+    wbImageIsPath = false;
+    const prev = document.getElementById('wb-img-preview');
+    prev.src = wbImageData; prev.style.display = 'block';
+    document.getElementById('wb-img-clear').style.display = 'inline-flex';
+    document.getElementById('wb-img-path').value = '';
+  };
+  r.readAsDataURL(file);
+}
+function clearWbImage() {
+  wbImageData   = null;
+  wbImageIsPath = false;
+  document.getElementById('wb-img-preview').style.display = 'none';
+  document.getElementById('wb-img-clear').style.display  = 'none';
+  document.getElementById('wb-img-file').value  = '';
+  document.getElementById('wb-img-path').value  = '';
+}
+function insertArticleImage(e) {
+  const file = e.target.files[0]; if (!file || !quillEditor) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    const range = quillEditor.getSelection(true);
+    quillEditor.insertEmbed(range.index, 'image', ev.target.result);
+    quillEditor.setSelection(range.index + 1);
+    UI.toast('Image inserted.');
+  };
+  r.readAsDataURL(file);
+}
+
+// ── SAVE ─────────────────────────────────────────────────────────
+async function saveArticle() {
+  const title = document.getElementById('editor-title').value.trim();
+  if (!title) { UI.toast('Please enter a title.'); return; }
+
+  // Sync any open value editors
+  document.querySelectorAll('.wb-value-editor').forEach(el => {
+    const idx = parseInt(el.dataset.idx);
+    if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
+  });
+
+  const content    = quillEditor.root.innerHTML;
+  const categoryId = selectedCategoryId || null;
+  const tags       = document.getElementById('editor-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const wikibox    = {
+    enabled:    document.getElementById('wikibox-enabled').checked,
+    title:      document.getElementById('wb-title').value.trim(),
+    subtitle:   document.getElementById('wb-subtitle').value.trim(),
+    image:      wbImageData,
+    imagePath:  wbImageIsPath,
+    imgCaption: document.getElementById('wb-img-caption').value.trim(),
+    fields:     wbFields.filter(f => f.type === 'section' || f.key || f.val),
+  };
+  const now = Date.now();
+
+  if (editingId) {
+    const art = DB.articles.find(a => a.id === editingId);
+    Object.assign(art, { title, content, categoryId, tags, wikibox, updated: now });
+    await DB.save(editingId);
+    UI.toast('Article saved.');
+    location.href = `article.html?id=${editingId}`;
+  } else {
+    const id = mkId('art');
+    DB.articles.push({ id, title, content, categoryId, tags, wikibox, created: now, updated: now });
+    await DB.save(id);
+    UI.toast('Article created.');
+    location.href = `article.html?id=${id}`;
+  }
+}
+</script>
+</body>
+</html>

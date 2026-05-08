@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+/* ── TIMELINE PAGE: override #main, go full-page ── */
+:root {
+  --tl-toolbar-h: 52px;
+  --tl-nav-h:     48px;
+  --tl-detail-w:  280px;
+  --tl-toggle-w:  22px;
+  --tl-mini-w:    64px;
+  --tl-top:       calc(var(--header-h) + var(--tl-toolbar-h));
+  --spine-w:      8px;
+}
+#main {
+  padding: 0 !important;
+  max-width: none !important;
+  /* left cleared by sidebar margin in main.css */
+}
+/* Track outer – sits in document flow, margins avoid fixed panels */
+#tl-track-outer {
+  margin-left:  calc(var(--tl-detail-w) + var(--tl-toggle-w));
+  margin-right: var(--tl-mini-w);
+  padding-top:  var(--tl-toolbar-h);
+  padding-bottom: calc(var(--tl-nav-h) + 48px);
+  transition: margin-left .2s;
+}
+#tl-track-outer.collapsed { margin-left: var(--tl-toggle-w); }
+/* Track expands when panel hidden */
+#tl-track { position: relative; min-height: 600px; }
+
+/* ── FIXED: TOOLBAR ── */
+#tl-toolbar {
+  position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0;
+  height: var(--tl-toolbar-h); z-index: 85;
+  background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 12px; gap: 8px;
+  overflow: hidden;
+}
+.tl-toolbar-title {
+  font-family: var(--font-display); font-size: 15px; font-weight: 600;
+  color: var(--text); flex-shrink: 0; white-space: nowrap;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+}
+.tl-toolbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+/* ── FIXED: DETAIL PANEL ── */
+#tl-detail-panel {
+  position: fixed; top: var(--tl-top); left: var(--sidebar-w);
+  width: var(--tl-detail-w); bottom: var(--tl-nav-h);
+  background: #fff; border-right: 1px solid var(--border);
+  z-index: 72; display: flex; flex-direction: column;
+  transition: opacity .2s, visibility .2s;
+  opacity: 1; visibility: visible;
+}
+/* Collapsed: hidden in place — never slides over the sidebar */
+#tl-detail-panel.collapsed { opacity: 0; visibility: hidden; pointer-events: none; }
+
+#tl-panel-toggle {
+  position: fixed; top: var(--tl-top); bottom: var(--tl-nav-h);
+  left: calc(var(--sidebar-w) + var(--tl-detail-w));
+  width: var(--tl-toggle-w);
+  background: var(--bg-sidebar); border: none; border-right: 1px solid var(--border);
+  cursor: pointer; z-index: 73;
+  font-family: var(--font-body); font-size: 8.5px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--text-faint);
+  writing-mode: vertical-lr; display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s, left .2s;
+}
+#tl-panel-toggle:hover { background: var(--accent-light); color: var(--accent); }
+/* Collapsed: toggle snaps flush to sidebar right edge */
+#tl-panel-toggle.collapsed { left: var(--sidebar-w); }
+
+/* Detail panel interior */
+.tl-dp-head {
+  padding: 10px 14px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.tl-dp-head button {
+  border: none; background: none; cursor: pointer;
+  color: var(--text-faint); font-size: 14px; padding: 2px; line-height: 1;
+  transition: color .12s;
+}
+.tl-dp-head button:hover { color: var(--text); }
+.tl-dp-body { padding: 16px; overflow-y: auto; flex: 1; }
+.tl-dp-placeholder {
+  color: var(--text-faint); font-size: 13px; text-align: center;
+  padding: 56px 16px; line-height: 1.7;
+}
+.tl-dp-title { font-family: var(--font-display); font-size: 19px; color: var(--text); line-height: 1.3; margin-bottom: 6px; }
+.tl-dp-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border-light); }
+.tl-dp-imp { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.tl-dp-cat { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.tl-dp-section { margin-bottom: 16px; }
+.tl-dp-section-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 5px; }
+.tl-dp-date { font-size: 15px; font-weight: 700; color: var(--text); }
+.tl-dp-date-secondary { font-size: 11.5px; color: var(--text-faint); margin-top: 1px; }
+.tl-dp-desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.7; }
+.tl-dp-footer { padding: 12px 16px; border-top: 1px solid var(--border-light); flex-shrink: 0; }
+
+/* ── FIXED: MINIMAP ── */
+#tl-minimap {
+  position: fixed; top: var(--tl-top); right: 0; bottom: var(--tl-nav-h);
+  width: var(--tl-mini-w); background: #fff; border-left: 1px solid var(--border);
+  z-index: 75; overflow: hidden; cursor: pointer; user-select: none;
+}
+#tl-minimap-inner { position: relative; width: 100%; height: 100%; }
+.tl-mm-era { position: absolute; left: 0; right: 0; opacity: .55; }
+.tl-mm-snap { position: absolute; left: 0; right: 0; border: none; cursor: pointer; font-size: 7.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #fff; text-align: left; padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-mm-snap:hover { filter: brightness(1.15); }
+.tl-mm-viewport { position: absolute; left: 0; right: 0; background: rgba(58,110,168,.15); border: 1px solid rgba(58,110,168,.4); pointer-events: none; }
+
+/* ── FIXED: NAV BAR ── */
+#tl-nav-bar {
+  position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; height: var(--tl-nav-h);
+  background: rgba(255,255,255,.97); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; gap: 14px; z-index: 85;
+}
+.tl-nav-btn {
+  border: 1px solid var(--border); background: var(--bg-card); border-radius: var(--radius);
+  padding: 6px 18px; font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  cursor: pointer; color: var(--text); display: flex; align-items: center; gap: 5px;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.tl-nav-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.tl-nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+.tl-nav-year {
+  font-variant-numeric: tabular-nums; font-size: 13.5px; font-weight: 600;
+  color: var(--text); min-width: 180px; text-align: center;
+  background: var(--bg-sidebar); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px 14px;
+}
+
+/* ── TRACK ELEMENTS ── */
+/* Spine */
+.tl-spine-base {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: 0; width: var(--spine-w); background: #c8cbd0; z-index: 1;
+}
+.tl-spine-era {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: var(--spine-w); z-index: 2;
+}
+/* Era background tint */
+.tl-era-band { position: absolute; left: 0; right: 0; opacity: .1; pointer-events: none; z-index: 0; }
+/* Era label */
+.tl-era-label {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,.96); border: 2px solid currentColor;
+  border-radius: var(--radius); padding: 7px 18px 6px;
+  z-index: 6; cursor: pointer; text-align: center; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1); transition: box-shadow .15s;
+}
+.tl-era-label:hover { box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+.tl-era-label-name { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; display: block; }
+.tl-era-label-dates { font-size: 10px; opacity: .7; display: block; margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* Year marker */
+.tl-year-marker {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 2px 8px; font-size: 10.5px; font-weight: 600; color: var(--text-muted);
+  white-space: nowrap; z-index: 4; pointer-events: none;
+}
+/* Duration line */
+.tl-dur-line {
+  position: absolute;
+  width: 6px; border-radius: 3px; z-index: 3; opacity: .85;
+}
+/* Zone wrapper — 5 equal columns, each 20% of track width */
+.tl-zone {
+  position: absolute; top: 0;
+  transform: translateY(-50%);
+  z-index: 5; box-sizing: border-box;
+  /* Each zone gets padding so cards don't touch zone boundaries */
+}
+.tl-zone-1 { left: 0%;  width: 20%; padding: 0 6px 0 4px; }
+.tl-zone-2 { left: 20%; width: 20%; padding: 0 6px 0 5px; }
+.tl-zone-3 { left: 40%; width: 20%; padding: 0 6px; }
+.tl-zone-4 { left: 60%; width: 20%; padding: 0 5px 0 6px; }
+.tl-zone-5 { left: 80%; width: 20%; padding: 0 4px 0 6px; }
+
+/* Card fills its zone completely */
+.tl-col-card {
+  width: 100%; box-sizing: border-box;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 9px 5px 8px;
+  display: flex; align-items: flex-start; gap: 6px;
+  cursor: pointer; pointer-events: all;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+  transition: border-color .15s, background .15s, box-shadow .15s;
+  /* Left/right columns have accent border on the spine-facing side */
+  border-left-width: 3px;
+}
+.tl-col-card.right-col { border-left-width: 1px; border-right-width: 3px; }
+.tl-col-card:hover, .tl-col-card.active {
+  background: var(--accent-light);
+  box-shadow: 0 2px 10px rgba(58,110,168,.15);
+}
+/* Center column (zone 3) — stacked, centered */
+.tl-col-card.center {
+  flex-direction: column; align-items: center; gap: 3px;
+  padding: 6px 8px; text-align: center;
+  border-left-width: 1px; border-top-width: 3px;
+}
+/* Text wraps, cards grow vertically */
+.tl-card-title { font-weight: 600; font-size: 12px; color: var(--text); line-height: 1.35; word-break: break-word; }
+.tl-card-date  { font-size: 10px; color: var(--text-faint); margin-top: 1px; font-variant-numeric: tabular-nums; }
+.tl-card-date-custom { font-size: 10.5px; font-weight: 600; }
+.tl-card-date-sec    { font-size: 9px; color: var(--text-faint); }
+
+/* ── COLOR PICKER ── */
+#g-cp {
+  display: none; position: fixed; background: #fff;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0,0,0,.16); padding: 12px; width: 226px; z-index: 9999;
+}
+#g-cp.open { display: block; }
+.cp-prev    { width: 100%; height: 24px; border-radius: 3px; border: 1px solid var(--border); margin-bottom: 9px; }
+.cp-grid    { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 10px; }
+.cp-swatch  { width: 22px; height: 22px; border-radius: 3px; cursor: pointer; border: 2px solid transparent; transition: transform .1s; }
+.cp-swatch:hover  { transform: scale(1.15); }
+.cp-swatch.sel    { border-color: var(--text); }
+.cp-inputs  { display: flex; flex-direction: column; gap: 6px; }
+.cp-row     { display: flex; align-items: center; gap: 6px; }
+.cp-row label { font-size: 11px; font-weight: 600; color: var(--text-muted); width: 26px; flex-shrink: 0; }
+.cp-row input { flex: 1; padding: 4px 6px; border: 1px solid var(--border); border-radius: 3px; font-family: var(--font-mono); font-size: 12px; outline: none; }
+.cp-row input:focus { border-color: var(--accent); }
+
+/* ── NOT FOUND ── */
+#tl-not-found { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+</style>
+</head>
+<body>
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+
+  <!-- FIXED: Toolbar -->
+  <div id="tl-toolbar">
+    <span class="tl-toolbar-title" id="tl-title-label">Timeline</span>
+    <div class="tl-toolbar-sep"></div>
+    <label style="font-size:11.5px;color:var(--text-muted);font-weight:500;flex-shrink:0;">Cal:</label>
+    <select id="tl-cal-sel" class="tl-cal-select" onchange="onCalChange()" style="flex-shrink:0;">
+      <option value="hcc">Human Common Calendar (BCE/CE)</option>
+      <option value="brf">Republic Foundational Reference (BRF/PRF)</option>
+      <option value="cyp">Equestrian Lunar Banishment (BLB/CYP)</option>
+      <option value="et">Tzenki Imperial Epoch (BET/ET)</option>
+      <option value="sa">Preserver Activation Chronometer (BA/SA)</option>
+    </select>
+    <div class="tl-toolbar-sep"></div>
+    <input id="tl-filter-text" type="text" class="editor-input" placeholder="Search…" style="font-size:12px;padding:4px 8px;width:110px;flex-shrink:0;" oninput="renderTL()">
+    <select id="tl-filter-cat" class="tl-cal-select" style="flex-shrink:0;" onchange="renderTL()"><option value="">All categories</option></select>
+    <select id="tl-filter-imp" class="tl-cal-select" style="flex-shrink:0;" onchange="renderTL()">
+      <option value="">All importance</option>
+      <option value="insignificant">Insig.+</option>
+      <option value="trivial">Trivial+</option>
+      <option value="minor">Minor+</option>
+      <option value="notable">Notable+</option>
+      <option value="major">Major+</option>
+      <option value="milestone">Milestone only</option>
+    </select>
+    <div style="flex:1;"></div>
+    <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" onclick="location.href='timeline-manager.html'">⚙ Edit</button>
+    <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" onclick="openEraModal(null)">+ Era</button>
+    <button class="btn btn-primary btn-sm"   style="flex-shrink:0;" onclick="openEventModal(null)">+ Event</button>
+  </div>
+
+  <!-- FIXED: Detail panel -->
+  <div id="tl-detail-panel">
+    <div class="tl-dp-head">
+      Event Details
+      <button onclick="togglePanel()" title="Collapse">◀</button>
+    </div>
+    <div class="tl-dp-body" id="tl-dp-body">
+      <div class="tl-dp-placeholder">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 10px;display:block;color:var(--border);"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+        Click any event on the timeline to view its full details here.
+      </div>
+    </div>
+    <div class="tl-dp-footer" id="tl-dp-footer" style="display:none;"></div>
+  </div>
+  <button id="tl-panel-toggle" onclick="togglePanel()">Details</button>
+
+  <!-- MAIN: track in document flow -->
+  <main id="main">
+    <div id="tl-track-outer">
+      <div id="tl-track"></div>
+    </div>
+  </main>
+
+  <!-- FIXED: Minimap -->
+  <div id="tl-minimap"><div id="tl-minimap-inner"></div></div>
+
+  <!-- FIXED: Nav bar -->
+  <div id="tl-nav-bar" style="display:none;">
+    <button class="tl-nav-btn" id="tl-nav-prev" onclick="navEvent(-1)">◀ Prev</button>
+    <div class="tl-nav-year" id="tl-nav-year">—</div>
+    <button class="tl-nav-btn" id="tl-nav-next" onclick="navEvent(1)">Next ▶</button>
+  </div>
+
+  <div id="tl-not-found">
+    <div class="empty-state">Timeline not found.<br><a href="timeline-manager.html" class="btn btn-secondary" style="margin-top:16px;display:inline-flex;">← Timelines</a></div>
+  </div>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+// ══════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════
+const IMP_ORDER   = ['insignificant','trivial','minor','notable','major','milestone'];
+const IMP_LABELS  = {insignificant:'Insignificant',trivial:'Trivial',minor:'Minor',notable:'Notable',major:'Major',milestone:'Milestone'};
+const IMP_DEFS    = {insignificant:'#9e9e9e',trivial:'#78909c',minor:'#26a69a',notable:'#3a6ea8',major:'#7b4ea8',milestone:'#c07020'};
+const ERA_SW      = ['#3a6ea8','#a84e6e','#4ea87b','#7b4ea8','#a87b4e','#4e8ea8','#a84e4e','#6ea84e','#c07020','#20a090','#e05050','#50a0e0','#a0a020','#e08020'];
+const CP_SW       = [...ERA_SW,'#9e9e9e','#78909c','#26a69a','#ffffff','#888888','#333333','#000000'];
+
+function getImpColor(imp){ return (DB.settings.importanceColors||{})[imp] || IMP_DEFS[imp] || '#3a6ea8'; }
+
+function impSVG(imp, color, sz=14){
+  const s={
+    insignificant:`<circle cx="8" cy="8" r="3.8" fill="${color}"/>`,
+    trivial:`<circle cx="8" cy="8" r="5.5" fill="${color}"/>`,
+    minor:`<rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="${color}"/>`,
+    notable:`<polygon points="8,1.5 14.5,14.5 1.5,14.5" fill="${color}"/>`,
+    major:`<polygon points="8,1 10.2,6.2 16,6.8 11.8,10.5 13.1,16 8,13 2.9,16 4.2,10.5 0,6.8 5.8,6.2" fill="${color}"/>`,
+    milestone:`<path d="M8,1 L9.9,6.2 L15.5,6.2 L11,9.5 L12.8,14.8 L8,11.5 L3.2,14.8 L5,9.5 L0.5,6.2 L6.1,6.2 Z" fill="${color}"/>`,
+  };
+  return `<svg width="${sz}" height="${sz}" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" style="display:block;">${s[imp]||s.notable}</svg>`;
+}
+function iconSz(imp){ return {insignificant:9,trivial:12,minor:14,notable:16,major:18,milestone:21}[imp]||14; }
+
+// ══════════════════════════════
+//  STATE
+// ══════════════════════════════
+let currentTlId    = null;
+let selectedEvId   = null;
+let panelOpen      = true;
+let sortedEvs      = [];
+let _bd            = null; // cached build-days params
+let _mmScrollBound = null; // remove old listener
+
+// ══════════════════════════════
+//  INIT
+// ══════════════════════════════
+(async () => {
+  await DB.init();
+  UI.init({ activePage: 'timelines' });
+
+  const params = new URLSearchParams(location.search);
+  currentTlId  = params.get('id');
+  const tl     = DB.timelines.find(t => t.id === currentTlId);
+
+  if (!tl) {
+    ['tl-toolbar','tl-detail-panel','tl-panel-toggle','tl-minimap','tl-nav-bar'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+    document.getElementById('tl-not-found').style.display = 'block';
+    return;
+  }
+
+  document.title = `${tl.name} — Encyclopedia of Many Things`;
+  document.getElementById('tl-title-label').textContent = tl.name;
+  document.getElementById('tl-cal-sel').value = DB.settings.activeCalendar || 'hcc';
+
+  const catSel = document.getElementById('tl-filter-cat');
+  DB.timelineCategories.forEach(c => {
+    const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; catSel.appendChild(o);
+  });
+
+  window.addEventListener('scroll', () => { updateNavYear(); updateMmVP(); }, { passive: true });
+  renderTL();
+})();
+
+// ══════════════════════════════
+//  PANEL TOGGLE
+// ══════════════════════════════
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('tl-detail-panel').classList.toggle('collapsed', !panelOpen);
+  document.getElementById('tl-panel-toggle').classList.toggle('collapsed', !panelOpen);
+  document.getElementById('tl-track-outer').classList.toggle('collapsed', !panelOpen);
+}
+
+// ══════════════════════════════
+//  CALENDAR
+// ══════════════════════════════
+function onCalChange() {
+  DB.settings.activeCalendar = document.getElementById('tl-cal-sel').value;
+  DB.save();
+  renderTL();
+}
+
+// ══════════════════════════════
+//  COLOR RESOLVER
+//  event.customColor → category.defaultColor → importanceColor
+// ══════════════════════════════
+function resolveEvColor(ev) {
+  if (ev.customColor) return ev.customColor;
+  const cat = DB.timelineCategories.find(c => c.id === ev.eventCategoryId);
+  if (cat?.defaultColor) return cat.defaultColor;
+  return getImpColor(ev.importance || 'notable');
+}
+
+// ══════════════════════════════
+//  ERA CUSTOM CALENDAR
+// ══════════════════════════════
+function getEraForEv(ev) {
+  if (!ev || ev.year == null) return null;
+  return DB.eras.find(e =>
+    e.timelineId === currentTlId && e.customCalAbbrev &&
+    ev.year >= e.startYear && ev.year <= e.endYear
+  ) || null;
+}
+
+function customEraYear(ceYear, era) {
+  const hasYZ = era.hasYearZero !== false; // default true
+  const bwd   = era.countsBackward === true;
+  let y;
+  if (bwd) {
+    // Backwards: the offset CE year = year 1 (the "end" anchor).
+    // For backwards calendars, offset defaults to era.endYear so that
+    // the era's last CE year = year 1 and earlier years count upward.
+    const offset = era.customCalOffset != null ? era.customCalOffset : era.endYear;
+    y = offset - ceYear;
+    if (!hasYZ) y += 1; // no year 0: shift everything up by 1
+  } else {
+    // Forwards: offset CE year = year 1. Defaults to era.startYear.
+    const offset = era.customCalOffset != null ? era.customCalOffset : era.startYear;
+    y = ceYear - offset;
+    if (!hasYZ) y += (ceYear >= offset ? 1 : 0); // skip year 0
+  }
+  return y;
+}
+
+function evDateDisplay(ev, calKey) {
+  const era = getEraForEv(ev);
+  if (era?.customCalAbbrev) {
+    const y = customEraYear(ev.year, era);
+    return {
+      primary:   `${y} ${era.customCalAbbrev}`,
+      secondary: formatDate(ev.year, ev.month, ev.day, calKey),
+      custom: true,
+    };
+  }
+  return { primary: formatDate(ev.year, ev.month, ev.day, calKey), secondary: null, custom: false };
+}
+
+// ══════════════════════════════
+//  MAIN RENDER
+// ══════════════════════════════
+function renderTL() {
+  const tl = DB.timelines.find(t => t.id === currentTlId);
+  if (!tl) return;
+
+  const fText  = (document.getElementById('tl-filter-text')?.value || '').toLowerCase();
+  const fCat   = document.getElementById('tl-filter-cat')?.value  || '';
+  const fImp   = document.getElementById('tl-filter-imp')?.value  || '';
+  const calKey = DB.settings.activeCalendar || 'hcc';
+
+  let evs = DB.events.filter(e => {
+    if (!e.timelineIds?.includes(currentTlId)) return false;
+    if (fText && !(e.title||'').toLowerCase().includes(fText) && !(e.description||'').toLowerCase().includes(fText)) return false;
+    if (fCat && e.eventCategoryId !== fCat) return false;
+    if (fImp) {
+      const fi = IMP_ORDER.indexOf(fImp), ei = IMP_ORDER.indexOf(e.importance||'notable');
+      if (fImp === 'milestone') return e.importance === 'milestone';
+      if (ei < fi) return false;
+    }
+    return true;
+  }).sort((a,b) => dateToDays(a.year||0,a.month,a.day) - dateToDays(b.year||0,b.month,b.day));
+
+  // sorted for nav (date asc → imp desc → title asc)
+  sortedEvs = [...evs].sort((a,b) => {
+    const dd = dateToDays(a.year||0,a.month,a.day) - dateToDays(b.year||0,b.month,b.day);
+    if (dd) return dd;
+    const id = IMP_ORDER.indexOf(b.importance||'notable') - IMP_ORDER.indexOf(a.importance||'notable');
+    return id || (a.title||'').localeCompare(b.title||'');
+  });
+
+  const eras = DB.eras.filter(e => e.timelineId === currentTlId).sort((a,b) => a.startYear - b.startYear);
+  document.getElementById('tl-nav-bar').style.display = sortedEvs.length ? 'flex' : 'none';
+
+  if (!evs.length && !eras.length) {
+    document.getElementById('tl-track').innerHTML = '<div class="empty-state" style="padding:140px 24px;">No events yet.<br><br><button class="btn btn-primary" onclick="openEventModal(null)">+ Add First Event</button></div>';
+    document.getElementById('tl-minimap-inner').innerHTML = '';
+    _bd = null; return;
+  }
+
+  // ── Date range ──
+  const allD = [
+    ...evs.flatMap(e => [dateToDays(e.year||0,e.month,e.day), ...(e.yearEnd!=null?[dateToDays(e.yearEnd,e.monthEnd,e.dayEnd)]:[] )]),
+    ...eras.flatMap(e => [dateToDays(e.startYear,1,1), dateToDays(e.endYear,12,31)]),
+  ];
+  if (tl.startYear != null) allD.push(dateToDays(tl.startYear,1,1));
+  if (tl.endYear   != null) allD.push(dateToDays(tl.endYear,12,31));
+  const minD = Math.min(...allD), maxD = Math.max(...allD);
+  const span = Math.max(maxD - minD, 365);
+  const PX   = 0.9, totalH = Math.max(800, span * PX), PAD = 80, TRACK_H = totalH + PAD * 2;
+  _bd = { minD, span, totalH, PAD };
+  const toY = d => PAD + (d - minD) / span * totalH;
+
+  const track = document.getElementById('tl-track');
+  track.innerHTML = '';
+  track.style.height = TRACK_H + 'px';
+
+  // ── Grey spine base ──
+  const spineBase = document.createElement('div');
+  spineBase.className = 'tl-spine-base';
+  spineBase.style.height = TRACK_H + 'px';
+  track.appendChild(spineBase);
+
+  // ── Era spine segments ──
+  eras.forEach(era => {
+    const y1 = toY(dateToDays(era.startYear,1,1)), y2 = toY(dateToDays(era.endYear,12,31));
+    const seg = document.createElement('div');
+    seg.className = 'tl-spine-era';
+    seg.style.cssText = `top:${y1}px;height:${y2-y1}px;background:${era.color};`;
+    track.appendChild(seg);
+  });
+
+  // ── Era background tints ──
+  eras.forEach(era => {
+    const y1 = toY(dateToDays(era.startYear,1,1)), y2 = toY(dateToDays(era.endYear,12,31));
+    const b = document.createElement('div');
+    b.className = 'tl-era-band';
+    b.style.cssText = `top:${y1}px;height:${y2-y1}px;background:${era.color};`;
+    track.appendChild(b);
+  });
+
+  // ── Era labels ──
+  eras.forEach(era => {
+    const y1 = toY(dateToDays(era.startYear,1,1));
+    const getDisp = cy => {
+      if (era.customCalAbbrev) {
+        return `${customEraYear(cy, era)} ${era.customCalAbbrev}`;
+      }
+      return ceToDisplay(cy, calKey);
+    };
+    const lbl = document.createElement('div');
+    lbl.className = 'tl-era-label';
+    lbl.style.cssText = `top:${y1+10}px;color:${era.color};border-color:${era.color};`;
+    lbl.innerHTML = `<span class="tl-era-label-name">${escHtml(era.name)}</span><span class="tl-era-label-dates">${getDisp(era.startYear)} – ${getDisp(era.endYear)}</span>`;
+    lbl.onclick = () => openEraModal(era.id);
+    track.appendChild(lbl);
+  });
+
+  // ── Year markers ──
+  const ySpan = span / 365.25;
+  const yStep = ySpan > 1000 ? 200 : ySpan > 500 ? 100 : ySpan > 100 ? 20 : ySpan > 20 ? 5 : 1;
+  const sCE = Math.floor(minD/365.25), eCE = Math.ceil(maxD/365.25);
+  for (let y = Math.ceil(sCE/yStep)*yStep; y <= eCE; y += yStep) {
+    const d = dateToDays(y,1,1);
+    if (d < minD || d > maxD) continue;
+    const ym = document.createElement('div');
+    ym.className = 'tl-year-marker';
+    ym.style.top = (toY(d)-10)+'px';
+    ym.textContent = ceToDisplay(y, calKey);
+    track.appendChild(ym);
+  }
+
+  // ── Duration lines (behind cards, in their column) ──
+  // Zone centers: col1=10%, col2=30%, col3=50%, col4=70%, col5=90%
+  const colCenters = { 1:'10%', 2:'30%', 3:'50%', 4:'70%', 5:'90%' };
+  evs.forEach(ev => {
+    if (ev.yearEnd == null) return;
+    const y1 = toY(dateToDays(ev.year||0,ev.month,ev.day));
+    const y2 = toY(dateToDays(ev.yearEnd,ev.monthEnd,ev.dayEnd));
+    if (Math.abs(y2-y1) < 3) return;
+    const evColor = resolveEvColor(ev);
+    const evCol   = ev.tlColumn || 3;
+    const cx      = colCenters[evCol];
+    const dl = document.createElement('div');
+    dl.className = 'tl-dur-line';
+    dl.style.cssText = `top:${Math.min(y1,y2)}px;height:${Math.abs(y2-y1)}px;background:${evColor};left:${cx};transform:translateX(-50%);`;
+    track.appendChild(dl);
+
+    // End-date indicator dot in same column
+    const endY = toY(dateToDays(ev.yearEnd,ev.monthEnd,ev.dayEnd));
+    const endDot = document.createElement('div');
+    endDot.style.cssText = `position:absolute;left:${cx};transform:translate(-50%,-50%);top:${endY}px;z-index:4;opacity:.65;cursor:pointer;`;
+    endDot.innerHTML = impSVG(ev.importance||'notable', evColor, Math.max(7, iconSz(ev.importance||'notable')-5));
+    endDot.title = `End: ${formatDate(ev.yearEnd, ev.monthEnd, ev.dayEnd, calKey)}`;
+    endDot.onclick = () => selectEv(ev.id);
+    track.appendChild(endDot);
+  });
+
+  // ── 5-column event placement ──
+  // Columns 1-2 = left side, 3 = center (on spine), 4-5 = right side
+  // Column positions as fraction of half-track width from center:
+  //   col 1 → leftmost,  col 2 → near-left
+  //   col 3 → center (spine)
+  //   col 4 → near-right, col 5 → rightmost
+  // Each event has ev.tlColumn (1-5, default 3)
+
+  // Collect Y positions of era labels so we can detect collisions
+  const eraLabelYs = eras.map(era => toY(dateToDays(era.startYear,1,1)) + 10);
+
+  evs.forEach(ev => {
+    const col     = ev.tlColumn || 3;
+    const imp     = ev.importance || 'notable';
+    const evColor = resolveEvColor(ev);
+    const sz      = iconSz(imp);
+    const isActive = ev.id === selectedEvId;
+
+    let baseY = toY(dateToDays(ev.year||0, ev.month, ev.day));
+
+    // Collision offset: if this card's Y is within 28px of an era label, push down
+    const ERA_LABEL_H = 56; // approx height of era label block
+    eraLabelYs.forEach(ly => {
+      if (baseY > ly - 10 && baseY < ly + ERA_LABEL_H) {
+        baseY = ly + ERA_LABEL_H + 8;
+      }
+    });
+
+    // ── Zone wrapper ──
+    // Each column owns a 20% zone. A wrapper div spans that zone absolutely,
+    // and the card fills the wrapper — guaranteeing consistent width and no overlap.
+    const zone = document.createElement('div');
+    zone.className = `tl-zone tl-zone-${col}`;
+    zone.style.top = baseY + 'px';
+
+    const isCenter   = col === 3;
+    const isRightCol = col >= 4; // cols 4,5 have accent on right side
+
+    const card = document.createElement('div');
+    card.className = 'tl-col-card'
+      + (isCenter   ? ' center'    : '')
+      + (isRightCol ? ' right-col' : '')
+      + (isActive   ? ' active'    : '');
+    card.dataset.evId = ev.id;
+    card.style.borderColor = evColor + '80';
+
+    // Accent border color on the spine-facing side
+    if (isCenter) {
+      card.style.borderTopColor  = evColor;
+    } else if (isRightCol) {
+      // Cols 4,5: spine is on the left → accent on LEFT border
+      card.style.borderLeftColor  = evColor;
+      card.style.borderLeftWidth  = '3px';
+      card.style.borderRightWidth = '1px';
+    } else {
+      // Cols 1,2: spine is on the right → accent on RIGHT border
+      card.style.borderRightColor = evColor;
+      card.style.borderRightWidth = '3px';
+      card.style.borderLeftWidth  = '1px';
+    }
+
+    // Build card content: icon + text
+    const d = evDateDisplay(ev, calKey);
+    const iconSpan = document.createElement('span');
+    iconSpan.style.cssText = 'flex-shrink:0;display:flex;align-items:center;';
+    iconSpan.innerHTML = impSVG(imp, evColor, sz);
+
+    const textDiv = document.createElement('div');
+    textDiv.style.cssText = 'min-width:0;flex:1;';
+    let textHtml = `<div class="tl-card-title">${escHtml(ev.title||'Untitled')}</div>`;
+    if (d.custom) {
+      textHtml += `<div class="tl-card-date-custom" style="color:${evColor};">${escHtml(d.primary)}</div>`;
+      textHtml += `<div class="tl-card-date-sec">${escHtml(d.secondary)}</div>`;
+    } else {
+      textHtml += `<div class="tl-card-date">${escHtml(d.primary)}</div>`;
+    }
+    textDiv.innerHTML = textHtml;
+
+    if (isCenter) {
+      card.appendChild(iconSpan);
+      card.appendChild(textDiv);
+    } else if (isRightCol) {
+      // Right cols: icon on left (closest to spine), text on right
+      card.appendChild(iconSpan);
+      card.appendChild(textDiv);
+    } else {
+      // Left cols: text on left, icon on right (closest to spine)
+      card.appendChild(textDiv);
+      card.appendChild(iconSpan);
+    }
+
+    card.onclick = () => selectEv(ev.id);
+    zone.appendChild(card);
+    track.appendChild(zone);
+  });
+
+  renderMinimap(TRACK_H, toY, eras);
+  updateNavYear();
+
+  // Restore active event highlighting
+  if (selectedEvId) {
+    const ev = DB.events.find(e => e.id === selectedEvId);
+    if (ev) {
+      renderDetailPanel(ev, calKey);
+      document.querySelectorAll('.tl-col-card').forEach(c => c.classList.toggle('active', c.dataset.evId === selectedEvId));
+    }
+  }
+}
+
+// ══════════════════════════════
+//  DETAIL PANEL
+// ══════════════════════════════
+function selectEv(id) {
+  selectedEvId = id;
+  const calKey = DB.settings.activeCalendar || 'hcc';
+  const ev = DB.events.find(e => e.id === id);
+  if (!ev) return;
+  document.querySelectorAll('.tl-col-card').forEach(c => c.classList.toggle('active', c.dataset.evId === id));
+  renderDetailPanel(ev, calKey);
+  if (!panelOpen) togglePanel();
+}
+
+function renderDetailPanel(ev, calKey) {
+  const body   = document.getElementById('tl-dp-body');
+  const footer = document.getElementById('tl-dp-footer');
+  const imp    = ev.importance || 'notable';
+  const col    = resolveEvColor(ev);
+  const cat    = DB.timelineCategories.find(c => c.id === ev.eventCategoryId);
+  const art    = ev.articleId ? DB.articles.find(a => a.id === ev.articleId) : null;
+  const d      = evDateDisplay(ev, calKey);
+
+  let dateHtml = d.custom
+    ? `<div class="tl-dp-date" style="color:${col};">${escHtml(d.primary)}</div><div class="tl-dp-date-secondary">${escHtml(d.secondary)}</div>`
+    : `<div class="tl-dp-date">${escHtml(d.primary)}</div>`;
+
+  if (ev.yearEnd != null) {
+    const ed = evDateDisplay({...ev, year:ev.yearEnd, month:ev.monthEnd, day:ev.dayEnd}, calKey);
+    dateHtml += `<div style="font-size:11.5px;color:var(--text-faint);margin-top:3px;">to</div>`;
+    dateHtml += ed.custom
+      ? `<div class="tl-dp-date" style="color:${col};">${escHtml(ed.primary)}</div><div class="tl-dp-date-secondary">${escHtml(ed.secondary)}</div>`
+      : `<div class="tl-dp-date">${escHtml(ed.primary)}</div>`;
+  }
+
+  body.innerHTML = `
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border-light);">
+      <div class="tl-dp-title">${escHtml(ev.title||'Untitled')}</div>
+      <div class="tl-dp-badges">
+        <span class="tl-dp-imp" style="background:${col}22;color:${col};">
+          ${impSVG(imp,col,13)} ${IMP_LABELS[imp]}
+        </span>
+        ${cat?`<span class="tl-dp-cat" style="background:${cat.color}22;color:${cat.color};"><span style="width:8px;height:8px;border-radius:50%;background:${cat.color};display:inline-block;"></span>${escHtml(cat.name)}</span>`:''}
+      </div>
+    </div>
+    <div class="tl-dp-section">
+      <div class="tl-dp-section-label">Date</div>
+      ${dateHtml}
+    </div>
+    ${ev.description?`<div class="tl-dp-section"><div class="tl-dp-section-label">Description</div><div class="tl-dp-desc">${escHtml(ev.description)}</div></div>`:''}
+    ${art?`<div class="tl-dp-section"><div class="tl-dp-section-label">Linked Article</div><a href="article.html?id=${art.id}" style="display:inline-flex;align-items:center;gap:5px;font-size:13.5px;color:var(--accent);font-weight:500;text-decoration:none;">📄 ${escHtml(art.title||'Untitled')}</a></div>`:''}`;
+
+  footer.style.display = 'block';
+  footer.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="openEventModal('${ev.id}')">✏ Edit Event</button>`;
+}
+
+// ══════════════════════════════
+//  MINIMAP
+// ══════════════════════════════
+function renderMinimap(trackH, toY, eras) {
+  const mm   = document.getElementById('tl-minimap');
+  const inner= document.getElementById('tl-minimap-inner');
+  const MM_H = mm.clientHeight || Math.max(300, window.innerHeight - 56 - 52 - 48);
+  inner.style.height = MM_H + 'px';
+  inner.innerHTML = '';
+
+  const tmm = y => (y / trackH) * MM_H;
+
+  eras.forEach(era => {
+    const y1 = tmm(toY(dateToDays(era.startYear,1,1)));
+    const y2 = tmm(toY(dateToDays(era.endYear,12,31)));
+    const b = document.createElement('div');
+    b.className = 'tl-mm-era';
+    b.style.cssText = `top:${y1}px;height:${Math.max(2,y2-y1)}px;background:${era.color};`;
+    inner.appendChild(b);
+    const btn = document.createElement('button');
+    btn.className = 'tl-mm-snap';
+    btn.style.cssText = `top:${y1}px;background:${era.color};`;
+    btn.textContent = era.name;
+    btn.onclick = e => {
+      e.stopPropagation();
+      const tr = document.getElementById('tl-track').getBoundingClientRect();
+      const tTop = window.scrollY + tr.top;
+      window.scrollTo({ top: tTop + toY(dateToDays(era.startYear,1,1)) - 100, behavior: 'smooth' });
+    };
+    inner.appendChild(btn);
+  });
+
+  const vp = document.createElement('div'); vp.className = 'tl-mm-viewport'; inner.appendChild(vp);
+  // store reference so updateMmVP can find it
+  mm._trackH = trackH; mm._tmm = tmm;
+  updateMmVP();
+
+  mm.onclick = e => {
+    const r = mm.getBoundingClientRect();
+    const frac = (e.clientY - r.top) / MM_H;
+    const tr = document.getElementById('tl-track').getBoundingClientRect();
+    window.scrollTo({ top: window.scrollY + tr.top + frac * trackH - window.innerHeight / 2, behavior: 'smooth' });
+  };
+}
+
+function updateMmVP() {
+  const mm = document.getElementById('tl-minimap');
+  if (!mm || !mm._tmm) return;
+  const vp = mm.querySelector('.tl-mm-viewport');
+  if (!vp) return;
+  const tr = document.getElementById('tl-track')?.getBoundingClientRect();
+  if (!tr) return;
+  const trackH = mm._trackH, tmm = mm._tmm;
+  const MM_H = mm.clientHeight || 300;
+  // scrollTop within track
+  const visStart = -tr.top; // how many px of the track are above the viewport
+  const visH = window.innerHeight;
+  vp.style.top    = Math.max(0, tmm(visStart)) + 'px';
+  vp.style.height = Math.min(MM_H, tmm(visH)) + 'px';
+}
+
+// ══════════════════════════════
+//  NAV ARROWS
+// ══════════════════════════════
+function updateNavYear() {
+  const el = document.getElementById('tl-nav-year');
+  if (!el || !_bd) return;
+  const { minD, span, totalH, PAD } = _bd;
+  const tr = document.getElementById('tl-track')?.getBoundingClientRect();
+  if (!tr) return;
+  const posInTrack = (window.innerHeight / 2) - tr.top - PAD;
+  const frac  = posInTrack / totalH;
+  const ceYear = minD / 365.25 + frac * (span / 365.25);
+  el.textContent = ceToDisplay(Math.round(ceYear), DB.settings.activeCalendar || 'hcc');
+}
+
+function navEvent(dir) {
+  if (!sortedEvs.length || !_bd) return;
+  const { minD, span, totalH, PAD } = _bd;
+  const toY = d => PAD + (d - minD) / span * totalH;
+  const tr  = document.getElementById('tl-track')?.getBoundingClientRect();
+  if (!tr) return;
+
+  // Center of visible area relative to track
+  const centerInTrack = (window.innerHeight / 2) - tr.top - PAD;
+  let closestIdx = 0, closestDist = Infinity;
+  sortedEvs.forEach((ev, i) => {
+    const d = Math.abs(toY(dateToDays(ev.year||0,ev.month,ev.day)) - centerInTrack);
+    if (d < closestDist) { closestDist = d; closestIdx = i; }
+  });
+
+  const targetIdx = Math.max(0, Math.min(sortedEvs.length - 1, closestIdx + dir));
+  const target    = sortedEvs[targetIdx];
+  if (!target) return;
+
+  const targetY = toY(dateToDays(target.year||0, target.month, target.day));
+  // Scroll so targetY is centered in viewport
+  const targetScroll = window.scrollY + tr.top + PAD + targetY - window.innerHeight / 2;
+  window.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+  selectEv(target.id);
+}
+
+// ══════════════════════════════
+//  COLOR PICKER
+// ══════════════════════════════
+let _cpCb = null;
+function openColorPicker(anchor, current, cb) {
+  document.getElementById('g-cp')?.remove();
+  _cpCb = cb;
+  const {r,g,b} = htr(current);
+  const pop = document.createElement('div'); pop.id='g-cp'; pop.className='open';
+  pop.innerHTML=`<div class="cp-prev" id="cp-prev" style="background:${current};"></div>
+    <div class="cp-grid">${CP_SW.map(s=>`<div class="cp-swatch${s===current?' sel':''}" style="background:${s};" onclick="cpPick('${s}')"></div>`).join('')}</div>
+    <div class="cp-inputs">
+      <div class="cp-row"><label>Hex</label><input id="cp-hex" type="text" value="${current}" maxlength="7" oninput="cpHex(this.value)"></div>
+      <div class="cp-row"><label>R</label><input id="cp-r" type="number" min="0" max="255" value="${r}" oninput="cpRgb()"></div>
+      <div class="cp-row"><label>G</label><input id="cp-g" type="number" min="0" max="255" value="${g}" oninput="cpRgb()"></div>
+      <div class="cp-row"><label>B</label><input id="cp-b" type="number" min="0" max="255" value="${b}" oninput="cpRgb()"></div>
+    </div>`;
+  document.body.appendChild(pop);
+  const rc = anchor.getBoundingClientRect();
+  pop.style.top  = Math.min(rc.bottom+4, window.innerHeight-280) + 'px';
+  pop.style.left = Math.min(rc.left, window.innerWidth-236) + 'px';
+  setTimeout(() => document.addEventListener('click', cpClose), 60);
+}
+function cpClose(e){const p=document.getElementById('g-cp');if(p&&!p.contains(e.target)){p.remove();document.removeEventListener('click',cpClose);}}
+window.cpPick=c=>cpSet(c);
+window.cpHex=v=>{if(/^#[0-9a-fA-F]{6}$/.test(v))cpSet(v);};
+window.cpRgb=()=>{const r=cl(+document.getElementById('cp-r').value),g=cl(+document.getElementById('cp-g').value),b=cl(+document.getElementById('cp-b').value);cpSet(rth(r,g,b));};
+function cpSet(hex){const p=document.getElementById('g-cp');if(!p)return;p.querySelector('#cp-prev').style.background=hex;p.querySelector('#cp-hex').value=hex;const{r,g,b}=htr(hex);p.querySelector('#cp-r').value=r;p.querySelector('#cp-g').value=g;p.querySelector('#cp-b').value=b;p.querySelectorAll('.cp-swatch').forEach(s=>s.classList.toggle('sel',s.style.background===hex||s.style.backgroundColor===hex));if(_cpCb)_cpCb(hex);}
+function htr(h){return{r:parseInt(h.slice(1,3),16)||0,g:parseInt(h.slice(3,5),16)||0,b:parseInt(h.slice(5,7),16)||0};}
+function rth(r,g,b){return'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');}
+function cl(v){return Math.min(255,Math.max(0,v||0));}
+
+// ══════════════════════════════
+//  EVENT MODAL
+// ══════════════════════════════
+function openEventModal(id) {
+  const ev=id?DB.events.find(e=>e.id===id):null;
+  const calKey=DB.settings.activeCalendar||'hcc';
+  const cal=CALENDARS[calKey];
+  let evPickerColor = ev?.customColor || '';
+  const toYE=cy=>{if(cy==null)return{year:'',era:cal.posEra};const y=cy+cal.offset;return y>=0?{year:String(y),era:cal.posEra}:{year:String(-y),era:cal.negEra};};
+  const{year:yy,era:ye}=toYE(ev?.year);
+  const{year:ey,era:ee}=toYE(ev?.yearEnd);
+  const eO=`<option value="${cal.posEra}">${cal.posEra}</option><option value="${cal.negEra}">${cal.negEra}</option>`;
+  const cO='<option value="">— No category —</option>'+DB.timelineCategories.map(c=>`<option value="${c.id}"${ev?.eventCategoryId===c.id?' selected':''}>${escHtml(c.name)}</option>`).join('');
+  const iO=IMP_ORDER.map(i=>`<option value="${i}"${(ev?.importance||'notable')===i?' selected':''}>${IMP_LABELS[i]}</option>`).join('');
+  const aO='<option value="">— Link to article —</option>'+DB.articles.map(a=>`<option value="${a.id}"${ev?.articleId===a.id?' selected':''}>${escHtml(a.title||'Untitled')}</option>`).join('');
+  const tC=DB.timelines.map(t=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" value="${t.id}"${ev?.timelineIds?.includes(t.id)||(!ev&&t.id===currentTlId)?' checked':''}> ${escHtml(t.name)}</label>`).join('');
+  const curCol = ev?.tlColumn || 3;
+  const colLabels = ['Far Left','Near Left','Centre','Near Right','Far Right'];
+
+  UI.showModal(ev?'Edit Event':'New Timeline Event',`
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field-row"><div class="field-label">Event Title *</div><input id="ev-title" class="field-input" value="${escHtml(ev?.title||'')}" placeholder="Name of the event"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="field-row">
+          <div class="field-label">Timeline Column</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <input id="ev-col" type="range" min="1" max="5" step="1" value="${curCol}" style="width:100%;accent-color:var(--accent);" oninput="document.getElementById('ev-col-label').textContent=(['Far Left','Near Left','Centre','Near Right','Far Right'][this.value-1])">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);"><span>◀ Left</span><span id="ev-col-label">${colLabels[curCol-1]}</span><span>Right ▶</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Custom Color <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(overrides category &amp; importance)</span></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div id="ev-color-swatch" style="width:28px;height:28px;border-radius:var(--radius);background:${evPickerColor||'var(--bg-sidebar)'};border:1px solid var(--border);cursor:pointer;flex-shrink:0;${evPickerColor?'':'opacity:.5;'}" onclick="openColorPicker(this,document.getElementById('ev-color-val').value||'#3a6ea8',c=>{evPickerColor=c;document.getElementById('ev-color-swatch').style.background=c;document.getElementById('ev-color-swatch').style.opacity='1';document.getElementById('ev-color-val').value=c;})"></div>
+            <span style="font-size:11.5px;color:var(--text-muted);">Click to set</span>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="evPickerColor='';document.getElementById('ev-color-val').value='';document.getElementById('ev-color-swatch').style.background='var(--bg-sidebar)';document.getElementById('ev-color-swatch').style.opacity='.5';">Clear</button>
+            <input id="ev-color-val" type="hidden" value="${ev?.customColor||''}">
+          </div>
+        </div>
+      </div>
+
+      <div style="border:1px solid var(--border-light);border-radius:var(--radius);padding:10px;background:var(--bg-sidebar);">
+        <div class="field-label" style="margin-bottom:8px;">Start Date *</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;">
+          <div class="field-row"><div class="field-label">Year</div><input id="ev-y" type="number" class="field-input" value="${yy}"></div>
+          <div class="field-row"><div class="field-label">Era</div><select id="ev-e" class="field-input">${eO.replace(`"${ye}"`,`"${ye}" selected`)}</select></div>
+          <div class="field-row"><div class="field-label">Month</div><input id="ev-mo" type="number" min="1" max="12" class="field-input" value="${ev?.month||''}"></div>
+          <div class="field-row"><div class="field-label">Day</div><input id="ev-d" type="number" min="1" max="31" class="field-input" value="${ev?.day||''}"></div>
+        </div>
+      </div>
+      <div style="border:1px solid var(--border-light);border-radius:var(--radius);padding:10px;background:var(--bg-sidebar);">
+        <div class="field-label" style="margin-bottom:8px;">End Date <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(optional — draws a duration line)</span></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;">
+          <div class="field-row"><div class="field-label">Year</div><input id="ev-ye" type="number" class="field-input" value="${ey}"></div>
+          <div class="field-row"><div class="field-label">Era</div><select id="ev-ee" class="field-input">${eO.replace(`"${ee}"`,`"${ee}" selected`)}</select></div>
+          <div class="field-row"><div class="field-label">Month</div><input id="ev-moe" type="number" min="1" max="12" class="field-input" value="${ev?.monthEnd||''}"></div>
+          <div class="field-row"><div class="field-label">Day</div><input id="ev-de" type="number" min="1" max="31" class="field-input" value="${ev?.dayEnd||''}"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="field-row"><div class="field-label">Category</div><select id="ev-cat" class="field-input">${cO}</select></div>
+        <div class="field-row"><div class="field-label">Importance</div><select id="ev-imp" class="field-input">${iO}</select></div>
+      </div>
+      <div class="field-row"><div class="field-label">Description</div><textarea id="ev-desc" class="field-input" rows="3" style="resize:vertical;">${escHtml(ev?.description||'')}</textarea></div>
+      <div class="field-row"><div class="field-label">Link to Article</div><select id="ev-art" class="field-input">${aO}</select></div>
+      <div class="field-row"><div class="field-label">Show on Timelines</div>
+        <div style="display:flex;flex-direction:column;gap:5px;background:var(--bg-sidebar);padding:10px;border-radius:var(--radius);">${tC||'<span style="color:var(--text-faint);font-size:13px;">No timelines yet.</span>'}</div>
+      </div>
+    </div>`,
+    [
+      ...(ev?[{label:'Delete',cls:'btn-danger',action:async()=>{
+        DB.events=DB.events.filter(e=>e.id!==id);await DB.save();UI.closeModal();
+        selectedEvId=null;document.getElementById('tl-dp-body').innerHTML='<div class="tl-dp-placeholder">Click any event to view details.</div>';document.getElementById('tl-dp-footer').style.display='none';
+        renderTL();UI.toast('Event deleted.');
+      }}]:[]),
+      {label:'Cancel',cls:'btn-secondary',action:()=>UI.closeModal()},
+      {label:ev?'Save Changes':'Add Event',cls:'btn-primary',action:async()=>{
+        const title=document.getElementById('ev-title').value.trim();
+        const yRaw=document.getElementById('ev-y').value.trim();
+        if(!title||!yRaw){UI.toast('Title and year are required.');return;}
+        const ceY=calendarToCE(yRaw,document.getElementById('ev-e').value,calKey);
+        const yERaw=document.getElementById('ev-ye').value.trim();
+        const ceYE=yERaw?calendarToCE(yERaw,document.getElementById('ev-ee').value,calKey):null;
+        const tIds=[...document.querySelectorAll('#modal-body input[type=checkbox]:checked')].map(c=>c.value);
+        const data={
+          title,year:ceY,
+          month:parseInt(document.getElementById('ev-mo').value)||null,
+          day:parseInt(document.getElementById('ev-d').value)||null,
+          yearEnd:ceYE,
+          monthEnd:ceYE?parseInt(document.getElementById('ev-moe').value)||null:null,
+          dayEnd:ceYE?parseInt(document.getElementById('ev-de').value)||null:null,
+          eventCategoryId:document.getElementById('ev-cat').value||null,
+          importance:document.getElementById('ev-imp').value||'notable',
+          description:document.getElementById('ev-desc').value.trim(),
+          articleId:document.getElementById('ev-art').value||null,
+          timelineIds:tIds,
+          tlColumn:parseInt(document.getElementById('ev-col').value)||3,
+          customColor:document.getElementById('ev-color-val').value||null,
+        };
+        if(ev)Object.assign(ev,data);else DB.events.push({id:mkId('ev'),...data});
+        await DB.save();UI.closeModal();renderTL();UI.toast(ev?'Event updated.':'Event added.');
+      }},
+    ]
+  );
+  setTimeout(()=>document.getElementById('ev-title')?.focus(),50);
+}
+
+// ══════════════════════════════
+//  ERA MODAL
+// ══════════════════════════════
+function openEraModal(id) {
+  const era=id?DB.eras.find(e=>e.id===id):null;
+  const calKey=DB.settings.activeCalendar||'hcc';
+  const cal=CALENDARS[calKey];
+  let pColor=era?.color||ERA_SW[DB.eras.filter(e=>e.timelineId===currentTlId).length%ERA_SW.length];
+  const toYE=cy=>{if(cy==null)return{year:'',era:cal.posEra};const y=cy+cal.offset;return y>=0?{year:String(y),era:cal.posEra}:{year:String(-y),era:cal.negEra};};
+  const{year:sy,era:se}=toYE(era?.startYear);
+  const{year:ey,era:ee}=toYE(era?.endYear);
+  const eO=`<option value="${cal.posEra}">${cal.posEra}</option><option value="${cal.negEra}">${cal.negEra}</option>`;
+
+  UI.showModal(era?'Edit Era':'New Era',`
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field-row"><div class="field-label">Era Name *</div><input id="era-name" class="field-input" value="${escHtml(era?.name||'')}" placeholder="e.g. The Founding Wars"></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+        <div class="field-row"><div class="field-label">Start Year *</div><input id="era-sy" type="number" class="field-input" value="${sy}"></div>
+        <div class="field-row"><div class="field-label">Era</div><select id="era-se" class="field-input">${eO.replace(`"${se}"`,`"${se}" selected`)}</select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;">
+        <div class="field-row"><div class="field-label">End Year *</div><input id="era-ey" type="number" class="field-input" value="${ey}"></div>
+        <div class="field-row"><div class="field-label">Era</div><select id="era-ee" class="field-input">${eO.replace(`"${ee}"`,`"${ee}" selected`)}</select></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Color</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div id="era-cs" style="width:32px;height:32px;border-radius:var(--radius);background:${pColor};border:1px solid var(--border);cursor:pointer;flex-shrink:0;" onclick="openColorPicker(this,'${pColor}',c=>{pColor=c;document.getElementById('era-cs').style.background=c;document.getElementById('era-cv').value=c;})"></div>
+          <span style="font-size:12px;color:var(--text-muted);">Click swatch to open colour picker</span>
+          <input id="era-cv" type="hidden" value="${pColor}">
+        </div>
+      </div>
+      <div style="border:1px solid var(--border-light);border-radius:var(--radius);padding:10px;background:var(--bg-sidebar);">
+        <div class="field-label" style="margin-bottom:8px;">Custom Calendar <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(optional)</span></div>
+      <div style="border:1px solid var(--border-light);border-radius:var(--radius);padding:10px;background:var(--bg-sidebar);">
+        <div class="field-label" style="margin-bottom:8px;">Custom Calendar <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(optional)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div class="field-row"><div class="field-label">Abbreviation</div><input id="era-ca" class="field-input" value="${escHtml(era?.customCalAbbrev||'')}" placeholder="e.g. IA, AE, YR"></div>
+          <div class="field-row"><div class="field-label">Year 1 = CE year</div><input id="era-co" type="number" class="field-input" value="${era?.customCalOffset??''}" placeholder="defaults to era start"></div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="era-yz" ${era?.hasYearZero===false?'':'checked'}> Has year zero</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="era-bwd" ${era?.countsBackward?'checked':''}> Counts backwards</label>
+        </div>
+        <div style="font-size:11.5px;color:var(--text-faint);margin-top:8px;">Set which CE year equals year 1. Leave blank to use era start. Backwards = earlier CE = higher custom year.</div>
+      </div>
+    </div>`,
+    [
+      ...(era?[{label:'Delete Era',cls:'btn-danger',action:async()=>{DB.eras=DB.eras.filter(e=>e.id!==id);await DB.save();UI.closeModal();renderTL();UI.toast('Era deleted.');}}]:[]),
+      {label:'Cancel',cls:'btn-secondary',action:()=>UI.closeModal()},
+      {label:era?'Save Changes':'Add Era',cls:'btn-primary',action:async()=>{
+        const name=document.getElementById('era-name').value.trim();
+        const syR=document.getElementById('era-sy').value.trim();
+        const eyR=document.getElementById('era-ey').value.trim();
+        if(!name||!syR||!eyR){UI.toast('Name and both years are required.');return;}
+        const color=document.getElementById('era-cv').value||ERA_SW[0];
+        const startYear=calendarToCE(syR,document.getElementById('era-se').value,calKey);
+        const endYear=calendarToCE(eyR,document.getElementById('era-ee').value,calKey);
+        const customCalAbbrev=document.getElementById('era-ca').value.trim()||null;
+        const oR=document.getElementById('era-co').value.trim();
+        const customCalOffset=oR!==''?parseInt(oR):null;
+        const hasYearZero=document.getElementById('era-yz').checked;
+        const countsBackward=document.getElementById('era-bwd').checked;
+        const data={name,startYear,endYear,color,customCalAbbrev,customCalOffset,hasYearZero,countsBackward};
+        if(era)Object.assign(era,data);else DB.eras.push({id:mkId('era'),timelineId:currentTlId,...data});
+        await DB.save();UI.closeModal();renderTL();UI.toast(era?'Era updated.':'Era added.');
+      }},
+    ]
+  );
+  setTimeout(()=>document.getElementById('era-name')?.focus(),50);
+}
+</script>
+</body>
+</html>

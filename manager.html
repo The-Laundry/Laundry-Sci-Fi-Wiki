@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Article Manager — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
+      <div>
+        <h1 class="page-title">Article Manager</h1>
+        <p class="page-subtitle">Drag articles between categories. Click <strong>Rename</strong> to rename inline.</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="openNewCatModal(null)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          New Category
+        </button>
+        <a href="editor.html?id=new" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Article
+        </a>
+      </div>
+    </div>
+
+    <div class="manager-tree" id="manager-tree"></div>
+
+    <!-- Wikibox Templates -->
+    <div style="margin-top:32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:20px;color:var(--text);margin-bottom:2px;">Wikibox Templates</h2>
+          <p style="color:var(--text-muted);font-size:13px;">Create reusable field layouts for your wikiboxes.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="openWbTemplateModal(null)">+ New Template</button>
+      </div>
+      <div id="wb-template-list" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:60px;"></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+let dragState = null;
+
+(async () => {
+  await DB.init();
+  UI.init({ activePage: 'articles' });
+  renderManager();
+  renderWbTemplateList();
+})();
+
+// ── ARTICLE MANAGER TREE ──────────────────────────────────────────
+
+function renderManager() {
+  const container = document.getElementById('manager-tree');
+  container.innerHTML = '';
+
+  function getDepth(cid) {
+    let d = 0, c = DB.getCatById(cid);
+    while (c && c.parentId) { d++; c = DB.getCatById(c.parentId); }
+    return d;
+  }
+
+  function artRow(art, catId, rowIdx) {
+    const row = document.createElement('div');
+    row.className = 'tree-art-row';
+    row.draggable = true;
+    row.style.background = rowIdx % 2 === 0 ? '#fff' : 'var(--bg-sidebar)';
+
+    const indent = document.createElement('div');
+    indent.style.cssText = `width:${(getDepth(catId) + 1) * 20 + 14}px;flex-shrink:0;`;
+    row.appendChild(indent);
+
+    const icon = document.createElement('span');
+    icon.textContent = '📄';
+    icon.style.cssText = 'font-size:13px;flex-shrink:0;color:var(--text-faint);margin-right:2px;';
+    row.appendChild(icon);
+
+    const title = document.createElement('span');
+    title.className = 'tree-art-title';
+    title.textContent = art.title || 'Untitled';
+    row.appendChild(title);
+
+    const acts = document.createElement('div');
+    acts.className = 'tree-art-actions';
+    acts.innerHTML = `
+      <a href="article.html?id=${art.id}" class="btn btn-ghost btn-xs">View</a>
+      <a href="editor.html?id=${art.id}" class="btn btn-ghost btn-xs">Edit</a>
+      <button class="btn btn-danger btn-xs" onclick="deleteArticleById('${art.id}')">Delete</button>`;
+    row.appendChild(acts);
+
+    row.ondragstart = e => { dragState = { type: 'article', id: art.id }; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; };
+    row.ondragend   = () => { row.classList.remove('dragging'); cleanDragOver(); };
+    row.ondragover  = e => { e.preventDefault(); row.classList.add('drag-over'); };
+    row.ondragleave = () => row.classList.remove('drag-over');
+    row.ondrop      = e => { e.preventDefault(); row.classList.remove('drag-over'); dropOnCat(catId); };
+    return row;
+  }
+
+  function catSection(cid, depth) {
+    const cat = DB.getCatById(cid); if (!cat) return document.createDocumentFragment();
+    const articles = DB.getArticlesInCat(cid);
+    const children = DB.getChildCats(cid).sort((a, b) => a.name.localeCompare(b.name));
+    const hasKids   = children.length + articles.length > 0;
+    const isOpen    = !cat.collapsed;
+    const frag      = document.createDocumentFragment();
+
+    const header = document.createElement('div');
+    header.className = 'tree-cat-row';
+    header.dataset.catId = cid;
+
+    const indent = document.createElement('div');
+    indent.style.cssText = `width:${depth * 20}px;flex-shrink:0;`;
+    header.appendChild(indent);
+
+    const tog = document.createElement('div');
+    tog.className = 'tree-toggle' + (hasKids ? (isOpen ? ' open' : '') : '  leaf');
+    tog.textContent = hasKids ? '▶' : '';
+    if (hasKids) { tog.onclick = e => { e.stopPropagation(); cat.collapsed = !cat.collapsed; DB.save(); renderManager(); }; }
+    header.appendChild(tog);
+
+    const fi = document.createElement('span'); fi.textContent = '📁'; fi.style.cssText = 'font-size:14px;margin-right:4px;flex-shrink:0;'; header.appendChild(fi);
+    const lbl = document.createElement('span'); lbl.className = 'tree-cat-label'; lbl.id = 'catlabel_' + cid; lbl.textContent = cat.name; header.appendChild(lbl);
+    const cnt = document.createElement('span'); cnt.className = 'tree-cat-count'; cnt.textContent = DB.countInSubtree(cid) + ' art.'; header.appendChild(cnt);
+
+    const acts = document.createElement('div'); acts.className = 'tree-cat-actions';
+    const rb = document.createElement('button'); rb.className = 'btn btn-ghost btn-xs'; rb.textContent = 'Rename'; rb.onclick = e => { e.stopPropagation(); startRename(cid); }; acts.appendChild(rb);
+    const sb = document.createElement('button'); sb.className = 'btn btn-ghost btn-xs'; sb.textContent = '+ Sub'; sb.onclick = e => { e.stopPropagation(); openNewCatModal(cid); }; acts.appendChild(sb);
+    const db2 = document.createElement('button'); db2.className = 'btn btn-danger btn-xs'; db2.textContent = 'Delete'; db2.onclick = e => { e.stopPropagation(); deleteCategoryById(cid); }; acts.appendChild(db2);
+    header.appendChild(acts);
+
+    header.ondragover  = e => { e.preventDefault(); header.classList.add('drag-over'); };
+    header.ondragleave = () => header.classList.remove('drag-over');
+    header.ondrop      = e => { e.preventDefault(); header.classList.remove('drag-over'); dropOnCat(cid); };
+    frag.appendChild(header);
+
+    const childWrap = document.createElement('div');
+    childWrap.className = 'tree-children' + (isOpen ? ' open' : '');
+    let ri = 0;
+    children.forEach(c => { childWrap.appendChild(catSection(c.id, depth + 1)); ri++; });
+    articles.forEach(a => { childWrap.appendChild(artRow(a, cid, ri)); ri++; });
+    frag.appendChild(childWrap);
+    return frag;
+  }
+
+  if (!DB.articles.length && !DB.categories.length) {
+    container.innerHTML = '<div class="empty-state">No articles or categories yet.</div>';
+    return;
+  }
+  DB.getRootCats().sort((a, b) => a.name.localeCompare(b.name)).forEach(c => container.appendChild(catSection(c.id, 0)));
+
+  // Uncategorized drop zone
+  const zone = document.createElement('div'); zone.className = 'uncat-zone';
+  zone.ondragover  = e => { e.preventDefault(); zone.style.background = 'var(--accent-light)'; };
+  zone.ondragleave = () => zone.style.background = '';
+  zone.ondrop      = e => { e.preventDefault(); zone.style.background = ''; dropOnCat(null); };
+  const zlbl = document.createElement('div'); zlbl.className = 'uncat-label'; zlbl.textContent = 'Uncategorized'; zone.appendChild(zlbl);
+  const uncat = DB.getUncategorized();
+  if (!uncat.length) {
+    const em = document.createElement('div'); em.style.cssText = 'font-size:12px;color:var(--text-faint);padding:4px 0;';
+    em.textContent = 'Drop articles here to remove their category.'; zone.appendChild(em);
+  } else { let ri = 0; uncat.forEach(a => { zone.appendChild(artRow(a, null, ri)); ri++; }); }
+  container.appendChild(zone);
+}
+
+function cleanDragOver() { document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')); }
+
+async function dropOnCat(targetCatId) {
+  if (!dragState) return;
+  if (dragState.type === 'article') {
+    const art = DB.articles.find(a => a.id === dragState.id);
+    if (art) {
+      art.categoryId = targetCatId || null;
+      await DB.save(art.id);
+      UI.renderSidebar();
+      renderManager();
+      UI.toast('Article moved.');
+    }
+  }
+  dragState = null;
+}
+
+function startRename(cid) {
+  const labelEl = document.getElementById('catlabel_' + cid); if (!labelEl) return;
+  const cat = DB.getCatById(cid);
+  const inp = document.createElement('input');
+  inp.value = cat.name;
+  inp.style.cssText = 'border:none;background:var(--accent-light);outline:1px solid var(--accent);border-radius:3px;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text-muted);padding:1px 6px;width:200px;';
+  labelEl.replaceWith(inp); inp.focus(); inp.select();
+  const commit = async () => {
+    const v = inp.value.trim();
+    if (v && v !== cat.name) { cat.name = v; await DB.save(); UI.renderSidebar(); }
+    renderManager();
+  };
+  inp.onblur = commit;
+  inp.onkeydown = e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') renderManager(); };
+}
+
+function openNewCatModal(parentId) {
+  UI.showModal('New Category', `
+    <div class="field-row">
+      <div class="field-label">Category Name</div>
+      <input id="new-cat-name" class="field-input" placeholder="e.g. Planets">
+      ${parentId ? `<div style="margin-top:6px;font-size:12px;color:var(--text-faint);">Nested inside: <strong>${escHtml(DB.getCatName(parentId))}</strong></div>` : ''}
+    </div>`,
+    [{ label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+     { label: 'Create', cls: 'btn-primary', action: async () => {
+        const name = document.getElementById('new-cat-name').value.trim();
+        if (!name) { UI.toast('Enter a name.'); return; }
+        DB.categories.push({ id: mkId('cat'), name, parentId: parentId || null, collapsed: false });
+        await DB.save(); UI.closeModal(); UI.renderSidebar(); renderManager(); UI.toast('Category created.');
+     }}]
+  );
+  setTimeout(() => document.getElementById('new-cat-name')?.focus(), 50);
+}
+
+async function deleteCategoryById(cid) {
+  const cat = DB.getCatById(cid);
+  const artCount   = DB.countInSubtree(cid);
+  const childCount = DB.getChildCats(cid).length;
+  let msg = `Delete category "${cat?.name}"?`;
+  if (artCount)   msg += `\n\n${artCount} article(s) will become uncategorized.`;
+  if (childCount) msg += `\n${childCount} subcategory(ies) will move up.`;
+  if (!confirm(msg)) return;
+  DB.articles.forEach(a => { if (a.categoryId === cid) a.categoryId = null; });
+  DB.getChildCats(cid).forEach(c => { c.parentId = cat.parentId || null; });
+  DB.categories = DB.categories.filter(c => c.id !== cid);
+  await DB.save(); UI.renderSidebar(); renderManager(); UI.toast('Category deleted.');
+}
+
+async function deleteArticleById(id) {
+  const art = DB.articles.find(a => a.id === id);
+  if (!confirm(`Delete "${art?.title || 'this article'}"? This cannot be undone.`)) return;
+  await DB.deleteArticleFile(id);
+  DB.articles = DB.articles.filter(a => a.id !== id);
+  await DB.save(); UI.renderSidebar(); renderManager(); UI.toast('Article deleted.');
+}
+
+// ── WIKIBOX TEMPLATE MANAGER ──────────────────────────────────────
+
+function renderWbTemplateList() {
+  const list = document.getElementById('wb-template-list');
+  if (!DB.wikiboxTemplates.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:24px;">No custom templates yet.</div>'; return;
+  }
+  list.innerHTML = '';
+  DB.wikiboxTemplates.forEach(t => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-light);';
+    const name = document.createElement('span'); name.style.cssText = 'flex:1;font-weight:500;font-size:14px;'; name.textContent = t.name;
+    const fieldCount  = t.fields.filter(f => !f.type || f.type === 'field').length;
+    const sectionCount = t.fields.filter(f => f.type === 'section').length;
+    const summary = [
+      fieldCount  ? `${fieldCount} field${fieldCount  !== 1 ? 's' : ''}` : '',
+      sectionCount ? `${sectionCount} section${sectionCount !== 1 ? 's' : ''}` : '',
+    ].filter(Boolean).join(', ') || 'empty';
+    const fc   = document.createElement('span'); fc.style.cssText = 'font-size:12px;color:var(--text-faint);'; fc.textContent = summary;
+    const acts = document.createElement('div'); acts.style.cssText = 'display:flex;gap:6px;';
+    const eb   = document.createElement('button'); eb.className = 'btn btn-ghost btn-xs'; eb.textContent = 'Edit'; eb.onclick = () => openWbTemplateModal(t.id); acts.appendChild(eb);
+    const db2  = document.createElement('button'); db2.className = 'btn btn-danger btn-xs'; db2.textContent = 'Delete';
+    db2.onclick = async () => {
+      if (!confirm(`Delete template "${t.name}"?`)) return;
+      DB.wikiboxTemplates = DB.wikiboxTemplates.filter(x => x.id !== t.id);
+      await DB.save(); renderWbTemplateList(); UI.toast('Template deleted.');
+    };
+    acts.appendChild(db2);
+    row.appendChild(name); row.appendChild(fc); row.appendChild(acts); list.appendChild(row);
+  });
+}
+
+function openWbTemplateModal(id) {
+  const existing = id ? DB.wikiboxTemplates.find(t => t.id === id) : null;
+  // Normalise: old templates may have bare {key} objects without type
+  let tmpFields = existing
+    ? JSON.parse(JSON.stringify(existing.fields)).map(f => ({ type: 'field', ...f }))
+    : [{ type: 'field', key: '' }];
+
+  // ── render field list inside the modal ──
+  let _tmplDragIdx = null;
+  function fHTML() {
+    return tmpFields.map((f, i) => {
+      const isSection = f.type === 'section';
+      const bg = isSection ? 'background:var(--accent-light);border:1px solid rgba(58,110,168,.2);' : 'background:#fff;border:1px solid var(--border-light);';
+      const inputStyle = isSection ? 'font-weight:600;font-size:12px;color:var(--accent);background:transparent;border:none;' : '';
+      return `<div draggable="true" data-tidx="${i}" style="display:flex;align-items:center;gap:4px;margin-bottom:5px;border-radius:var(--radius);padding:4px 6px;${bg}"
+        ondragstart="event.dataTransfer.effectAllowed='move';_tmplDragIdx=${i};this.style.opacity='.4';"
+        ondragend="this.style.opacity='1';_tmplDragIdx=null;"
+        ondragover="event.preventDefault();this.style.outline='2px dashed var(--accent)';"
+        ondragleave="this.style.outline='';"
+        ondrop="event.preventDefault();this.style.outline='';if(_tmplDragIdx!==null&&_tmplDragIdx!==${i}){const m=tmpFields.splice(_tmplDragIdx,1)[0];tmpFields.splice(${i},0,m);rebuild();}">
+        <span style="cursor:grab;color:var(--text-faint);font-size:13px;flex-shrink:0;user-select:none;">⠿</span>
+        <input type="text" class="field-input" id="wbtf_${i}" placeholder="${isSection?'Section name':'Field label'}"
+          value="${escHtml(f.key||'')}" style="margin:0;flex:1;${inputStyle}">
+        <button type="button" style="border:none;background:none;color:var(--text-faint);cursor:pointer;font-size:14px;" onclick="wbTmplRemove(${i})">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  function rebuild() {
+    document.getElementById('wb-tmpl-fields').innerHTML = fHTML();
+  }
+
+  function syncCurrentValues() {
+    document.querySelectorAll('[id^="wbtf_"]').forEach((inp, j) => {
+      if (tmpFields[j]) tmpFields[j].key = inp.value;
+    });
+  }
+
+  window.wbTmplRemove = i => {
+    syncCurrentValues();
+    tmpFields.splice(i, 1);
+    rebuild();
+  };
+  window.wbTmplAddField = () => {
+    syncCurrentValues();
+    tmpFields.push({ type: 'field', key: '' });
+    rebuild();
+  };
+  window.wbTmplAddSection = () => {
+    syncCurrentValues();
+    tmpFields.push({ type: 'section', key: 'Section' });
+    rebuild();
+  };
+
+  UI.showModal(existing ? 'Edit Template' : 'New Wikibox Template', `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field-row">
+        <div class="field-label">Template Name</div>
+        <input id="wb-tmpl-name" class="field-input" value="${escHtml(existing?.name || '')}" placeholder="e.g. Starship">
+      </div>
+      <div class="field-row">
+        <div class="field-label" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Fields &amp; Sections</span>
+          <div style="display:flex;gap:4px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="wbTmplAddSection()">+ Section</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="wbTmplAddField()">+ Field</button>
+          </div>
+        </div>
+        <div id="wb-tmpl-fields" style="display:flex;flex-direction:column;">${fHTML()}</div>
+        <p style="font-size:11.5px;color:var(--text-faint);margin-top:6px;">
+          Sections create collapsible headers in the rendered wikibox. Fields become label/value rows.
+        </p>
+      </div>
+    </div>`,
+    [
+      { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+      { label: existing ? 'Save Changes' : 'Create', cls: 'btn-primary', action: async () => {
+        const name = document.getElementById('wb-tmpl-name').value.trim();
+        if (!name) { UI.toast('Enter a name.'); return; }
+        syncCurrentValues();
+        // Keep sections as-is, filter out empty field rows
+        const fields = tmpFields.filter(f => f.type === 'section' || f.key.trim()).map(f => ({
+          type: f.type || 'field',
+          key:  f.key.trim(),
+        }));
+        if (existing) { existing.name = name; existing.fields = fields; }
+        else DB.wikiboxTemplates.push({ id: mkId('wbt'), name, fields });
+        await DB.save();
+        UI.closeModal();
+        renderWbTemplateList();
+        UI.toast(existing ? 'Template updated.' : 'Template created.');
+      }},
+    ]
+  );
+  setTimeout(() => document.getElementById('wb-tmpl-name')?.focus(), 50);
+}
+</script>
+</body>
+</html>

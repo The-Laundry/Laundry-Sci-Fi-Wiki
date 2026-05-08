@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encyclopedia of Many Things — Phodd Communications</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <div class="home-hero">
+      <div class="home-hero-text">
+        <div class="home-hero-eyebrow">Phodd Communications — Est. [REDACTED]</div>
+        <h1 class="home-hero-title">Encyclopedia of Many Things</h1>
+        <textarea id="home-desc-edit" class="home-edit-desc" rows="4" placeholder="Click to edit the homepage description…"></textarea>
+      </div>
+      <div class="home-hero-stats">
+        <div class="home-stat"><span class="home-stat-val" id="stat-articles">0</span><span class="home-stat-label">Articles</span></div>
+        <div class="home-stat"><span class="home-stat-val" id="stat-categories">0</span><span class="home-stat-label">Categories</span></div>
+        <div class="home-stat"><span class="home-stat-val" id="stat-events">0</span><span class="home-stat-label">Events</span></div>
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <div class="home-card">
+        <div class="home-card-title">Recent Articles</div>
+        <div id="home-recent"></div>
+      </div>
+      <div class="home-card">
+        <div class="home-card-title">Browse by Category</div>
+        <div id="home-categories"></div>
+      </div>
+    </div>
+
+    <!-- Folder setup prompt shown when no folder is connected -->
+    <div id="folder-prompt" style="display:none; margin-top:24px;">
+      <div class="data-section" style="border-color:var(--accent);">
+        <h2 style="color:var(--accent);">📂 Connect your data folder</h2>
+        <p>Connect a local folder so your data is saved as real files on your computer — no import/export needed. You only need to do this once per browser session.</p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="UI.handleFolderClick()">Choose Folder</button>
+          <span style="font-size:13px;color:var(--text-faint);">or continue using browser storage (data stays in this browser)</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(async () => {
+  await DB.init();
+  UI.init({ activePage: 'home' });
+
+  // Show folder prompt if not connected
+  if (!DB.isConnected) {
+    document.getElementById('folder-prompt').style.display = 'block';
+  }
+
+  // Stats
+  document.getElementById('stat-articles').textContent   = DB.articles.length;
+  document.getElementById('stat-categories').textContent = DB.categories.length;
+  document.getElementById('stat-events').textContent     = DB.events.length;
+
+  // Description
+  const descEl = document.getElementById('home-desc-edit');
+  descEl.value = DB.settings.homeDesc || '';
+  descEl.oninput = async () => { DB.settings.homeDesc = descEl.value; await DB.save(); };
+
+  // Recent articles
+  const sorted = [...DB.articles].sort((a, b) => (b.updated || 0) - (a.updated || 0)).slice(0, 8);
+  document.getElementById('home-recent').innerHTML = sorted.length
+    ? sorted.map(a => `
+        <a class="home-article-link" href="article.html?id=${a.id}">
+          <span class="hal-title">${escHtml(a.title || 'Untitled')}</span>
+          <span class="hal-cat">${escHtml(DB.getCatPath(a.categoryId) || '')}</span>
+        </a>`).join('')
+    : '<div style="color:var(--text-faint);font-size:13px;padding:8px 0;">No articles yet.</div>';
+
+  // Categories
+  document.getElementById('home-categories').innerHTML = DB.getRootCats().length
+    ? DB.getRootCats().sort((a, b) => a.name.localeCompare(b.name)).map(c => {
+        const n = DB.countInSubtree(c.id);
+        return `<a class="home-article-link" href="manager.html">
+          <span class="hal-title">${escHtml(c.name)}</span>
+          <span class="hal-cat">${n} article${n !== 1 ? 's' : ''}</span>
+        </a>`;
+      }).join('')
+    : '<div style="color:var(--text-faint);font-size:13px;padding:8px 0;">No categories yet.</div>';
+})();
+</script>
+</body>
+</html>

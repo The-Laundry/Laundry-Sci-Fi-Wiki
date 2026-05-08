@@ -1,0 +1,112 @@
+[
+  {
+    "id": "era_1778245478598_t2a1",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Pre-Equestrian Era",
+    "startYear": -1001,
+    "endYear": 326,
+    "color": "#4d4d4d",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": true,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778245613511_xw6w",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Pre-Classical Era",
+    "startYear": 325,
+    "endYear": 933,
+    "color": "#ab149e",
+    "customCalAbbrev": "PCE",
+    "customCalOffset": null,
+    "hasYearZero": false,
+    "countsBackward": true
+  },
+  {
+    "id": "era_1778245648414_ev9u",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Chaotic Era",
+    "startYear": 934,
+    "endYear": 936,
+    "color": "#633300",
+    "customCalAbbrev": null,
+    "customCalOffset": null
+  },
+  {
+    "id": "era_1778245690633_km17",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Equestrian Classical Era",
+    "startYear": 937,
+    "endYear": 1324,
+    "color": "#0062b1",
+    "customCalAbbrev": "ECE",
+    "customCalOffset": null,
+    "hasYearZero": false,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778245729534_18se",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "The Celestial Peace",
+    "startYear": 1325,
+    "endYear": 2415,
+    "color": "#99c4d5",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": false,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778245823742_q9pp",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Early Interstellar Era",
+    "startYear": 2416,
+    "endYear": 2670,
+    "color": "#16a5a5",
+    "customCalAbbrev": null,
+    "customCalOffset": null
+  },
+  {
+    "id": "era_1778245856940_2ayx",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Imperial Era",
+    "startYear": 2671,
+    "endYear": 2961,
+    "color": "#c45100",
+    "customCalAbbrev": "IE",
+    "customCalOffset": null,
+    "hasYearZero": false,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778245915984_bnc2",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Post-Imperial Era",
+    "startYear": 2962,
+    "endYear": 3361,
+    "color": "#00a34f",
+    "customCalAbbrev": null,
+    "customCalOffset": null
+  },
+  {
+    "id": "era_1778245977229_59oz",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Early Republican Era",
+    "startYear": 3362,
+    "endYear": 3499,
+    "color": "#fb9e00",
+    "customCalAbbrev": null,
+    "customCalOffset": null
+  },
+  {
+    "id": "era_1778246000835_wnyg",
+    "timelineId": "tl_1778245395199_9qgu",
+    "name": "Republican Era",
+    "startYear": 3500,
+    "endYear": 4000,
+    "color": "#fcc400",
+    "customCalAbbrev": null,
+    "customCalOffset": null
+  }
+]

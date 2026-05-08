@@ -1,0 +1,154 @@
+[
+  {
+    "id": "wbt_1778223219668_3pi7",
+    "name": "Planet",
+    "fields": [
+      {
+        "type": "section",
+        "key": "Astrographical information"
+      },
+      {
+        "type": "field",
+        "key": "Sector"
+      },
+      {
+        "type": "field",
+        "key": "System"
+      },
+      {
+        "type": "field",
+        "key": "Satellites"
+      },
+      {
+        "type": "field",
+        "key": "Rotation period"
+      },
+      {
+        "type": "field",
+        "key": "Orbital period"
+      },
+      {
+        "type": "section",
+        "key": "Physical information"
+      },
+      {
+        "type": "field",
+        "key": "Class"
+      },
+      {
+        "type": "field",
+        "key": "Type"
+      },
+      {
+        "type": "field",
+        "key": "Diameter"
+      },
+      {
+        "type": "field",
+        "key": "Gravity"
+      },
+      {
+        "type": "field",
+        "key": "Atmosphere"
+      },
+      {
+        "type": "field",
+        "key": "Climate"
+      },
+      {
+        "type": "field",
+        "key": "Formation"
+      },
+      {
+        "type": "field",
+        "key": "Destruction"
+      },
+      {
+        "type": "section",
+        "key": "Societal information"
+      },
+      {
+        "type": "field",
+        "key": "Native species"
+      },
+      {
+        "type": "field",
+        "key": "Population"
+      },
+      {
+        "type": "field",
+        "key": "Major cities"
+      },
+      {
+        "type": "field",
+        "key": "Major imports"
+      },
+      {
+        "type": "field",
+        "key": "Major exports"
+      },
+      {
+        "type": "field",
+        "key": "Affiliation"
+      }
+    ]
+  },
+  {
+    "id": "wbt_1778228087659_8nwa",
+    "name": "Civilization",
+    "fields": [
+      {
+        "type": "section",
+        "key": "General information"
+      },
+      {
+        "type": "field",
+        "key": "Capital"
+      },
+      {
+        "type": "field",
+        "key": "Largest world"
+      },
+      {
+        "type": "field",
+        "key": "Primary species"
+      },
+      {
+        "type": "field",
+        "key": "Demonym"
+      },
+      {
+        "type": "section",
+        "key": "Government information"
+      },
+      {
+        "type": "field",
+        "key": "Form of government"
+      },
+      {
+        "type": "field",
+        "key": "Head of state"
+      },
+      {
+        "type": "field",
+        "key": "Head of government"
+      },
+      {
+        "type": "field",
+        "key": "Legislature"
+      },
+      {
+        "type": "section",
+        "key": "Historical information"
+      },
+      {
+        "type": "field",
+        "key": "Preceded by"
+      },
+      {
+        "type": "field",
+        "key": "Succeeded by"
+      }
+    ]
+  }
+]

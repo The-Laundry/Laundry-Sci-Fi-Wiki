@@ -1,0 +1,1480 @@
+[
+  {
+    "id": "ev_1778225321377_0r9c",
+    "title": "Discord's Reign",
+    "year": 934,
+    "month": null,
+    "day": null,
+    "yearEnd": 937,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": []
+  },
+  {
+    "id": "ev_1778225367652_2rxo",
+    "title": "Discovery of the Elements of Harmony",
+    "year": 937,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": []
+  },
+  {
+    "id": "ev_1778245549596_hws3",
+    "title": "Grogar's Defeat",
+    "year": -1000,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "The earliest known ruler of the land that would eventually become Equestria, Grogar was a mysterious tyrant emperor and creator of all monsters that roam Equus.\n\nEventually, his tyranny was challenged by Gusty the Great and her unicorn warriors, who are theorized to have been an expedition from the north of Equestria. Gusty the Great was able to defeat Grogar after separating him from the source of his power: the Bewitching Bell.\n\nGrogar was thus banished to the Realm of Shadows, and his bell hidden by Gusty in the hopes that nobody could use it's evil power again",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": "#4d4d4d"
+  },
+  {
+    "id": "ev_1778246058584_2tjo",
+    "title": "Discord's Reign",
+    "year": 934,
+    "month": null,
+    "day": null,
+    "yearEnd": 937,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": "#633300"
+  },
+  {
+    "id": "ev_1778246123641_ttky",
+    "title": "Discovery of the Elements of Harmony",
+    "year": 937,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268927387_38ij",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778246167288_otyx",
+    "title": "Pillars of Equestria Active",
+    "year": 613,
+    "month": null,
+    "day": null,
+    "yearEnd": 639,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": "#ecc218"
+  },
+  {
+    "id": "ev_1778246202791_fadk",
+    "title": "Discovery of Celestia and Luna",
+    "year": 612,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268927387_38ij",
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778246225824_abfz",
+    "title": "Banishment of the Sirens",
+    "year": 614,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778246241747_5y2w",
+    "title": "Arrival of Tirek and Scorpan",
+    "year": 630,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246267940_i3ac",
+    "title": "Passing of the Sun & Moon",
+    "year": 633,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268927387_38ij",
+    "importance": "notable",
+    "description": "Celestia and Luna take over the responsibility of moving the sun and moon from Star Swirl the Bearded and the other unicorns. In the process, they both gain their cutie marks and true legitimacy as the rulers of Equestria.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778246292560_6ya7",
+    "title": "Planting of the Tree of Harmony",
+    "year": 638,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778266717812_mzuv",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778246326609_ce9i",
+    "title": "Sealing of the Pony of Shadows",
+    "year": 639,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": "#ecc218"
+  },
+  {
+    "id": "ev_1778246359324_h5l4",
+    "title": "Migration of the Three Tribes",
+    "year": 600,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "milestone",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246386930_64x3",
+    "title": "The Long Winter",
+    "year": 550,
+    "month": null,
+    "day": null,
+    "yearEnd": 600,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": "#009ce0"
+  },
+  {
+    "id": "ev_1778246451661_nwvg",
+    "title": "Construction of the Castle of Two Sisters",
+    "year": 938,
+    "month": null,
+    "day": null,
+    "yearEnd": 942,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246494831_tvme",
+    "title": "King Sombra's Rise to Power",
+    "year": 1196,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246517395_yyws",
+    "title": "Crisis of the Crystal Empire",
+    "year": 1197,
+    "month": null,
+    "day": null,
+    "yearEnd": 1208,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246540772_1643",
+    "title": "Banishment of the Crystal Empire",
+    "year": 1208,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246568942_3v8a",
+    "title": "Arrival of the Tantabus",
+    "year": 1319,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": "#180b3b"
+  },
+  {
+    "id": "ev_1778246622075_pxxz",
+    "title": "Night Everlasting",
+    "year": 1321,
+    "month": null,
+    "day": null,
+    "yearEnd": 1325,
+    "monthEnd": 6,
+    "dayEnd": 21,
+    "eventCategoryId": null,
+    "importance": "major",
+    "description": "Nightmare Moon's 4 year long night.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": "#180b3b"
+  },
+  {
+    "id": "ev_1778246645980_23uo",
+    "title": "Banishment of Nightmare Moon",
+    "year": 1325,
+    "month": 6,
+    "day": 21,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "major",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": "#180b3b"
+  },
+  {
+    "id": "ev_1778246709604_uvne",
+    "title": "Canterlot Becomes the Capital",
+    "year": 1326,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246869201_1rdz",
+    "title": "Births of the Mane Six",
+    "year": 2302,
+    "month": null,
+    "day": null,
+    "yearEnd": 2306,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "Fluttershy - 977 CYP (2302 CE)\n\nRarity - 978 (2303 CE)\n\nApplejack - 979 (2304 CE)\n\nTwilight Sparkle - 980 (2305 CE)\n\nRainbow Dash - 980 (2305 CE)\n\nPinkie Pie - 981 (2306 CE)",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778246900852_zyhe",
+    "title": "Destruction of Hive Crucis",
+    "year": 2304,
+    "month": 4,
+    "day": 9,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246941199_7s5e",
+    "title": "Ascension of Princess Cadence",
+    "year": 2318,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778246972562_bo76",
+    "title": "Return of Nightmare Moon",
+    "year": 2325,
+    "month": 6,
+    "day": 21,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "Nightmare Moon – an evil being created by Princess Luna hosting the metamagical Tantabus parasite – returns from her 1000 year long banishment on Equus’ moon. Nightmare Moon and the Tantabus were neutralized by Twilight Sparkle and her friends using the rediscovered Elements of Harmony.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": "#180b3b"
+  },
+  {
+    "id": "ev_1778246996467_6fek",
+    "title": "Return of Discord",
+    "year": 2326,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": "#633300"
+  },
+  {
+    "id": "ev_1778247037059_p0to",
+    "title": "Return of the Crystal Empire",
+    "year": 2327,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247061946_xrzd",
+    "title": "Canterlot Invasion of 1002",
+    "year": 2327,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "Queen Chrysalis kidnaps and disguises herself as Princess Cadence on the eve of Cadence's wedding in an attempt to conquer Canterlot and Equestria in a single decisive strike. Once revealed, her army of changelings wreaks havoc on the city before ultimately being defeated and expelled by the Cadence, her fiancé - Shining Armor, and the bearers of the Elements of Harmony.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 5,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247106298_mvgl",
+    "title": "Storm Wars",
+    "year": 2327,
+    "month": null,
+    "day": null,
+    "yearEnd": 2332,
+    "monthEnd": 10,
+    "dayEnd": 14,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "major",
+    "description": "WIP - Storm King's invasions",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247162437_m2w1",
+    "title": "Ascension of Princess Twilight Sparkle",
+    "year": 2328,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247192007_m49d",
+    "title": "Return of Tirek",
+    "year": 2329,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247209989_c6y8",
+    "title": "Return of the Pillars of Harmony",
+    "year": 2331,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778247227100_ntze",
+    "title": "Thoraxian Reformation",
+    "year": 2331,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778247255324_8g5a",
+    "title": "Occupation of Mt. Aris",
+    "year": 2331,
+    "month": null,
+    "day": null,
+    "yearEnd": 2332,
+    "monthEnd": 10,
+    "dayEnd": 14,
+    "eventCategoryId": "ec_1778268831069_urqg",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 1,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247311685_n4wm",
+    "title": "Storm King’s Occupation of Equestria",
+    "year": 2332,
+    "month": 7,
+    "day": null,
+    "yearEnd": 2332,
+    "monthEnd": 10,
+    "dayEnd": 14,
+    "eventCategoryId": "ec_1778268831069_urqg",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 1,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247347862_z90h",
+    "title": "Death of the Storm King",
+    "year": 2332,
+    "month": 10,
+    "day": 14,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268807499_2lne",
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247366277_8lt6",
+    "title": "Grogar's Plot",
+    "year": 2333,
+    "month": null,
+    "day": null,
+    "yearEnd": 2334,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247391991_w3et",
+    "title": "Zebrican Struggle",
+    "year": 2347,
+    "month": null,
+    "day": null,
+    "yearEnd": 2353,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247422484_8lga",
+    "title": "Siege of Trotgiers",
+    "year": 2352,
+    "month": null,
+    "day": null,
+    "yearEnd": 2355,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268807499_2lne",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247445178_xn6i",
+    "title": "The War for Harmony",
+    "year": 2353,
+    "month": null,
+    "day": null,
+    "yearEnd": 2358,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "milestone",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247476993_f4u6",
+    "title": "Treaty of Baltimare",
+    "year": 2358,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247493924_pvu5",
+    "title": "Creation of the Equestrian Space Agency",
+    "year": 2366,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778247517348_u59e",
+    "title": "Second Pony on the Moon",
+    "year": 2377,
+    "month": 5,
+    "day": 9,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778247573066_5vlq",
+    "title": "Project Spyglass",
+    "year": 2406,
+    "month": null,
+    "day": null,
+    "yearEnd": 2415,
+    "monthEnd": 11,
+    "dayEnd": 27,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "WIP - Equestrian FTL program",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247609675_ionl",
+    "title": "Construction of the ESAV Starswirl",
+    "year": 2411,
+    "month": 4,
+    "day": 15,
+    "yearEnd": 2415,
+    "monthEnd": 11,
+    "dayEnd": 27,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247639109_xmg7",
+    "title": "Launch of the ESAV Starswirl",
+    "year": 2416,
+    "month": 3,
+    "day": 21,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "milestone",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247676578_9gkp",
+    "title": "Equus' First Contact",
+    "year": 2416,
+    "month": 5,
+    "day": 6,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778247703182_phdn",
+    "title": "Equestrian first contact with Humans and Sardens",
+    "year": 2418,
+    "month": 3,
+    "day": 16,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247733351_84zy",
+    "title": "Colonization of Yildun Rest",
+    "year": 2418,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778247782160_imil",
+    "title": "The Great War",
+    "year": 2429,
+    "month": 5,
+    "day": 13,
+    "yearEnd": 2444,
+    "monthEnd": 10,
+    "dayEnd": 17,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "milestone",
+    "description": "AKA 1st Hydian War",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247891323_ove0",
+    "title": "Formation of the Sector Alliance",
+    "year": 2429,
+    "month": 7,
+    "day": 1,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "major",
+    "description": "With the outbreak of war between United Equus, the Sarden Clans, and the United Systems Confederace against the Apleen and Huachavi alliance, the Equestrians, Sarden, and Humans formalize their alliance. Princess Twilight Sparkle of Equestria, Peng Wei, the speaker of the Confederate Congress, and the Greenspeaker of Mari would meet aboard the *USS Enterprise* in the a centrally located system at the time simply known as F471, which would later become known as Terminus. Through this meeting of delegates the Sector Alliance was born, a common front against the Apleen and Huachavi.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 1,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778247942781_lv72",
+    "title": "Equus declares war on the Apleen and Huachavi",
+    "year": 2429,
+    "month": 5,
+    "day": 15,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "minor",
+    "description": "Following the devastating attack on Yildun Rest, the Convocation of Creatures on Equus voted unanimously to enter a state of war with the Apleen and Huachavi government, and approved the emergency reorganization of the Convocation into a legally-binding, planetwide government: United Equus.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248025836_m92e",
+    "title": "Creation of Equus High Command",
+    "year": 2429,
+    "month": 6,
+    "day": 14,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "With the return of the survivors of the Battle of Yildun Rest back to Equus and the reorganization of the Conclave of Creatures into United Equus, a proper military command structure is formed. Prism Gleam and Nebula Bolt, both fresh veterans of Yildun Rest, senior officers on the ESAV Starswirl's maiden voyage, and long-time members of the Equestrian military, were made into the first two ranking Admirals. Prism Gleam, having served as the head of security in the Yildun Rest colony, was appointed as the commander-in-chief of the Equus Military Forces; while Nebula Bolt was assigned to overseeing the rapid build-up of Equus' military.=",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248046507_b9rv",
+    "title": "Launch of the Cloudsdale-A",
+    "year": 2429,
+    "month": 11,
+    "day": 22,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "The first Cloudsdale II-class Cruiser, a design created from the earlier Cloudsdale-class colony ships in response to the outbreak of the great war, is launched from Equus Drydock. The Cloudsdale-A, named in honor of the colony ship destroyed in the first battle of Yildun Rest, was the first of what would become the mainstay of the Equestrian Navy for the most of the great war.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248074843_rndy",
+    "title": "Battle of Caren Prime",
+    "year": 2438,
+    "month": 11,
+    "day": 19,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268807499_2lne",
+    "importance": "major",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248115660_i2g1",
+    "title": "The Hauxipec Accords",
+    "year": 2444,
+    "month": 10,
+    "day": 17,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "major",
+    "description": "The Hauxipec Accords was a meeting between the Continuation Forces and the Huachavi-Apleen Alliance that marked the final end of the Great War. The Huachavi was forced to give up all claims in the Disuputed Zone, while the remnant of the Apleen Fleet was to surrender immediately to the Apleen Republic or face complete destruction. Following the accords, the Preservers and Sarden both successfully rejoined the Sector Alliance, and the Human and Equestrian members of the Continuation Forces surrendered to their respective governments.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248156652_nrh0",
+    "title": "Disappearance of the ESS Eclipse",
+    "year": 2450,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248228699_mnhe",
+    "title": "Dawn of the Hydian Peace",
+    "year": 2460,
+    "month": null,
+    "day": null,
+    "yearEnd": 2640,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "milestone",
+    "description": "With reconstruction from the Great War complete, the powers of the Hydian Sector entered a prolonged period of peace and prosperity known as the Hydian Peace.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248257970_dov5",
+    "title": "Start of the Olympus Ring",
+    "year": 2579,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "Construction began on the Olympus Ring, a massive orbital ring around Equus that would serve as a shipyard, star port, and orbital habitat for the planet. It would later prove to be a money pit, frequently behind schedule and above budget.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248297764_g2tb",
+    "title": "Puerto Paraíso Scandal",
+    "year": 2653,
+    "month": 8,
+    "day": 16,
+    "yearEnd": 2653,
+    "monthEnd": 12,
+    "dayEnd": 7,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "The Puerto Paraíso Scandal was first uncovered on August 16th, 2653, and would lead to the impeachment and imprisonment of President Gucharo Picorroca in October, and the resignation of Picorroca's entire cabinet, his successor, and 57 Convocation members in November. In the scandal's aftermath, Princess Celestia was appointed interim president on December 7th, 2653.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248331177_o46i",
+    "title": "Equus Presidential Election of 2658",
+    "year": 2658,
+    "month": 4,
+    "day": 6,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "After serving the remainder of President Picorroca's term, President Celestia ran for reelection, winning a landslide 68.9% of the vote, beginning her 17th term in office.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778248353499_w3zv",
+    "title": "Assassination of Princess Cadence",
+    "year": 2666,
+    "month": 9,
+    "day": 21,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "On the way back from a Sector Alliance diplomatic conference on Caren Prime, Princess Cadence, serving as the chief diplomat for Equus, was ambushed in deep space, in the vicinity of the Maw of Tartarus. The official investigation would place blame on the Huachavi, but the real perpetrators were a group of Chrysalid Changeling terrorists.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248392275_u0g6",
+    "title": "Equestrian Secession from the Sector Alliance",
+    "year": 2668,
+    "month": 11,
+    "day": 3,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "major",
+    "description": "In the wake of Princess Cadence's assassination, Equus attempted to bring the Sector Alliance into a war with the Huachavi, who they believed was responsible for the attack. The other members of the alliance refused, which prompted the exit of the Union of Equus from the Sector Alliance.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248447334_eov9",
+    "title": "Manehattan Race Riots",
+    "year": 2670,
+    "month": 3,
+    "day": 5,
+    "yearEnd": 2670,
+    "monthEnd": 5,
+    "dayEnd": 17,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "With a precipitous rise in xenophobia amongst Equestrians, tensions in Equus' most diverse city, Manehattan rose dramatically, reaching a head in the late winter of 2670. Sparked from a court ruling a Huachavi innocent of a crime levied against him, Equestrians took to the streets in a frenzy, starting a brutal, weeks long riot that left thousands dead, mostly non-Equestrian aliens.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778248481870_zzqm",
+    "title": "Emergency Powers Act",
+    "year": 2670,
+    "month": 3,
+    "day": 24,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "notable",
+    "description": "Following the outset of the Manehattan Race Riots, the Convocation declared a state of emergency, granting President Celestia unilateral emergency powers and suspending the planned 2670 presidential election until further notice. Even after the end of the Manehattan Riots, the state of emergency persisted, and would not be removed until the Convocation disbanded itself in 2671.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ]
+  },
+  {
+    "id": "ev_1778248515919_jgys",
+    "title": "Formation of the Solar Empire",
+    "year": 2671,
+    "month": 7,
+    "day": 22,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "milestone",
+    "description": "Following the Battle of Nekmer, President Celestia declares herself to be the \"Eternal Empress of Equus and it's Colonies\". The government of United Equus dissolves itself and hands power over to Celestia.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254172992_lu6v",
+    "title": "The Marauder War",
+    "year": 2677,
+    "month": null,
+    "day": null,
+    "yearEnd": 2689,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "minor",
+    "description": "The Marauder War was an invasion and subsequent space conflict fought between the nascent Solar Empire and multiple Sarden clans that had long been raiding into Equestrian space. Pirate strongholds, including the planet Janset III, were captured or destroyed early in the war, with the following decade largely being composed of low level irregular combat against individuals or small groups of marauders.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254221285_5zrj",
+    "title": "1st Equestrian-Huachavi Border War",
+    "year": 2671,
+    "month": 8,
+    "day": 14,
+    "yearEnd": 2673,
+    "monthEnd": 9,
+    "dayEnd": 27,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254264293_d5vl",
+    "title": "Battle of Nekmer",
+    "year": 2671,
+    "month": 5,
+    "day": 13,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268807499_2lne",
+    "importance": "minor",
+    "description": "On the 242nd anniversary of the 1st Battle of Yildun Rest and the start of the Great War, Equestrian naval forces engaged a hostile force above the colony of Nekmer, and were able to win the day. Equestrian officials stated that it was a group of Huachavi warships, though most analysts believe the Battle of Nekmer was a false flag attack orchestrated by President Celestia and the Equestrian Navy.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254644901_o4hy",
+    "title": "2nd Equestria-Huachavi Border War",
+    "year": 2678,
+    "month": null,
+    "day": null,
+    "yearEnd": 2680,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 1,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254668660_mcib",
+    "title": "2nd Battle of Nekmer",
+    "year": 2679,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268807499_2lne",
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 1,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254691691_l08a",
+    "title": "Construction of the ISS Phoenix",
+    "year": 2692,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254706562_f2ye",
+    "title": "Completion of the Olympus Ring",
+    "year": 2693,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254722415_p95i",
+    "title": "Occupation of Drakan",
+    "year": 2696,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268831069_urqg",
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254742390_vxhy",
+    "title": "Drak'vorr Resistance",
+    "year": 2698,
+    "month": null,
+    "day": null,
+    "yearEnd": 2709,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268856866_7010",
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254785729_5prh",
+    "title": "Imperial Tribunals on Drakan",
+    "year": 2710,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "WIP - Celestia uses the losses during the Drak'vorr occupation as reasoning to have the least loyal members of the military command investigated",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254829916_mwp1",
+    "title": "Fall of the Solar Empire",
+    "year": 2962,
+    "month": 3,
+    "day": 15,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "milestone",
+    "description": "Although at it's peak the Solar Empire controlled practically all of the Hydian Sector, in it's final years it began to face serious internal threats. However, forces such as Luna's Rebellion were never able to strike a killing blow to the Empire, such a thing would come during the cataclysmic Battle of Equus. In the days before the battle, the ESS Eclipse was rediscovered, and in it, the Tantabus. The Tantabus quickly spurred to action, activating what would be called the Nightmare Fleet, and attacked Equus. Through highly destructive means, the Tantabus forced the deposition of Empress Celestia, then disappeared just as quickly as he was found.",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254857588_c8t8",
+    "title": "Warring Systems Period",
+    "year": 2963,
+    "month": null,
+    "day": null,
+    "yearEnd": 2975,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "major",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778254875960_oky3",
+    "title": "Foundation of the Union of Free Systems",
+    "year": 3144,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "major",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  }
+]

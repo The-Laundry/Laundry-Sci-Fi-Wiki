@@ -1,0 +1,317 @@
+[
+  {
+    "id": "cat_1778221758985_cj4o",
+    "name": "Locations",
+    "parentId": null,
+    "collapsed": true,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778221765054_tsjq",
+    "name": "Planets",
+    "parentId": "cat_1778221758985_cj4o",
+    "collapsed": true,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778227717518_y80p",
+    "name": "Civilizations",
+    "parentId": null,
+    "collapsed": false,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778227723000_6fzg",
+    "name": "Human",
+    "parentId": "cat_1778227717518_y80p",
+    "collapsed": false,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778227730187_cic5",
+    "name": "United Systems",
+    "parentId": "cat_1778227723000_6fzg",
+    "collapsed": false,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778227740346_uaf9",
+    "name": "United Systems Confederacy",
+    "parentId": "cat_1778227723000_6fzg",
+    "collapsed": false,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778227750899_vsvj",
+    "name": "Government",
+    "parentId": "cat_1778227740346_uaf9",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778227756342_nwcn",
+    "name": "Military",
+    "parentId": "cat_1778227740346_uaf9",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778227764127_y9dl",
+    "name": "Government",
+    "parentId": "cat_1778227730187_cic5",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778227773189_xdhs",
+    "name": "Military",
+    "parentId": "cat_1778227730187_cic5",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228650628_hdaz",
+    "name": "Moons",
+    "parentId": "cat_1778221758985_cj4o",
+    "collapsed": true,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228657317_s6lx",
+    "name": "Sectors",
+    "parentId": "cat_1778221758985_cj4o",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228666867_2iik",
+    "name": "Systems",
+    "parentId": "cat_1778221758985_cj4o",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228700918_na3c",
+    "name": "Astrogeography",
+    "parentId": "cat_1778221758985_cj4o",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228729951_xd42",
+    "name": "Vehicles",
+    "parentId": null,
+    "collapsed": true,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228738726_nfhg",
+    "name": "Space Vessels",
+    "parentId": "cat_1778228729951_xd42",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228759493_aeyz",
+    "name": "Components",
+    "parentId": "cat_1778228729951_xd42",
+    "collapsed": true,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228771408_bx99",
+    "name": "Terrestrial Vehicles",
+    "parentId": "cat_1778228729951_xd42",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228794993_62pj",
+    "name": "Ship Classes",
+    "parentId": "cat_1778228738726_nfhg",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228800769_7h4t",
+    "name": "Specific Ships",
+    "parentId": "cat_1778228738726_nfhg",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228828633_emt7",
+    "name": "Lifeforms",
+    "parentId": null,
+    "collapsed": true,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778228847910_r4ji",
+    "name": "Sapients",
+    "parentId": "cat_1778228828633_emt7",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228860373_92yd",
+    "name": "Flora",
+    "parentId": "cat_1778228828633_emt7",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228864647_jje4",
+    "name": "Fauna",
+    "parentId": "cat_1778228828633_emt7",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228892394_h75m",
+    "name": "Organizations",
+    "parentId": null,
+    "collapsed": true,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778228899327_r0iw",
+    "name": "Companies",
+    "parentId": "cat_1778228892394_h75m",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228914079_yvvg",
+    "name": "Events",
+    "parentId": null,
+    "collapsed": false,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778228925910_qife",
+    "name": "Military Conflicts",
+    "parentId": "cat_1778228914079_yvvg",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778228932180_byzt",
+    "name": "The Great War",
+    "parentId": "cat_1778228925910_qife",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778244834465_l45m",
+    "name": "Equestrian",
+    "parentId": "cat_1778227717518_y80p",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778244865404_7zi4",
+    "name": "Solar Empire",
+    "parentId": "cat_1778244834465_l45m",
+    "collapsed": false,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778244873078_8sfm",
+    "name": "United Equus",
+    "parentId": "cat_1778244834465_l45m",
+    "collapsed": true,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778244914174_2xpg",
+    "name": "Government",
+    "parentId": "cat_1778244865404_7zi4",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778244919563_xjyz",
+    "name": "Military",
+    "parentId": "cat_1778244865404_7zi4",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778244925278_a9cp",
+    "name": "Government",
+    "parentId": "cat_1778244873078_8sfm",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778244931126_1dlw",
+    "name": "Military",
+    "parentId": "cat_1778244873078_8sfm",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778258327160_x3l1",
+    "name": "Ichizhou",
+    "parentId": "cat_1778227717518_y80p",
+    "collapsed": true,
+    "_ddCollapsed": true
+  },
+  {
+    "id": "cat_1778258337565_79vv",
+    "name": "Ichizhou Empire",
+    "parentId": "cat_1778258327160_x3l1",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778258344727_3v8j",
+    "name": "Government",
+    "parentId": "cat_1778258337565_79vv",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778258352899_xv5k",
+    "name": "Military",
+    "parentId": "cat_1778258337565_79vv",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778259099004_s8zg",
+    "name": "Constellations",
+    "parentId": "cat_1778228700918_na3c",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778259247300_83a2",
+    "name": "Equestrian",
+    "parentId": "cat_1778228794993_62pj",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778259255537_8o2s",
+    "name": "Pre-Imperial",
+    "parentId": "cat_1778259247300_83a2",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778259261593_dqy3",
+    "name": "Imperial",
+    "parentId": "cat_1778259247300_83a2",
+    "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778259272715_2xaz",
+    "name": "Post-Imperial",
+    "parentId": "cat_1778259247300_83a2",
+    "collapsed": false,
+    "_ddCollapsed": false
+  }
+]

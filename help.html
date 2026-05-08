@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <div style="margin-bottom:28px;">
+      <h1 class="page-title">Help &amp; Guide</h1>
+      <p class="page-subtitle">A reference for using the Encyclopedia of Many Things.</p>
+    </div>
+
+    <div class="data-section">
+      <h2 style="font-family:var(--font-display);font-size:18px;margin-bottom:10px;">🚀 Getting Started</h2>
+      <p>Open a terminal in the <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">encyclopedia/</code> folder and run:</p>
+      <pre style="background:var(--bg-sidebar);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;font-family:var(--font-mono);font-size:13px;margin:10px 0;">python -m http.server 8000</pre>
+      <p>Then open <strong>http://localhost:8000</strong> in Chrome, Edge, or Arc. Click the <strong>No folder</strong> button in the top right to connect your data folder — pick the <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">data/</code> subfolder inside your encyclopedia folder. The app will read and write real JSON files from that point on.</p>
+      <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--accent);margin-top:10px;">
+        💡 You only need to connect the folder once per browser session. The browser remembers it until you close and reopen it.
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2 style="font-family:var(--font-display);font-size:18px;margin-bottom:10px;">✍️ The Article Editor</h2>
+      <p style="margin-bottom:10px;">Click <strong>New Article</strong> in the top right, or <strong>Edit Article</strong> on any article page.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:var(--bg-sidebar);border-radius:var(--radius);padding:14px;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">Toolbar</div>
+          <div style="font-size:13px;color:var(--text-muted);display:flex;flex-direction:column;gap:5px;">
+            <div><strong style="color:var(--text);">H1 / H2 / H3</strong> — Headings (populate the Table of Contents)</div>
+            <div><strong style="color:var(--text);">B I U S</strong> — Bold, italic, underline, strikethrough</div>
+            <div><strong style="color:var(--text);">Align</strong> — Left, centre, right, justify</div>
+            <div><strong style="color:var(--text);">Lists</strong> — Ordered or unordered</div>
+            <div><strong style="color:var(--text);">Indent</strong> — Tab / Shift+Tab also work</div>
+            <div><strong style="color:var(--text);">xⁿ x₂</strong> — Superscript / subscript</div>
+            <div><strong style="color:var(--text);">HR</strong> — Insert a horizontal rule</div>
+          </div>
+        </div>
+        <div style="background:var(--bg-sidebar);border-radius:var(--radius);padding:14px;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">Wikilinks</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">Type <code style="background:#fff;border:1px solid var(--border);padding:1px 5px;border-radius:3px;">[[Article Name]]</code> anywhere to create a link.</p>
+          <p style="font-size:13px;color:var(--text-muted);">Blue = article exists. Red = broken link (click to create the missing article).</p>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;margin-top:12px;">Table of Contents</div>
+          <p style="font-size:13px;color:var(--text-muted);">Auto-generated from H1/H2/H3 headings. Appears when there are 2+ headings.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2 style="font-family:var(--font-display);font-size:18px;margin-bottom:10px;">📂 Article Manager</h2>
+      <div style="font-size:13px;color:var(--text-muted);display:flex;flex-direction:column;gap:6px;">
+        <div><strong style="color:var(--text);">Nested categories</strong> — Unlimited depth. Use <strong>+ Sub</strong> on any category to create a child.</div>
+        <div><strong style="color:var(--text);">Drag &amp; drop</strong> — Drag article rows onto category headers or the Uncategorized zone to move them.</div>
+        <div><strong style="color:var(--text);">Rename</strong> — Click Rename, type, press Enter.</div>
+        <div><strong style="color:var(--text);">Wikibox Templates</strong> — Define reusable field layouts at the bottom of the manager page. They appear in the template dropdown in any editor.</div>
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2 style="font-family:var(--font-display);font-size:18px;margin-bottom:10px;">📅 Timelines</h2>
+      <div style="font-size:13px;color:var(--text-muted);display:flex;flex-direction:column;gap:6px;">
+        <div><strong style="color:var(--text);">Multiple timelines</strong> — Each is its own page. Events can belong to any number of timelines.</div>
+        <div><strong style="color:var(--text);">Calendar selector</strong> — Switch between five in-universe calendars. All dates are stored in CE internally and converted on the fly.</div>
+        <div><strong style="color:var(--text);">Importance levels</strong> — Insignificant (dot only) → Trivial → Minor → Notable (default) → Major → Milestone. Controls card size and visual weight.</div>
+        <div><strong style="color:var(--text);">Eras</strong> — Coloured date ranges that appear as bands on the timeline and segments in the minimap. Click an era label to edit it.</div>
+        <div><strong style="color:var(--text);">Minimap</strong> — The narrow bar on the right. Click anywhere to jump. Era names are clickable snap-to buttons.</div>
+        <div><strong style="color:var(--text);">Date override</strong> — Set a manual start/end year on a timeline to extend it beyond your earliest/latest event.</div>
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2 style="font-family:var(--font-display);font-size:18px;margin-bottom:10px;">💾 Saving &amp; Backup</h2>
+      <p>With a folder connected, everything saves automatically to <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">.json</code> files. To move your wiki to another device, copy the entire <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">encyclopedia/</code> folder and connect the <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">data/</code> subfolder on the new device.</p>
+      <p style="margin-top:8px;">Use <strong>Data → Export All Data</strong> for a single-file JSON backup at any time.</p>
+      <div style="background:var(--red-light);border:1px solid #e0b0b0;border-radius:var(--radius);padding:10px 14px;font-size:13px;color:var(--red);margin-top:10px;">
+        ⚠️ Without a connected folder, data lives in browser storage and can be erased if you clear your browser. Export regularly.
+      </div>
+    </div>
+
+    <div class="data-section">
+      <h2 style="font-family:var(--font-display);font-size:18px;margin-bottom:10px;">🌐 GitHub Pages Hosting</h2>
+      <p>Push the <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">encyclopedia/</code> folder to a GitHub repository and enable Pages in Settings. The wiki will be live at <code style="background:var(--bg);padding:1px 5px;border:1px solid var(--border);border-radius:3px;">https://username.github.io/repo-name</code>.</p>
+      <p style="margin-top:8px;">GitHub Pages is read-only, so the File System API won't be available there — the app falls back to localStorage. Use it as a read/share view of a JSON import, not as a live editing environment.</p>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(async () => {
+  await DB.init();
+  UI.init({ activePage: 'help' });
+})();
+</script>
+</body>
+</html>

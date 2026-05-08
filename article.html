@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Article — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <div id="article-view">
+      <div style="margin-bottom:28px;">
+        <div id="view-category-tag" class="article-category-tag"></div>
+        <h1 id="view-title" class="article-title"></h1>
+        <div class="article-meta"><span id="view-meta-tags"></span></div>
+      </div>
+      <div class="article-layout">
+        <div class="article-body-wrap">
+          <div id="view-wikibox"></div>
+          <div id="view-content" class="article-content clearfix"></div>
+          <div class="article-footer">
+            <div id="view-tags" class="article-tags"></div>
+            <div class="article-actions">
+              <a id="edit-link" href="#" class="btn btn-secondary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit Article
+              </a>
+              <button class="btn btn-danger btn-sm" onclick="deleteArticle()">Delete</button>
+            </div>
+          </div>
+        </div>
+        <div id="toc-panel" style="display:none;">
+          <div class="toc-inner">
+            <div class="toc-label">Contents</div>
+            <nav id="toc-nav"></nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="not-found" style="display:none;">
+      <div class="empty-state">
+        <p>Article not found.</p>
+        <a href="index.html" class="btn btn-secondary" style="margin-top:16px;">← Go home</a>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(async () => {
+  await DB.init();
+  UI.init({ activePage: '' });
+
+  const params = new URLSearchParams(location.search);
+  const artId = params.get('id');
+  const art = DB.articles.find(a => a.id === artId);
+
+  if (!art) {
+    document.getElementById('article-view').style.display = 'none';
+    document.getElementById('not-found').style.display = 'block';
+    document.title = 'Not Found — Encyclopedia of Many Things';
+    return;
+  }
+
+  document.title = `${art.title || 'Untitled'} — Encyclopedia of Many Things`;
+  document.getElementById('edit-link').href = `editor.html?id=${artId}`;
+
+  // Category breadcrumb
+  document.getElementById('view-category-tag').textContent = DB.getCatPath(art.categoryId) || 'Uncategorized';
+  document.getElementById('view-title').textContent = art.title || 'Untitled';
+
+  // Tags
+  document.getElementById('view-tags').innerHTML = (art.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+  document.getElementById('view-meta-tags').textContent = (art.tags || []).length ? 'Tags: ' + art.tags.join(', ') : '';
+
+  // Wikibox
+  const wbEl = document.getElementById('view-wikibox');
+  if (art.wikibox && art.wikibox.enabled) {
+    const wb     = art.wikibox;
+    const hasImg = !!wb.image;
+
+    // Build table rows, handling sections and fields
+    let tableRows = '';
+    let currentSectionId = null;
+    (wb.fields || []).forEach((f, i) => {
+      if (f.type === 'section') {
+        const sid = `wbs_${i}`;
+        tableRows += `<tr class="wb-section-header-row">
+          <td colspan="2">
+            <div class="wb-section-header-label" onclick="toggleWbSection('${sid}')">
+              <span class="wb-sec-toggle" id="${sid}_tog">▼</span>
+              ${escHtml(f.key || 'Section')}
+            </div>
+          </td>
+        </tr>`;
+        currentSectionId = sid;
+      } else if (f.key || f.val) {
+        const sectionClass = currentSectionId ? `wb-collapsible-row` : '';
+        const sectionAttr  = currentSectionId ? `data-section="${currentSectionId}"` : '';
+        const valHtml = f.val ? processWikilinks(f.val) : '';
+        tableRows += `<tr class="${sectionClass}" ${sectionAttr}>
+          <td>${escHtml(f.key || '')}</td>
+          <td>${valHtml}</td>
+        </tr>`;
+      }
+    });
+
+    wbEl.innerHTML = `
+      <div class="wikibox">
+        <div class="wikibox-header${hasImg ? '' : ' no-image'}">${escHtml(wb.title || art.title || '')}</div>
+        ${wb.subtitle ? `<div class="wikibox-subtitle">${escHtml(wb.subtitle)}</div>` : ''}
+        ${hasImg ? `
+          <div class="wikibox-image-wrap">
+            <img class="wikibox-image" src="${wb.image}" alt="${escHtml(wb.title || '')}">
+            ${wb.imgCaption ? `<div class="wikibox-img-caption">${escHtml(wb.imgCaption)}</div>` : ''}
+          </div>` : ''}
+        ${tableRows ? `<table class="wikibox-table">${tableRows}</table>` : ''}
+      </div>`;
+  }
+
+  // Content
+  const contentEl = document.getElementById('view-content');
+  contentEl.innerHTML = processWikilinks(art.content || '');
+  buildTOC(contentEl);
+})();
+
+function processWikilinks(html) {
+  return html.replace(/\[\[([^\]]+)\]\]/g, (m, inner) => {
+    // Support [[Article Name|Display Text]] syntax
+    const pipeIdx = inner.indexOf('|');
+    const name    = pipeIdx >= 0 ? inner.slice(0, pipeIdx).trim() : inner.trim();
+    const display = pipeIdx >= 0 ? inner.slice(pipeIdx + 1).trim() : name;
+    const t = DB.articles.find(a => a.title && a.title.toLowerCase() === name.toLowerCase());
+    return t
+      ? `<a href="article.html?id=${t.id}">${escHtml(display)}</a>`
+      : `<a href="editor.html?id=new&title=${encodeURIComponent(name)}" class="broken-link" title="Click to create: ${escHtml(name)}">${escHtml(display)}</a>`;
+  });
+}
+
+function toggleWbSection(sid) {
+  const tog  = document.getElementById(sid + '_tog');
+  const rows = document.querySelectorAll(`[data-section="${sid}"]`);
+  const isCollapsed = tog && tog.classList.contains('collapsed');
+  if (tog) tog.classList.toggle('collapsed', !isCollapsed);
+  rows.forEach(r => r.style.display = isCollapsed ? '' : 'none');
+}
+
+function buildTOC(contentEl) {
+  const nav = document.getElementById('toc-nav');
+  nav.innerHTML = '';
+  const headings = contentEl.querySelectorAll('h1,h2,h3');
+  const panel = document.getElementById('toc-panel');
+  panel.style.display = headings.length >= 2 ? 'block' : 'none';
+  headings.forEach((h, i) => {
+    h.id = 'hd' + i;
+    const a = document.createElement('a');
+    a.className = `toc-item toc-${h.tagName.toLowerCase()}`;
+    a.textContent = h.textContent;
+    a.onclick = () => {
+      h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelectorAll('.toc-item').forEach(e => e.classList.remove('active'));
+      a.classList.add('active');
+    };
+    nav.appendChild(a);
+  });
+}
+
+async function deleteArticle() {
+  const params = new URLSearchParams(location.search);
+  const artId = params.get('id');
+  const art = DB.articles.find(a => a.id === artId);
+  if (!confirm(`Delete "${art?.title || 'this article'}"? This cannot be undone.`)) return;
+  await DB.deleteArticleFile(artId);
+  DB.articles = DB.articles.filter(a => a.id !== artId);
+  await DB.save();
+  UI.toast('Article deleted.');
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>

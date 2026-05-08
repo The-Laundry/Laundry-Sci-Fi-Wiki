@@ -1,0 +1,79 @@
+{
+  "id": "art_1778258494179_uvng",
+  "title": "Ichizhou Empire",
+  "content": "<p>The&nbsp;<strong>Ichizhou Empire</strong>&nbsp;was the primary government of the Ichizhou from the unification of their&nbsp;homeworld, [[Airehai]], until it's eventual annexation by the&nbsp;[[Solar Empire]]. One of the oldest interstellar polities of the Hydian Sector, the empire underwent several periods of decline and regrowth over it's several hundred year history, most notably between the second half of the 24th century and the early 26th century.</p><p><br></p>",
+  "categoryId": "cat_1778258337565_79vv",
+  "tags": [],
+  "wikibox": {
+    "enabled": true,
+    "title": "Ichizhou Empire",
+    "subtitle": "",
+    "image": null,
+    "imagePath": false,
+    "imgCaption": "",
+    "fields": [
+      {
+        "type": "section",
+        "key": "General information",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Capital and largest world",
+        "val": "<span style=\"font-size: 14.5px; white-space-collapse: preserve;\">[[Airehai]]</span>"
+      },
+      {
+        "type": "field",
+        "key": "Primary species",
+        "val": "Ichizhou"
+      },
+      {
+        "type": "field",
+        "key": "Demonym",
+        "val": "Ichizhou"
+      },
+      {
+        "type": "section",
+        "key": "Government information",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Form of government",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Head of state",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Head of government",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Legislature",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Historical information",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Preceded by",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Succeeded by",
+        "val": "<div>• Ichizhou Argonate</div><div>• [[Solar Empire]]</div>"
+      }
+    ]
+  },
+  "created": 1778258494179,
+  "updated": 1778258494179
+}

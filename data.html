@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Management — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <h1 class="page-title" style="margin-bottom:24px;">Data Management</h1>
+
+    <!-- Folder status -->
+    <div class="data-section" id="folder-section" style="border-color:var(--accent);">
+      <h2 style="color:var(--accent);">📂 Data Folder</h2>
+      <div id="folder-info"></div>
+    </div>
+
+    <div class="data-section">
+      <h2>Export All Data</h2>
+      <p>Download a JSON file containing all articles, categories, timelines, events, and settings. Works as a universal backup regardless of storage mode.</p>
+      <button class="btn btn-primary" onclick="doExport()">Download JSON Backup</button>
+    </div>
+
+    <div class="data-section">
+      <h2>Import Data</h2>
+      <p>Load a previously exported JSON file. <strong style="color:var(--red);">Warning: this replaces all current data.</strong></p>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">Choose File &amp; Import</button>
+    </div>
+
+    <div class="data-section">
+      <h2>Export Single Article</h2>
+      <p>Export one article as a standalone JSON file.</p>
+      <select id="export-single-select" class="editor-select" style="margin-bottom:12px;min-width:220px;"></select><br>
+      <button class="btn btn-secondary" onclick="exportSingle()">Export Article</button>
+    </div>
+
+    <div class="data-section" style="border-color:#e0b0b0;">
+      <h2 style="color:var(--red);">Clear All Data</h2>
+      <p>Permanently delete all articles, categories, timelines, and events. This cannot be undone.</p>
+      <button class="btn btn-danger" onclick="doClear()">Clear Everything</button>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script>
+(async () => {
+  await DB.init();
+  UI.init({ activePage: 'data' });
+
+  // Folder info panel
+  const fi = document.getElementById('folder-info');
+  if (DB.isConnected) {
+    fi.innerHTML = `
+      <p>Connected to folder: <strong>${escHtml(DB.folderName)}</strong></p>
+      <p>Data is saved as individual JSON files. No import needed on this device.</p>
+      <button class="btn btn-secondary" onclick="UI.handleFolderClick()">Disconnect Folder</button>`;
+  } else {
+    fi.innerHTML = `
+      <p>No folder connected. Data is stored in your browser's local storage.</p>
+      <p style="color:var(--red);font-size:13px;">⚠️ Browser storage can be cleared accidentally. Connect a folder for safer storage.</p>
+      <button class="btn btn-primary" onclick="UI.handleFolderClick()">Connect a Folder</button>`;
+  }
+
+  // Populate article export select
+  const sel = document.getElementById('export-single-select');
+  sel.innerHTML = DB.articles.length
+    ? DB.articles.map(a => `<option value="${a.id}">${escHtml(a.title || 'Untitled')}</option>`).join('')
+    : '<option disabled>No articles yet</option>';
+})();
+
+function doExport() { DB.exportAll(); UI.toast('Export downloaded.'); }
+
+async function doImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      if (!confirm('This will replace ALL current data. Are you sure?')) return;
+      await DB.importAll(ev.target.result);
+      UI.toast('Data imported successfully.');
+      location.reload();
+    } catch (err) { UI.toast('Import failed: invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportSingle() {
+  const id  = document.getElementById('export-single-select').value;
+  const art = DB.articles.find(a => a.id === id);
+  if (!art) { UI.toast('No article selected.'); return; }
+  const blob = new Blob([JSON.stringify(art, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = (art.title || 'article').replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  UI.toast('Article exported.');
+}
+
+async function doClear() {
+  if (!confirm('Delete EVERYTHING? This cannot be undone.')) return;
+  if (!confirm('Are you absolutely sure? All articles, timelines, and events will be lost.')) return;
+  await DB.clearAll();
+  UI.toast('All data cleared.');
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>
