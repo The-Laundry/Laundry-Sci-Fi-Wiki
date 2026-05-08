@@ -33,6 +33,10 @@
     </div>
 
     <div class="editor-meta-row">
+      <!-- Article template picker (new articles only) -->
+      <select id="editor-article-template" class="editor-select" onchange="loadArticleTemplate()" style="display:none;">
+        <option value="">— Article Template —</option>
+      </select>
       <!-- Custom category dropdown replaces the plain <select> -->
       <div class="cat-dropdown-wrap" id="cat-dropdown-wrap" style="min-width:180px;flex-shrink:0;">
         <div class="cat-dropdown-display" id="cat-dropdown-display" tabindex="0">
@@ -222,11 +226,22 @@ let selectedCategoryId = null;
     document.title = 'New Article — Encyclopedia of Many Things';
     document.getElementById('editor-title').value = prefillTitle;
     document.getElementById('cancel-btn').onclick = () => history.back();
+    // Show article template picker on new articles
+    const tmplSel = document.getElementById('editor-article-template');
+    if (tmplSel) tmplSel.style.display = '';
   }
 
   buildCategoryDropdown(selectedCategoryId);
   populateWbTemplateSelect();
+  populateArticleTemplateSelect();
   renderWbFields();
+
+  // Apply article template from URL param (new articles only)
+  const templateId = params.get('template');
+  if (!editingId && templateId) {
+    const tmpl = DB.articleTemplates.find(t => t.id === templateId);
+    if (tmpl) applyArticleTemplate(tmpl);
+  }
 })();
 
 // ── QUILL INIT ───────────────────────────────────────────────────
@@ -619,6 +634,44 @@ function insertArticleImage(e) {
     UI.toast('Image inserted.');
   };
   r.readAsDataURL(file);
+}
+
+// ── ARTICLE TEMPLATE SELECT ──────────────────────────────────────
+function populateArticleTemplateSelect() {
+  const sel = document.getElementById('editor-article-template');
+  if (!sel) return;
+  // Remove any previously added options
+  [...sel.options].slice(1).forEach(o => o.remove());
+  if (DB.articleTemplates.length) {
+    DB.articleTemplates.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = t.name;
+      sel.appendChild(o);
+    });
+  }
+}
+
+function loadArticleTemplate() {
+  const sel = document.getElementById('editor-article-template');
+  const id = sel?.value;
+  if (!id) return;
+  const tmpl = DB.articleTemplates.find(t => t.id === id);
+  if (!tmpl) return;
+  if (!confirm(`Apply template "${tmpl.name}"? This will overwrite current content, tags, and category.`)) {
+    sel.value = ''; return;
+  }
+  applyArticleTemplate(tmpl);
+  sel.value = '';
+}
+
+function applyArticleTemplate(tmpl) {
+  if (tmpl.content) quillEditor.clipboard.dangerouslyPasteHTML(tmpl.content);
+  if (tmpl.categoryId) buildCategoryDropdown(tmpl.categoryId);
+  if (tmpl.tags && tmpl.tags.length) {
+    document.getElementById('editor-tags').value = tmpl.tags.join(', ');
+  }
+  UI.toast(`Template "${tmpl.name}" applied.`);
 }
 
 // ── SAVE ─────────────────────────────────────────────────────────

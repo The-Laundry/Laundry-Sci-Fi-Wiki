@@ -1,5 +1,6 @@
 {
   "homeDesc": "",
   "activeCalendar": "hcc",
-  "importanceColors": {}
+  "importanceColors": {},
+  "theme": "dark"
 }

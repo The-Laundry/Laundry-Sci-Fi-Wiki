@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <style>
 /* ── TIMELINE PAGE: override #main, go full-page ── */
 :root {
@@ -39,7 +41,7 @@
 #tl-toolbar {
   position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0;
   height: var(--tl-toolbar-h); z-index: 85;
-  background: #fff; border-bottom: 1px solid var(--border);
+  background: var(--bg-card); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 12px; gap: 8px;
   overflow: hidden;
 }
@@ -54,7 +56,7 @@
 #tl-detail-panel {
   position: fixed; top: var(--tl-top); left: var(--sidebar-w);
   width: var(--tl-detail-w); bottom: var(--tl-nav-h);
-  background: #fff; border-right: 1px solid var(--border);
+  background: var(--bg-card); border-right: 1px solid var(--border);
   z-index: 72; display: flex; flex-direction: column;
   transition: opacity .2s, visibility .2s;
   opacity: 1; visibility: visible;
@@ -104,12 +106,17 @@
 .tl-dp-date { font-size: 15px; font-weight: 700; color: var(--text); }
 .tl-dp-date-secondary { font-size: 11.5px; color: var(--text-faint); margin-top: 1px; }
 .tl-dp-desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.7; }
+/* Quill inside event modal — compact */
+#ev-desc-editor .ql-toolbar { padding: 4px 6px; border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0; background: var(--bg-sidebar); }
+#ev-desc-editor .ql-container { border-color: var(--border); border-radius: 0 0 var(--radius) var(--radius); font-family: var(--font-body); font-size: 13.5px; min-height: 90px; max-height: 200px; overflow-y: auto; }
+#ev-desc-editor .ql-editor { min-height: 80px; }
+#ev-desc-editor .ql-editor p { margin-bottom: 6px; }
 .tl-dp-footer { padding: 12px 16px; border-top: 1px solid var(--border-light); flex-shrink: 0; }
 
 /* ── FIXED: MINIMAP ── */
 #tl-minimap {
   position: fixed; top: var(--tl-top); right: 0; bottom: var(--tl-nav-h);
-  width: var(--tl-mini-w); background: #fff; border-left: 1px solid var(--border);
+  width: var(--tl-mini-w); background: var(--bg-card); border-left: 1px solid var(--border);
   z-index: 75; overflow: hidden; cursor: pointer; user-select: none;
 }
 #tl-minimap-inner { position: relative; width: 100%; height: 100%; }
@@ -121,7 +128,7 @@
 /* ── FIXED: NAV BAR ── */
 #tl-nav-bar {
   position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; height: var(--tl-nav-h);
-  background: rgba(255,255,255,.97); backdrop-filter: blur(8px);
+  background: var(--bg-card); backdrop-filter: blur(8px);
   border-top: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center; gap: 14px; z-index: 85;
 }
@@ -155,7 +162,7 @@
 /* Era label */
 .tl-era-label {
   position: absolute; left: 50%; transform: translateX(-50%);
-  background: rgba(255,255,255,.96); border: 2px solid currentColor;
+  background: var(--bg-card); border: 2px solid currentColor;
   border-radius: var(--radius); padding: 7px 18px 6px;
   z-index: 6; cursor: pointer; text-align: center; white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,.1); transition: box-shadow .15s;
@@ -191,7 +198,7 @@
 /* Card fills its zone completely */
 .tl-col-card {
   width: 100%; box-sizing: border-box;
-  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 5px 9px 5px 8px;
   display: flex; align-items: flex-start; gap: 6px;
   cursor: pointer; pointer-events: all;
@@ -219,7 +226,7 @@
 
 /* ── COLOR PICKER ── */
 #g-cp {
-  display: none; position: fixed; background: #fff;
+  display: none; position: fixed; background: var(--bg-card);
   border: 1px solid var(--border); border-radius: var(--radius);
   box-shadow: 0 4px 20px rgba(0,0,0,.16); padding: 12px; width: 226px; z-index: 9999;
 }
@@ -754,7 +761,7 @@ function renderDetailPanel(ev, calKey) {
       <div class="tl-dp-section-label">Date</div>
       ${dateHtml}
     </div>
-    ${ev.description?`<div class="tl-dp-section"><div class="tl-dp-section-label">Description</div><div class="tl-dp-desc">${escHtml(ev.description)}</div></div>`:''}
+    ${ev.description?`<div class="tl-dp-section"><div class="tl-dp-section-label">Description</div><div class="tl-dp-desc">${ev.description}</div></div>`:''}
     ${art?`<div class="tl-dp-section"><div class="tl-dp-section-label">Linked Article</div><a href="article.html?id=${art.id}" style="display:inline-flex;align-items:center;gap:5px;font-size:13.5px;color:var(--accent);font-weight:500;text-decoration:none;">📄 ${escHtml(art.title||'Untitled')}</a></div>`:''}`;
 
   footer.style.display = 'block';
@@ -959,7 +966,7 @@ function openEventModal(id) {
         <div class="field-row"><div class="field-label">Category</div><select id="ev-cat" class="field-input">${cO}</select></div>
         <div class="field-row"><div class="field-label">Importance</div><select id="ev-imp" class="field-input">${iO}</select></div>
       </div>
-      <div class="field-row"><div class="field-label">Description</div><textarea id="ev-desc" class="field-input" rows="3" style="resize:vertical;">${escHtml(ev?.description||'')}</textarea></div>
+      <div class="field-row"><div class="field-label">Description</div><div id="ev-desc-editor" style="background:var(--bg-card);border-radius:var(--radius);"></div></div>
       <div class="field-row"><div class="field-label">Link to Article</div><select id="ev-art" class="field-input">${aO}</select></div>
       <div class="field-row"><div class="field-label">Show on Timelines</div>
         <div style="display:flex;flex-direction:column;gap:5px;background:var(--bg-sidebar);padding:10px;border-radius:var(--radius);">${tC||'<span style="color:var(--text-faint);font-size:13px;">No timelines yet.</span>'}</div>
@@ -989,7 +996,7 @@ function openEventModal(id) {
           dayEnd:ceYE?parseInt(document.getElementById('ev-de').value)||null:null,
           eventCategoryId:document.getElementById('ev-cat').value||null,
           importance:document.getElementById('ev-imp').value||'notable',
-          description:document.getElementById('ev-desc').value.trim(),
+          description:evDescQuill ? evDescQuill.root.innerHTML.replace(/<p><br><\/p>$/,'').trim() : '',
           articleId:document.getElementById('ev-art').value||null,
           timelineIds:tIds,
           tlColumn:parseInt(document.getElementById('ev-col').value)||3,
@@ -1000,7 +1007,23 @@ function openEventModal(id) {
       }},
     ]
   );
-  setTimeout(()=>document.getElementById('ev-title')?.focus(),50);
+  let evDescQuill = null;
+  setTimeout(() => {
+    document.getElementById('ev-title')?.focus();
+    const descEl = document.getElementById('ev-desc-editor');
+    if (descEl) {
+      evDescQuill = new Quill(descEl, {
+        theme: 'snow',
+        placeholder: 'Optional description…',
+        modules: { toolbar: [
+          ['bold','italic','underline'],
+          [{ list:'ordered' }, { list:'bullet' }],
+          ['link','clean'],
+        ]},
+      });
+      if (ev?.description) evDescQuill.clipboard.dangerouslyPasteHTML(ev.description);
+    }
+  }, 50);
 }
 
 // ══════════════════════════════

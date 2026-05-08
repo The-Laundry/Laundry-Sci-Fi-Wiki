@@ -15,6 +15,7 @@ const DB = {
   eras: [],
   timelineCategories: [],
   wikiboxTemplates: [],
+  articleTemplates: [],
   settings: { homeDesc: '', activeCalendar: 'hcc', importanceColors: {} },
 
   // File system handles (null when using localStorage or static)
@@ -80,6 +81,7 @@ const DB = {
     this.eras               = await fetchJson(base + 'data/eras.json',                []);
     this.timelineCategories = await fetchJson(base + 'data/timeline-categories.json', []);
     this.wikiboxTemplates   = await fetchJson(base + 'data/wikibox-templates.json',   []);
+    this.articleTemplates   = await fetchJson(base + 'data/article-templates.json',   []);
 
     // Load article index then individual article files
     // First try a manifest, then fall back to the bulk export format
@@ -208,6 +210,7 @@ const DB = {
     this.eras              = await this._readJson(dir, 'eras.json',                []);
     this.timelineCategories= await this._readJson(dir, 'timeline-categories.json', []);
     this.wikiboxTemplates  = await this._readJson(dir, 'wikibox-templates.json',   []);
+    this.articleTemplates  = await this._readJson(dir, 'article-templates.json',   []);
 
     // Load individual article files
     this.articles = [];
@@ -246,6 +249,7 @@ const DB = {
     if (!this.eras)               this.eras = [];
     if (!this.timelineCategories) this.timelineCategories = [];
     if (!this.wikiboxTemplates)   this.wikiboxTemplates = [];
+    if (!this.articleTemplates)   this.articleTemplates = [];
   },
 
   _migrate() {
@@ -290,6 +294,7 @@ const DB = {
       this._writeJson(dir, 'eras.json',                 this.eras),
       this._writeJson(dir, 'timeline-categories.json',  this.timelineCategories),
       this._writeJson(dir, 'wikibox-templates.json',    this.wikiboxTemplates),
+      this._writeJson(dir, 'article-templates.json',    this.articleTemplates),
     ]);
 
     // Write article file(s)
@@ -324,6 +329,7 @@ const DB = {
         timelines: this.timelines, events: this.events, eras: this.eras,
         timelineCategories: this.timelineCategories,
         wikiboxTemplates: this.wikiboxTemplates, settings: this.settings,
+        articleTemplates: this.articleTemplates,
       };
       localStorage.setItem('eomt_db', JSON.stringify(snapshot));
     } catch (e) {
@@ -338,7 +344,8 @@ const DB = {
       articles: this.articles, categories: this.categories,
       timelines: this.timelines, events: this.events, eras: this.eras,
       timelineCategories: this.timelineCategories,
-      wikiboxTemplates: this.wikiboxTemplates, settings: this.settings,
+      wikiboxTemplates: this.wikiboxTemplates, articleTemplates: this.articleTemplates,
+      settings: this.settings,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -361,6 +368,7 @@ const DB = {
     this.articles = []; this.categories = []; this.timelines = [];
     this.events = []; this.eras = []; this.timelineCategories = [];
     this.wikiboxTemplates = [];
+    this.articleTemplates = [];
     this.settings = { homeDesc: '', activeCalendar: 'hcc' };
     if (this._mode === 'filesystem') {
       // Delete all article files

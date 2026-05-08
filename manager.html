@@ -7,7 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
-</head>
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<style>
+/* Quill inside article template modal */
+#at-content-editor .ql-toolbar { padding: 4px 6px; border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0; background: var(--bg-sidebar); }
+#at-content-editor .ql-container { border-color: var(--border); border-radius: 0 0 var(--radius) var(--radius); font-family: var(--font-body); font-size: 13.5px; min-height: 100px; }
+</style>
 <body>
 
 <header id="app-header"></header>
@@ -44,7 +50,19 @@
         </div>
         <button class="btn btn-secondary" onclick="openWbTemplateModal(null)">+ New Template</button>
       </div>
-      <div id="wb-template-list" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:60px;"></div>
+      <div id="wb-template-list" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);min-height:60px;"></div>
+    </div>
+
+    <!-- Article Templates -->
+    <div style="margin-top:32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:20px;color:var(--text);margin-bottom:2px;">Article Templates</h2>
+          <p style="color:var(--text-muted);font-size:13px;">Save article starters — pre-filled title, category, tags, content, and wikibox.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="openArticleTemplateModal(null)">+ New Template</button>
+      </div>
+      <div id="art-template-list" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);min-height:60px;"></div>
     </div>
 
   </main>
@@ -62,6 +80,7 @@ let dragState = null;
   UI.init({ activePage: 'articles' });
   renderManager();
   renderWbTemplateList();
+  renderArticleTemplateList();
 })();
 
 // ── ARTICLE MANAGER TREE ──────────────────────────────────────────
@@ -80,7 +99,7 @@ function renderManager() {
     const row = document.createElement('div');
     row.className = 'tree-art-row';
     row.draggable = true;
-    row.style.background = rowIdx % 2 === 0 ? '#fff' : 'var(--bg-sidebar)';
+    row.style.background = rowIdx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-sidebar)';
 
     const indent = document.createElement('div');
     indent.style.cssText = `width:${(getDepth(catId) + 1) * 20 + 14}px;flex-shrink:0;`;
@@ -251,7 +270,124 @@ async function deleteArticleById(id) {
   await DB.save(); UI.renderSidebar(); renderManager(); UI.toast('Article deleted.');
 }
 
-// ── WIKIBOX TEMPLATE MANAGER ──────────────────────────────────────
+// ── ARTICLE TEMPLATE MANAGER ─────────────────────────────────────
+
+function renderArticleTemplateList() {
+  const list = document.getElementById('art-template-list');
+  if (!DB.articleTemplates.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:24px;">No article templates yet.</div>'; return;
+  }
+  list.innerHTML = '';
+  DB.articleTemplates.forEach(t => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-light);';
+
+    const name = document.createElement('span');
+    name.style.cssText = 'flex:1;font-weight:500;font-size:14px;';
+    name.textContent = t.name;
+
+    const meta = document.createElement('span');
+    meta.style.cssText = 'font-size:12px;color:var(--text-faint);';
+    const parts = [];
+    if (t.categoryId) parts.push(DB.getCatPath(t.categoryId));
+    if (t.tags && t.tags.length) parts.push(t.tags.join(', '));
+    meta.textContent = parts.join(' · ') || 'No defaults';
+
+    const acts = document.createElement('div');
+    acts.style.cssText = 'display:flex;gap:6px;';
+
+    const eb = document.createElement('button');
+    eb.className = 'btn btn-ghost btn-xs'; eb.textContent = 'Edit';
+    eb.onclick = () => openArticleTemplateModal(t.id);
+    acts.appendChild(eb);
+
+    const useBtn = document.createElement('a');
+    useBtn.className = 'btn btn-secondary btn-xs';
+    useBtn.textContent = 'Use';
+    useBtn.href = `editor.html?id=new&template=${t.id}`;
+    acts.appendChild(useBtn);
+
+    const db2 = document.createElement('button');
+    db2.className = 'btn btn-danger btn-xs'; db2.textContent = 'Delete';
+    db2.onclick = async () => {
+      if (!confirm(`Delete template "${t.name}"?`)) return;
+      DB.articleTemplates = DB.articleTemplates.filter(x => x.id !== t.id);
+      await DB.save(); renderArticleTemplateList(); UI.toast('Template deleted.');
+    };
+    acts.appendChild(db2);
+
+    row.appendChild(name); row.appendChild(meta); row.appendChild(acts);
+    list.appendChild(row);
+  });
+}
+
+function openArticleTemplateModal(id) {
+  const existing = id ? DB.articleTemplates.find(t => t.id === id) : null;
+
+  const catOptions = '<option value="">— No Category —</option>' +
+    [...DB.categories]
+      .sort((a, b) => DB.getCatPath(a.id).localeCompare(DB.getCatPath(b.id)))
+      .map(c => `<option value="${c.id}"${existing?.categoryId === c.id ? ' selected' : ''}>${escHtml(DB.getCatPath(c.id))}</option>`)
+      .join('');
+
+  UI.showModal(existing ? 'Edit Article Template' : 'New Article Template', `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field-row">
+        <div class="field-label">Template Name *</div>
+        <input id="at-name" class="field-input" value="${escHtml(existing?.name || '')}" placeholder="e.g. Planet Article">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Default Category</div>
+        <select id="at-cat" class="field-input">${catOptions}</select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Default Tags <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(comma-separated)</span></div>
+        <input id="at-tags" class="field-input" value="${escHtml((existing?.tags || []).join(', '))}" placeholder="e.g. planet, geography">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Starter Content <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(optional HTML or leave blank)</span></div>
+        <div id="at-content-editor" style="background:var(--bg-card);border-radius:var(--radius);"></div>
+      </div>
+    </div>`,
+    [
+      { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+      { label: existing ? 'Save Changes' : 'Create', cls: 'btn-primary', action: async () => {
+        const name = document.getElementById('at-name').value.trim();
+        if (!name) { UI.toast('Enter a template name.'); return; }
+        const tags = document.getElementById('at-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const catId = document.getElementById('at-cat').value || null;
+        const content = _atQuill ? _atQuill.root.innerHTML.replace(/<p><br><\/p>$/, '').trim() : '';
+        if (existing) {
+          Object.assign(existing, { name, categoryId: catId, tags, content });
+        } else {
+          DB.articleTemplates.push({ id: mkId('atpl'), name, categoryId: catId, tags, content });
+        }
+        await DB.save(); UI.closeModal(); renderArticleTemplateList();
+        UI.toast(existing ? 'Template updated.' : 'Template created.');
+      }},
+    ]
+  );
+
+  let _atQuill = null;
+  setTimeout(() => {
+    document.getElementById('at-name')?.focus();
+    const el = document.getElementById('at-content-editor');
+    if (el) {
+      _atQuill = new Quill(el, {
+        theme: 'snow',
+        placeholder: 'Optional starter content for new articles using this template…',
+        modules: { toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline'],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['link', 'clean'],
+        ]},
+      });
+      if (existing?.content) _atQuill.clipboard.dangerouslyPasteHTML(existing.content);
+    }
+  }, 50);
+}
+
 
 function renderWbTemplateList() {
   const list = document.getElementById('wb-template-list');
@@ -295,7 +431,7 @@ function openWbTemplateModal(id) {
   function fHTML() {
     return tmpFields.map((f, i) => {
       const isSection = f.type === 'section';
-      const bg = isSection ? 'background:var(--accent-light);border:1px solid rgba(58,110,168,.2);' : 'background:#fff;border:1px solid var(--border-light);';
+      const bg = isSection ? 'background:var(--accent-light);border:1px solid rgba(58,110,168,.2);' : 'background:var(--bg-card);border:1px solid var(--border-light);';
       const inputStyle = isSection ? 'font-weight:600;font-size:12px;color:var(--accent);background:transparent;border:none;' : '';
       return `<div draggable="true" data-tidx="${i}" style="display:flex;align-items:center;gap:4px;margin-bottom:5px;border-radius:var(--radius);padding:4px 6px;${bg}"
         ondragstart="event.dataTransfer.effectAllowed='move';_tmplDragIdx=${i};this.style.opacity='.4';"

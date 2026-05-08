@@ -9,6 +9,7 @@ const UI = {
   // ── SHELL INJECTION ──────────────────────────────────────────────────
 
   init(opts = {}) {
+    this._applyTheme();
     this._injectHeader(opts.activePage || '');
     this._injectSidebar();
     this._injectModal();
@@ -45,6 +46,10 @@ const UI = {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New Article
         </a>`;
+    const themeBtn = `
+        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="UI.toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <span id="theme-toggle-icon">${(DB.settings.theme === 'dark') ? '☀️' : '🌙'}</span>
+        </button>`;
     header.innerHTML = `
       <a class="header-brand" href="index.html">
         <span class="corp">Phodd Communications</span>
@@ -61,10 +66,28 @@ const UI = {
           <a href="${p.href}" class="btn btn-ghost ${activePage === p.id ? 'active' : ''}" style="${activePage === p.id ? 'color:var(--accent);' : ''}">
             ${p.label}
           </a>`).join('')}
+        ${themeBtn}
         ${folderBtn}
         ${readOnlyBadge}
         ${newArticleBtn}
       </div>`;
+  },
+
+  // ── THEME ─────────────────────────────────────────────────────────────
+
+  _applyTheme() {
+    const theme = DB.settings.theme || 'light';
+    document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+  },
+
+  toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    DB.settings.theme = next;
+    document.documentElement.setAttribute('data-theme', next);
+    const icon = document.getElementById('theme-toggle-icon');
+    if (icon) icon.textContent = next === 'dark' ? '☀️' : '🌙';
+    DB.save();
   },
 
   _injectSidebar() {
