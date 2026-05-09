@@ -242,6 +242,21 @@
 .cp-row input { flex: 1; padding: 4px 6px; border: 1px solid var(--border); border-radius: 3px; font-family: var(--font-mono); font-size: 12px; outline: none; }
 .cp-row input:focus { border-color: var(--accent); }
 
+/* --- ZOOM CONTROLS --- */
+.tl-zoom-group { display:flex; align-items:center; gap:0; flex-shrink:0; }
+.tl-zoom-btn {
+  border: 1px solid var(--border); background: var(--bg-card);
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  cursor: pointer; color: var(--text); line-height: 1;
+  transition: background .15s, border-color .15s, color .15s;
+  padding: 5px 9px;
+}
+.tl-zoom-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.tl-zoom-btn:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
+.tl-zoom-btn:not(:first-child) { border-left: none; }
+.tl-zoom-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); z-index:1; position:relative; }
+#tl-zoom-label { min-width: 44px; text-align: center; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+
 /* --- NOT FOUND --- */
 #tl-not-found { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
 </style>
@@ -277,6 +292,12 @@
       <option value="milestone">Milestone only</option>
     </select>
     <div style="flex:1;"></div>
+    <div class="tl-zoom-group">
+      <button class="tl-zoom-btn" onclick="zoomOut()" title="Zoom out">−</button>
+      <button class="tl-zoom-btn" id="tl-zoom-label" onclick="zoomReset()" title="Reset zoom to 100%">100%</button>
+      <button class="tl-zoom-btn" onclick="zoomIn()" title="Zoom in">+</button>
+    </div>
+    <div class="tl-toolbar-sep"></div>
     <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" onclick="location.href='timeline-manager.html'">⚙ Edit</button>
     <button class="btn btn-secondary btn-sm" style="flex-shrink:0;" onclick="openEraModal(null)">+ Era</button>
     <button class="btn btn-primary btn-sm"   style="flex-shrink:0;" onclick="openEventModal(null)">+ Event</button>
@@ -358,6 +379,7 @@ let panelOpen      = true;
 let sortedEvs      = [];
 let _bd            = null; // cached build-days params
 let _mmScrollBound = null; // remove old listener
+let tlZoom         = 1.0;
 
 // ══════════════════════════════
 //  INIT
@@ -391,6 +413,17 @@ let _mmScrollBound = null; // remove old listener
   window.addEventListener('scroll', () => { updateNavYear(); updateMmVP(); }, { passive: true });
   renderTL();
 })();
+
+// ══════════════════════════════
+//  ZOOM
+// ══════════════════════════════
+function zoomIn()    { tlZoom = Math.min(8, +(tlZoom * 1.5).toFixed(4)); _applyZoom(); }
+function zoomOut()   { tlZoom = Math.max(0.1, +(tlZoom / 1.5).toFixed(4)); _applyZoom(); }
+function zoomReset() { tlZoom = 1.0; _applyZoom(); }
+function _applyZoom() {
+  document.getElementById('tl-zoom-label').textContent = Math.round(tlZoom * 100) + '%';
+  renderTL();
+}
 
 // ══════════════════════════════
 //  PANEL TOGGLE
@@ -516,7 +549,7 @@ function renderTL() {
   if (tl.endYear   != null) allD.push(dateToDays(tl.endYear,12,31));
   const minD = Math.min(...allD), maxD = Math.max(...allD);
   const span = Math.max(maxD - minD, 365);
-  const PX   = 0.9, totalH = Math.max(800, span * PX), PAD = 80, TRACK_H = totalH + PAD * 2;
+  const PX   = 0.9 * tlZoom, totalH = Math.max(800, span * PX), PAD = 80, TRACK_H = totalH + PAD * 2;
   _bd = { minD, span, totalH, PAD };
   const toY = d => PAD + (d - minD) / span * totalH;
 
