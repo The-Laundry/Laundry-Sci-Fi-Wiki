@@ -5,14 +5,181 @@
   "categoryId": "cat_1778259255537_8o2s",
   "tags": [],
   "wikibox": {
-    "enabled": false,
-    "title": "",
+    "enabled": true,
+    "title": "Cloudsdale II-class Cruiser",
     "subtitle": "",
     "image": null,
     "imagePath": false,
     "imgCaption": "",
-    "fields": []
+    "fields": [
+      {
+        "type": "section",
+        "key": "Production information",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Designer",
+        "val": "Nebula Bolt"
+      },
+      {
+        "type": "field",
+        "key": "Manufacturer",
+        "val": "Equus Orbital Yards"
+      },
+      {
+        "type": "field",
+        "key": "Line",
+        "val": "Cloudsdale series"
+      },
+      {
+        "type": "field",
+        "key": "Model",
+        "val": "Cloudsdale II-class Cruiser"
+      },
+      {
+        "type": "field",
+        "key": "Type",
+        "val": "Cruiser"
+      },
+      {
+        "type": "field",
+        "key": "Year introduced",
+        "val": "2429"
+      },
+      {
+        "type": "field",
+        "key": "Production end",
+        "val": "~2450"
+      },
+      {
+        "type": "section",
+        "key": "Physical specifications",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Length",
+        "val": "285 meters"
+      },
+      {
+        "type": "field",
+        "key": "Beam",
+        "val": "<br>"
+      },
+      {
+        "type": "field",
+        "key": "Height",
+        "val": "62 meters"
+      },
+      {
+        "type": "field",
+        "key": "Mass",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Decks",
+        "val": "15"
+      },
+      {
+        "type": "field",
+        "key": "Crew complement",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Passenger capacity",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Cargo capacity",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Consumables",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Technical systems",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Superluminal drive",
+        "val": "Type-27 Teleportation Device"
+      },
+      {
+        "type": "field",
+        "key": "FTL method",
+        "val": "Instantaneous"
+      },
+      {
+        "type": "field",
+        "key": "Navigational system",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Sublight engine(s)",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Hull",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Shielding",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Sensor range",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Armament",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Power system",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Usage",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Role(s)",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Affliation",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Standard registry",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Active",
+        "val": "2430s - 2900s"
+      }
+    ]
   },
   "created": 1778259989861,
-  "updated": 1778261767555
+  "updated": 1778350221679,
+  "summary": ""
 }
