@@ -487,10 +487,10 @@ const UI = {
       const q = input.value.trim().toLowerCase();
       const res = document.getElementById('search-results');
       if (!q) { res.classList.remove('open'); return; }
-      const matches = DB.articles.filter(a =>
+      // Header search uses metadata only (fast, no file reads) — title + tags
+      const matches = DB.articleMeta.filter(a =>
         (a.title || '').toLowerCase().includes(q) ||
-        (a.tags || []).some(t => t.toLowerCase().includes(q)) ||
-        (a.content || '').toLowerCase().includes(q)
+        (a.tags || []).some(t => t.toLowerCase().includes(q))
       ).slice(0, 6);
       const fullSearchLink = `<a class="search-result-item search-result-full" href="search.html?q=${encodeURIComponent(input.value.trim())}" style="border-top:1px solid var(--border-light);color:var(--accent);font-size:12.5px;padding:8px 14px;">
         <span>🔍 Full search for <strong>${escHtml(input.value.trim())}</strong></span>

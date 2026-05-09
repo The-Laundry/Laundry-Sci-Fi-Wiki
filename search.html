@@ -256,15 +256,119 @@
       catSel.appendChild(opt);
     });
 
-  // Tags: all unique tags across all articles
-  const allTags = [...new Set(DB.articles.flatMap(a => a.tags || []))].sort();
+  // Tags: all unique tags across all articles (from metadata)
+  const allTags = [...new Set(DB.articleMeta.flatMap(a => a.tags || []))].sort();
   const tagSel = document.getElementById('filter-tag');
   allTags.forEach(t => {
     const opt = document.createElement('option');
-    opt.value = t;
-    opt.textContent = t;
+    opt.value = t; opt.textContent = t;
     tagSel.appendChild(opt);
   });
+
+  // ── Build search index (async, non-blocking) ──────────────────────
+  // Structure: Map<token, Map<articleId, score>>
+  // Tokens from: title (×3), tags (×2), summary (×1)
+  let _index = null;
+  let _indexBuilding = false;
+
+  const STOP_WORDS = new Set(['the','a','an','of','in','on','at','to','for','is','was',
+    'are','were','be','been','by','with','from','and','or','but','not','it','its',
+    'this','that','as','if','so','do','did','has','had','have','will','would','can',
+    'could','all','any','one','two','may','also','than','their','they','them','then',
+    'there','which','who','what','when','where','how','he','she','we','you','his',
+    'her','our','your','my','no','up','out','into','than','more','some','about']);
+
+  function tokenize(str) {
+    return (str || '').toLowerCase()
+      .replace(/<[^>]+>/g, ' ')   // strip HTML
+      .replace(/[^a-z0-9\s'-]/g, ' ')
+      .split(/\s+/)
+      .filter(t => t.length > 1 && !STOP_WORDS.has(t));
+  }
+
+  async function buildIndex() {
+    if (_index || _indexBuilding) return;
+    _indexBuilding = true;
+    const idx = new Map();
+
+    const add = (token, id, weight) => {
+      if (!idx.has(token)) idx.set(token, new Map());
+      const m = idx.get(token);
+      m.set(id, (m.get(id) || 0) + weight);
+    };
+
+    // Index from metadata (always available, no file reads)
+    for (const meta of DB.articleMeta) {
+      for (const t of tokenize(meta.title))   add(t, meta.id, 3);
+      for (const t of (meta.tags || []).flatMap(tokenize)) add(t, meta.id, 2);
+      for (const t of tokenize(meta.summary)) add(t, meta.id, 1);
+    }
+
+    // Index event titles and descriptions (always loaded)
+    for (const ev of DB.events) {
+      for (const t of tokenize(ev.title))       add('ev:' + t, ev.id, 3);
+      for (const t of tokenize(ev.description)) add('ev:' + t, ev.id, 1);
+    }
+
+    _index = idx;
+    _indexBuilding = false;
+  }
+
+  // Start building index immediately, non-blocking
+  buildIndex();
+
+  function indexSearch(q) {
+    // Returns Map<articleId, score> from the index
+    if (!_index || !q) return null;
+    const tokens = tokenize(q);
+    if (!tokens.length) return null;
+
+    let result = null;
+    for (const token of tokens) {
+      // Prefix match: find all index keys that start with this token
+      const matches = new Map();
+      for (const [key, scores] of _index) {
+        if (key.startsWith(token)) {
+          for (const [id, score] of scores) {
+            matches.set(id, (matches.get(id) || 0) + score);
+          }
+        }
+      }
+      if (result === null) {
+        result = matches;
+      } else {
+        // Intersect: keep only IDs present in both
+        for (const id of result.keys()) {
+          if (matches.has(id)) result.set(id, result.get(id) + matches.get(id));
+          else result.delete(id);
+        }
+      }
+    }
+    return result;
+  }
+
+  function indexSearchEvents(q) {
+    if (!_index || !q) return null;
+    const tokens = tokenize(q);
+    if (!tokens.length) return null;
+    let result = null;
+    for (const token of tokens) {
+      const matches = new Map();
+      for (const [key, scores] of _index) {
+        if (key.startsWith('ev:') && key.slice(3).startsWith(token)) {
+          for (const [id, score] of scores) matches.set(id, (matches.get(id) || 0) + score);
+        }
+      }
+      if (result === null) result = matches;
+      else {
+        for (const id of result.keys()) {
+          if (matches.has(id)) result.set(id, result.get(id) + matches.get(id));
+          else result.delete(id);
+        }
+      }
+    }
+    return result;
+  }
 
   // ── Read URL params ───────────────────────────────────────────────
   const params = new URLSearchParams(location.search);
@@ -287,20 +391,22 @@
   });
 
   // ── Live search ───────────────────────────────────────────────────
-  searchInput.addEventListener('input', runSearch);
+  let _searchDebounce = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(_searchDebounce);
+    _searchDebounce = setTimeout(runSearch, 80);
+  });
   catSel.addEventListener('change', runSearch);
   tagSel.addEventListener('change', runSearch);
 
-  // Run on load if params provided
   if (initQ || initTag) runSearch();
   else renderEmpty('prompt');
 
   function runSearch() {
-    const q       = searchInput.value.trim().toLowerCase();
-    const catId   = catSel.value;
-    const tagVal  = tagSel.value;
+    const q      = searchInput.value.trim().toLowerCase();
+    const catId  = catSel.value;
+    const tagVal = tagSel.value;
 
-    // Update URL without reloading
     const newParams = new URLSearchParams();
     if (q) newParams.set('q', searchInput.value.trim());
     if (tagVal) newParams.set('tag', tagVal);
@@ -312,75 +418,124 @@
 
     // ── Article matches ───────────────────────────────────────────
     if (activeType === 'all' || activeType === 'articles') {
-      DB.articles.forEach(a => {
-        if (catId && a.categoryId !== catId) return;
-        if (tagVal && !(a.tags || []).includes(tagVal)) return;
-
-        const titleMatch   = q && (a.title || '').toLowerCase().includes(q);
-        const tagMatch     = q && (a.tags || []).some(t => t.toLowerCase().includes(q));
-        const contentMatch = q && (a.content || '').toLowerCase().includes(q);
-        const wikiboxMatch = q && (a.wikibox?.fields || []).some(f =>
-          (f.val || '').toLowerCase().includes(q) || (f.key || '').toLowerCase().includes(q)
-        );
-
-        if (!q || titleMatch || tagMatch || contentMatch || wikiboxMatch) {
-          results.push({
-            type: 'article',
-            id: a.id,
-            title: a.title || 'Untitled',
-            breadcrumb: DB.getCatPath(a.categoryId) || 'Uncategorized',
-            tags: a.tags || [],
-            snippet: q ? extractSnippet(a.content || '', q, 160) : '',
-            score: (titleMatch ? 3 : 0) + (tagMatch ? 2 : 0) + (contentMatch ? 1 : 0),
-          });
-        }
-      });
-    }
-
-    // ── Event matches ─────────────────────────────────────────────
-    if (activeType === 'all' || activeType === 'events') {
-      if (!catId && !tagVal) { // events have no category/tag, skip if filtered
-        DB.events.forEach(ev => {
-          const titleMatch = q && (ev.title || '').toLowerCase().includes(q);
-          const descMatch  = q && (ev.description || '').toLowerCase().includes(q);
-          if (!q || titleMatch || descMatch) {
-            // Find linked timeline name
-            const tl = DB.timelines.find(t => (ev.timelineIds || []).includes(t.id));
+      if (q && _index) {
+        // Fast index path
+        const scores = indexSearch(q);
+        if (scores) {
+          for (const [id, score] of scores) {
+            const meta = DB.articleMeta.find(m => m.id === id);
+            if (!meta) continue;
+            if (catId && meta.categoryId !== catId) continue;
+            if (tagVal && !(meta.tags || []).includes(tagVal)) continue;
             results.push({
-              type: 'event',
-              id: ev.id,
-              articleId: ev.articleId,
-              title: ev.title || 'Untitled Event',
-              breadcrumb: tl ? tl.name : 'Timeline Event',
-              tags: [],
-              snippet: q ? extractSnippet(ev.description || '', q, 160) : '',
-              score: (titleMatch ? 3 : 0) + (descMatch ? 1 : 0),
+              type: 'article', id: meta.id,
+              title: meta.title || 'Untitled',
+              breadcrumb: DB.getCatPath(meta.categoryId) || 'Uncategorized',
+              tags: meta.tags || [],
+              snippet: meta.summary || '',  // immediate snippet from metadata
+              score,
+              _needsSnippet: true,  // will async-load content snippet
+            });
+          }
+        }
+      } else {
+        // No query or index not ready — filter by cat/tag only
+        DB.articleMeta.forEach(meta => {
+          if (catId && meta.categoryId !== catId) return;
+          if (tagVal && !(meta.tags || []).includes(tagVal)) return;
+          const titleMatch = q && (meta.title || '').toLowerCase().includes(q);
+          const tagMatch   = q && (meta.tags || []).some(t => t.toLowerCase().includes(q));
+          if (!q || titleMatch || tagMatch) {
+            results.push({
+              type: 'article', id: meta.id,
+              title: meta.title || 'Untitled',
+              breadcrumb: DB.getCatPath(meta.categoryId) || 'Uncategorized',
+              tags: meta.tags || [],
+              snippet: meta.summary || '',
+              score: (titleMatch ? 3 : 0) + (tagMatch ? 2 : 0),
             });
           }
         });
       }
     }
 
-    // Sort: higher score first, then alphabetical
-    results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+    // ── Event matches ─────────────────────────────────────────────
+    if (activeType === 'all' || activeType === 'events') {
+      if (!catId && !tagVal) {
+        if (q && _index) {
+          const evScores = indexSearchEvents(q);
+          if (evScores) {
+            for (const [id, score] of evScores) {
+              const ev = DB.events.find(e => e.id === id);
+              if (!ev) continue;
+              const tl = DB.timelines.find(t => (ev.timelineIds || []).includes(t.id));
+              results.push({
+                type: 'event', id: ev.id, articleId: ev.articleId,
+                title: ev.title || 'Untitled Event',
+                breadcrumb: tl ? tl.name : 'Timeline Event',
+                tags: [], snippet: (ev.description || '').slice(0, 160), score,
+              });
+            }
+          }
+        } else {
+          DB.events.forEach(ev => {
+            const titleMatch = q && (ev.title || '').toLowerCase().includes(q);
+            const descMatch  = q && (ev.description || '').toLowerCase().includes(q);
+            if (!q || titleMatch || descMatch) {
+              const tl = DB.timelines.find(t => (ev.timelineIds || []).includes(t.id));
+              results.push({
+                type: 'event', id: ev.id, articleId: ev.articleId,
+                title: ev.title || 'Untitled Event',
+                breadcrumb: tl ? tl.name : 'Timeline Event',
+                tags: [], snippet: descMatch ? extractSnippet(ev.description || '', q, 160) : '',
+                score: (titleMatch ? 3 : 0) + (descMatch ? 1 : 0),
+              });
+            }
+          });
+        }
+      }
+    }
 
+    results.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
     renderResults(results, q);
+
+    // Async: load content snippets for matching articles that need them
+    if (q) {
+      const needSnippets = results.filter(r => r._needsSnippet && r.type === 'article');
+      if (needSnippets.length) {
+        loadSnippetsAsync(needSnippets, q, searchInput.value.trim().toLowerCase());
+      }
+    }
+  }
+
+  // Load content snippets asynchronously and update result cards in place
+  async function loadSnippetsAsync(items, q, originalQ) {
+    for (const item of items) {
+      // Abort if search query changed while we were loading
+      if (searchInput.value.trim().toLowerCase() !== originalQ) return;
+      const art = await DB.loadArticle(item.id);
+      if (!art) continue;
+      const contentSnippet = extractSnippet((art.content || '') +
+        ' ' + (art.wikibox?.fields || []).map(f => f.val || '').join(' '), q, 160);
+      if (contentSnippet) {
+        const cardEl = document.querySelector(`.result-card[href="article.html?id=${item.id}"] .result-card-snippet`);
+        if (cardEl) cardEl.innerHTML = highlightSnippet(contentSnippet, q);
+      }
+    }
   }
 
   function extractSnippet(html, q, maxLen) {
-    // Strip tags
     const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const idx = text.toLowerCase().indexOf(q);
+    const idx  = text.toLowerCase().indexOf(q);
     if (idx < 0) return text.slice(0, maxLen) + (text.length > maxLen ? '…' : '');
     const start = Math.max(0, idx - 60);
     const end   = Math.min(text.length, idx + q.length + 100);
-    const raw   = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
-    return raw;
+    return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
   }
 
   function highlightSnippet(text, q) {
     if (!q) return escHtml(text);
-    const safe = escHtml(text);
+    const safe  = escHtml(text);
     const safeQ = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return safe.replace(new RegExp(safeQ, 'gi'), m => `<mark>${m}</mark>`);
   }
