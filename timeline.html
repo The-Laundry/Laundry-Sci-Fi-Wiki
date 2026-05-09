@@ -422,7 +422,24 @@ function zoomOut()   { tlZoom = Math.max(0.1, +(tlZoom / 1.5).toFixed(4)); _appl
 function zoomReset() { tlZoom = 1.0; _applyZoom(); }
 function _applyZoom() {
   document.getElementById('tl-zoom-label').textContent = Math.round(tlZoom * 100) + '%';
+
+  // Capture what fraction of the track is currently at the viewport center,
+  // so we can restore that position after the track height changes.
+  const track = document.getElementById('tl-track');
+  const oldH  = track ? parseFloat(track.style.height) || 0 : 0;
+  const tr    = track ? track.getBoundingClientRect() : null;
+  const frac  = (tr && oldH > 0) ? (window.innerHeight / 2 - tr.top) / oldH : 0;
+
   renderTL();
+
+  if (tr && oldH > 0) {
+    const newH = parseFloat(track.style.height) || 0;
+    if (newH > 0) {
+      // trackTopInDoc = scrollY + tr.top (unchanged by re-render)
+      const newScroll = window.scrollY + tr.top + frac * newH - window.innerHeight / 2;
+      window.scrollTo({ top: Math.max(0, newScroll) });
+    }
+  }
 }
 
 // ══════════════════════════════
