@@ -33,6 +33,23 @@
 //                                   callbacks: { onPhase, onContextReady, onEvent,
 //                                   onRawDelta, onComplete, onError }. Returns the final
 //                                   normalized event array.
+//   AI.generateVocabularyStreaming(spec, callbacks)
+//                                 — conlang vocabulary generation. spec: { langId,
+//                                   semanticField, count?, notes?, relatedIds? }.
+//                                   callbacks: { onPhase, onContextReady, onRawDelta,
+//                                   onWord, onComplete, onError }. Returns
+//                                   { words[], contextUsed }.
+//   AI.translateSentenceStreaming(spec, callbacks)
+//                                 — sentence translation between English and a conlang.
+//                                   spec: { langId, direction, sentence, relatedIds? }.
+//                                   callbacks: { onPhase, onContextReady, onRawDelta,
+//                                   onComplete, onError }. Returns
+//                                   { translation, gloss, words[], unknown[], contextUsed }.
+//   AI.suggestEtymologyStreaming(spec, callbacks)
+//                                 — etymology suggestion for a single lexicon entry.
+//                                   spec: { langId, wordId, relatedIds? }.
+//                                   callbacks: { onPhase, onContextReady, onRawDelta,
+//                                   onComplete, onError }. Returns { text, contextUsed }.
 //
 // The API key is stored ONLY in localStorage under 'eomt_ai_key' and is never
 // written to settings.json or exported. DB.exportAll() scrubs settings.ai.apiKey
@@ -764,6 +781,279 @@ const AI = {
       throw err;
     }
   },
+
+  // ── CONLANG: VOCABULARY GENERATION ─────────────────────────────────
+  //
+  // spec:
+  //   { langId, semanticField, count?, notes?, relatedIds?: string[] }
+  //
+  // callbacks (all optional):
+  //   onPhase(phase)             — 'context' | 'writing' | 'parsing' | 'done'
+  //   onContextReady(ctxBlock)   — { explicit, semantic, query,
+  //                                  relatedLanguages, sampleTexts, lexiconStats }
+  //   onRawDelta(delta, accum)   — raw text tokens as they stream in
+  //   onWord(word, rawObj, idx)  — fired per completed word object inside "words"
+  //   onComplete({words, contextUsed})
+  //   onError(err)               — fatal error (still throws too)
+  //
+  // Returns { words: NormalizedWord[], contextUsed: ctxBlock }.
+  async generateVocabularyStreaming(spec, callbacks = {}) {
+    const cb = {
+      onPhase:        typeof callbacks.onPhase === 'function'        ? callbacks.onPhase        : () => {},
+      onContextReady: typeof callbacks.onContextReady === 'function' ? callbacks.onContextReady : () => {},
+      onRawDelta:     typeof callbacks.onRawDelta === 'function'     ? callbacks.onRawDelta     : () => {},
+      onWord:         typeof callbacks.onWord === 'function'         ? callbacks.onWord         : () => {},
+      onComplete:     typeof callbacks.onComplete === 'function'     ? callbacks.onComplete     : () => {},
+      onError:        typeof callbacks.onError === 'function'        ? callbacks.onError        : () => {},
+    };
+    try {
+      if (!this.isConfigured()) throw new Error('AI is not configured.');
+      if (!window.Conlang || typeof Conlang.gatherVocabContext !== 'function') {
+        throw new Error('Conlang module not loaded.');
+      }
+      const c = this.getConfig();
+
+      // ── Phase 1: context gather ────────────────────────────────────
+      cb.onPhase('context');
+      const ctx = await Conlang.gatherVocabContext({
+        langId:        spec.langId,
+        semanticField: spec.semanticField,
+        notes:         spec.notes,
+        relatedIds:    spec.relatedIds,
+        topK:          c.topK,
+      });
+      const publicCtx = _publicConlangCtx(ctx, 'vocab');
+      cb.onContextReady(publicCtx);
+
+      // ── Phase 2: streamed chat ─────────────────────────────────────
+      cb.onPhase('writing');
+      const messages = _buildVocabPromptMessages({ spec, ctx });
+
+      const collected = [];
+      const extractor = new _ProgressiveJsonArrayExtractor('words');
+      extractor.onItem = (rawObj) => {
+        const w = _normalizeWord(rawObj);
+        if (!w) return;
+        collected.push(w);
+        try { cb.onWord(w, rawObj, collected.length - 1); }
+        catch (e) { console.warn('onWord cb threw:', e); }
+      };
+
+      let raw = '';
+      const onChunk = (delta, accumulated) => {
+        raw = accumulated;
+        cb.onRawDelta(delta, accumulated);
+        try { extractor.ingest(delta); }
+        catch (e) { console.warn('progressive extractor error:', e); }
+      };
+
+      const chatOpts = {
+        temperature: c.temperature,
+        maxTokens:   c.maxTokens,
+        jsonMode:    true,
+      };
+      if (c.streaming !== false) {
+        raw = await this.chatStream(messages, chatOpts, onChunk);
+      } else {
+        raw = await this.chat(messages, chatOpts);
+        onChunk(raw, raw);
+      }
+
+      // ── Phase 3: parse fallback ────────────────────────────────────
+      cb.onPhase('parsing');
+      if (collected.length === 0) {
+        const parsed = _extractJsonObject(raw);
+        const arr = parsed && Array.isArray(parsed.words) ? parsed.words
+                  : Array.isArray(parsed) ? parsed
+                  : null;
+        if (arr) {
+          arr.forEach((rawObj) => {
+            const w = _normalizeWord(rawObj);
+            if (!w) return;
+            collected.push(w);
+            try { cb.onWord(w, rawObj, collected.length - 1); }
+            catch (e) { console.warn('onWord cb threw (fallback):', e); }
+          });
+        }
+      }
+      if (!collected.length) {
+        throw new Error('AI returned no usable words. Raw reply:\n' + _truncateChars(raw, 400));
+      }
+
+      cb.onPhase('done');
+      const result = { words: collected, contextUsed: publicCtx };
+      cb.onComplete(result);
+      return result;
+    } catch (err) {
+      cb.onError(err);
+      throw err;
+    }
+  },
+
+  // ── CONLANG: SENTENCE TRANSLATION ──────────────────────────────────
+  //
+  // spec:
+  //   { langId, direction: 'en-to-lang'|'lang-to-en', sentence,
+  //     relatedIds?: string[] }
+  //
+  // callbacks (all optional):
+  //   onPhase(phase)             — 'context' | 'writing' | 'parsing' | 'done'
+  //   onContextReady(ctxBlock)   — { explicit, semantic, query,
+  //                                  relatedLanguages, sampleTexts,
+  //                                  ancestorChain, lexicalPreMatches }
+  //   onRawDelta(delta, accum)
+  //   onComplete({translation, gloss, words[], unknown[], contextUsed})
+  //   onError(err)
+  async translateSentenceStreaming(spec, callbacks = {}) {
+    const cb = {
+      onPhase:        typeof callbacks.onPhase === 'function'        ? callbacks.onPhase        : () => {},
+      onContextReady: typeof callbacks.onContextReady === 'function' ? callbacks.onContextReady : () => {},
+      onRawDelta:     typeof callbacks.onRawDelta === 'function'     ? callbacks.onRawDelta     : () => {},
+      onComplete:     typeof callbacks.onComplete === 'function'     ? callbacks.onComplete     : () => {},
+      onError:        typeof callbacks.onError === 'function'        ? callbacks.onError        : () => {},
+    };
+    try {
+      if (!this.isConfigured()) throw new Error('AI is not configured.');
+      if (!window.Conlang || typeof Conlang.gatherTranslationContext !== 'function') {
+        throw new Error('Conlang module not loaded.');
+      }
+      if (!spec.sentence || !String(spec.sentence).trim()) {
+        throw new Error('No sentence provided.');
+      }
+      const c = this.getConfig();
+
+      cb.onPhase('context');
+      const ctx = await Conlang.gatherTranslationContext({
+        langId:     spec.langId,
+        direction:  spec.direction,
+        sentence:   spec.sentence,
+        relatedIds: spec.relatedIds,
+        topK:       c.topK,
+      });
+      const publicCtx = _publicConlangCtx(ctx, 'translate');
+      cb.onContextReady(publicCtx);
+
+      cb.onPhase('writing');
+      const messages = _buildTranslatePromptMessages({ spec, ctx });
+
+      let raw = '';
+      const onChunk = (delta, accumulated) => {
+        raw = accumulated;
+        cb.onRawDelta(delta, accumulated);
+      };
+
+      const chatOpts = {
+        temperature: c.temperature,
+        maxTokens:   c.maxTokens,
+        jsonMode:    true,
+      };
+      if (c.streaming !== false) {
+        raw = await this.chatStream(messages, chatOpts, onChunk);
+      } else {
+        raw = await this.chat(messages, chatOpts);
+        onChunk(raw, raw);
+      }
+
+      cb.onPhase('parsing');
+      const parsed = _extractJsonObject(raw);
+      if (!parsed) {
+        throw new Error('AI returned no valid JSON object. Raw reply:\n' + _truncateChars(raw, 400));
+      }
+      const out = {
+        translation: typeof parsed.translation === 'string' ? parsed.translation.trim() : '',
+        gloss:       typeof parsed.gloss === 'string' ? parsed.gloss.trim() : '',
+        words:       Array.isArray(parsed.words) ? parsed.words.map(w => ({
+          source: typeof w?.source === 'string' ? w.source : '',
+          target: typeof w?.target === 'string' ? w.target : '',
+          note:   typeof w?.note   === 'string' ? w.note   : '',
+        })) : [],
+        unknown:     Array.isArray(parsed.unknown)
+                       ? parsed.unknown.map(s => String(s).trim()).filter(Boolean)
+                       : [],
+        contextUsed: publicCtx,
+      };
+
+      cb.onPhase('done');
+      cb.onComplete(out);
+      return out;
+    } catch (err) {
+      cb.onError(err);
+      throw err;
+    }
+  },
+
+  // ── CONLANG: ETYMOLOGY SUGGESTION ──────────────────────────────────
+  //
+  // spec:
+  //   { langId, wordId, relatedIds?: string[] }
+  //
+  // callbacks (all optional):
+  //   onPhase(phase)             — 'context' | 'writing' | 'parsing' | 'done'
+  //   onContextReady(ctxBlock)   — { explicit, semantic, query,
+  //                                  ancestorChain, siblingCognates,
+  //                                  sampleTexts, peerEtymologies }
+  //   onRawDelta(delta, accum)   — plain prose tokens as they stream in
+  //   onComplete({text, contextUsed})
+  //   onError(err)
+  async suggestEtymologyStreaming(spec, callbacks = {}) {
+    const cb = {
+      onPhase:        typeof callbacks.onPhase === 'function'        ? callbacks.onPhase        : () => {},
+      onContextReady: typeof callbacks.onContextReady === 'function' ? callbacks.onContextReady : () => {},
+      onRawDelta:     typeof callbacks.onRawDelta === 'function'     ? callbacks.onRawDelta     : () => {},
+      onComplete:     typeof callbacks.onComplete === 'function'     ? callbacks.onComplete     : () => {},
+      onError:        typeof callbacks.onError === 'function'        ? callbacks.onError        : () => {},
+    };
+    try {
+      if (!this.isConfigured()) throw new Error('AI is not configured.');
+      if (!window.Conlang || typeof Conlang.gatherEtymologyContext !== 'function') {
+        throw new Error('Conlang module not loaded.');
+      }
+      const c = this.getConfig();
+
+      cb.onPhase('context');
+      const ctx = await Conlang.gatherEtymologyContext({
+        langId:     spec.langId,
+        wordId:     spec.wordId,
+        relatedIds: spec.relatedIds,
+        topK:       c.topK,
+      });
+      const publicCtx = _publicConlangCtx(ctx, 'etymology');
+      cb.onContextReady(publicCtx);
+
+      cb.onPhase('writing');
+      const messages = _buildEtymologyPromptMessages({ spec, ctx });
+
+      let raw = '';
+      const onChunk = (delta, accumulated) => {
+        raw = accumulated;
+        cb.onRawDelta(delta, accumulated);
+      };
+
+      // Etymologies are short prose — cap tokens conservatively.
+      const chatOpts = {
+        temperature: c.temperature,
+        maxTokens:   Math.min(c.maxTokens || 800, 800),
+      };
+      if (c.streaming !== false) {
+        raw = await this.chatStream(messages, chatOpts, onChunk);
+      } else {
+        raw = await this.chat(messages, chatOpts);
+        onChunk(raw, raw);
+      }
+
+      cb.onPhase('parsing');
+      const text = (raw || '').trim().replace(/^["'`]+|["'`]+$/g, '');
+      if (!text) throw new Error('AI returned no etymology text.');
+
+      const out = { text, contextUsed: publicCtx };
+      cb.onPhase('done');
+      cb.onComplete(out);
+      return out;
+    } catch (err) {
+      cb.onError(err);
+      throw err;
+    }
+  },
 };
 
 // ── PRIVATE HELPERS ────────────────────────────────────────────────────
@@ -816,6 +1106,31 @@ function _DEFAULT_PROMPTS_BUILDER() {
     '',
     'NEVER duplicate events already listed in EXISTING EVENTS. NEVER wrap the JSON in triple-backtick fences or add commentary before/after it.',
   ];
+  const vocabSystemLines = [
+    'You are a conlang assistant. Generate plausible new words that fit the supplied phonology and the existing flavour of the language. Use related-language data, sample texts, and any in-universe wiki context as inspiration where relevant.',
+    '',
+    'OUTPUT CONTRACT — reply with EXACTLY ONE JSON object, nothing else, no markdown fences, no commentary. The object MUST have this exact shape:',
+    '  { "words": [ { "word":"...", "romanization":"...", "ipa":"...", "partOfSpeech":"...", "definitions":["..."], "etymology":"...", "notes":"" } ] }',
+    '',
+    'Use ONLY phonemes that appear in the supplied IPA inventory. Respect the supplied phonotactics. Do NOT duplicate words already in the lexicon. Make definitions concise English glosses (1–4 short phrases each). Etymology may reference parent/sibling languages or supplied wiki articles when relevant; otherwise keep it brief or empty.',
+    '',
+    'NEVER wrap the JSON in triple-backtick fences or add commentary before/after it.',
+  ];
+  const translateSystemLines = [
+    'You translate between English and constructed languages. Use the supplied lexicon, lexical pre-matches, grammar notes, and sample texts wherever possible. Coin words explicitly when the lexicon lacks them and list each coined word in the "unknown" array.',
+    '',
+    'OUTPUT CONTRACT — reply with EXACTLY ONE JSON object, nothing else, no markdown fences, no commentary. The object MUST have this exact shape:',
+    '  { "translation": "...", "gloss": "word-by-word interlinear gloss", "words": [ { "source":"...", "target":"...", "note":"" } ], "unknown": ["..."] }',
+    '',
+    'Use the supplied phonotactics for any coined word. The "note" field on words should be empty unless the word was coined or derived (in which case write "[coined]" or "[derived]"). The "gloss" string is one space-separated line, each token formatted as source-or-meaning.gloss-tag (e.g. "fire-NOM all earth-ACC").',
+    '',
+    'NEVER wrap the JSON in triple-backtick fences or add commentary before/after it.',
+  ];
+  const etymologySystemLines = [
+    'You propose etymologies for entries in constructed-language lexicons. Be concise (2 to 4 sentences) and consistent with the supplied phonology, ancestor/sibling languages, and previously-written peer etymologies in this language.',
+    '',
+    'Output plain prose only — no JSON, no markdown fences, no headings, no bullet points. Reference reconstructed forms with a leading asterisk (e.g. *kalo-) when appropriate. Do not invent ancestor languages that were not supplied.',
+  ];
   return {
     articleSystem:        articleSystemLines.join('\n'),
     articleUserPreamble:  'ARTICLE TITLE: {title}',
@@ -827,6 +1142,12 @@ function _DEFAULT_PROMPTS_BUILDER() {
     testUser:             'Reply with the single word: PONG',
     timelineSystem:       timelineSystemLines.join('\n'),
     timelineUserPreamble: 'TIMELINE: {timelineName}\nTARGET EVENT COUNT: approximately {count}',
+    vocabSystem:          vocabSystemLines.join('\n'),
+    vocabUserPreamble:    'TASK: Generate {count} new words for the semantic field "{semanticField}".',
+    translateSystem:      translateSystemLines.join('\n'),
+    translateUserPreamble:'TASK: Translate from {fromLabel} to {toLabel}.\nSENTENCE: "{sentence}"',
+    etymologySystem:      etymologySystemLines.join('\n'),
+    etymologyUserPreamble:'TASK: Suggest an etymology for the word: "{word}"',
   };
 }
 
@@ -1603,3 +1924,275 @@ _ProgressiveJsonArrayExtractor.prototype._drain = function () {
 Object.defineProperty(_ProgressiveJsonArrayExtractor.prototype, '_scanIdx', {
   get() { return this._i; }, set(v) { this._i = v; },
 });
+
+// ── CONLANG: PRIVATE HELPERS ───────────────────────────────────────────
+//
+// Used exclusively by AI.generateVocabularyStreaming / translateSentenceStreaming /
+// suggestEtymologyStreaming and their gatherer counterparts in js/conlang.js.
+// Kept here (not in the AI object literal) because they're pure functions and
+// the prompt-assembly code is naturally chunky.
+
+// Strip a streamed conlang context object down to a compact, JSON-serializable
+// shape suitable for both onContextReady() consumption and storing as
+// `contextUsed` on the result. Removes large lexicon arrays, full sample-text
+// bodies, etc., so the page can render chips without hauling around megabytes.
+function _publicConlangCtx(ctx, kind) {
+  const articles = ctx.articles || { explicit: [], semantic: [], query: '' };
+  const out = {
+    explicit: (articles.explicit || []).map(x => ({
+      id: x.id, title: x.title, summary: x.summary, snippet: x.snippet,
+    })),
+    semantic: (articles.semantic || []).map(x => ({
+      id: x.id, title: x.title, summary: x.summary, snippet: x.snippet, score: x.score,
+    })),
+    query:    articles.query || '',
+    relatedLanguages: (ctx.relatedLanguages || []).map(l => ({
+      id: l.id, name: l.name, relation: l.relation, sampleSize: l.sampleSize,
+    })),
+    sampleTexts: (ctx.sampleTexts || []).map(t => ({
+      title: t.title, translation: t.translation || '',
+    })),
+  };
+  if (kind === 'translate') {
+    out.lexicalPreMatches = (ctx.lexicalPreMatches || []).map(p => ({
+      word: p.word, definitions: p.definitions || [],
+    }));
+    out.ancestorChain = (ctx.ancestorChain || []).slice();
+  } else if (kind === 'etymology') {
+    out.ancestorChain = (ctx.ancestorChain || []).map(a => ({ id: a.id, name: a.name }));
+    out.siblingCognates = (ctx.siblingCognates || []).map(s => ({
+      langId: s.langId, langName: s.langName, count: (s.entries || []).length,
+    }));
+    out.peerEtymologies = (ctx.peerEtymologies || []).slice();
+  } else if (kind === 'vocab') {
+    out.lexiconStats = ctx.lexiconStats || null;
+  }
+  return out;
+}
+
+// Normalize one raw word object from the streamed vocab JSON.
+function _normalizeWord(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const word = typeof raw.word === 'string' ? raw.word.trim() : '';
+  if (!word) return null;
+  let defs;
+  if (Array.isArray(raw.definitions)) {
+    defs = raw.definitions.map(d => String(d).trim()).filter(Boolean);
+  } else if (typeof raw.definitions === 'string' && raw.definitions.trim()) {
+    defs = [raw.definitions.trim()];
+  } else {
+    defs = [];
+  }
+  return {
+    word,
+    romanization: typeof raw.romanization === 'string' ? raw.romanization.trim() : '',
+    ipa:          typeof raw.ipa === 'string' ? raw.ipa.trim() : '',
+    partOfSpeech: typeof raw.partOfSpeech === 'string' ? raw.partOfSpeech.trim() : '',
+    definitions:  defs,
+    etymology:    typeof raw.etymology === 'string' ? raw.etymology.trim() : '',
+    notes:        typeof raw.notes === 'string' ? raw.notes.trim() : '',
+    tags:         Array.isArray(raw.tags)
+                    ? raw.tags.map(t => String(t).trim()).filter(Boolean)
+                    : [],
+  };
+}
+
+// ── Block builders for conlang prompts ─────────────────────────────────
+
+function _conlangArticlesBlock(ctx) {
+  const parts = [];
+  const ex = (ctx.articles && ctx.articles.explicit) || [];
+  const se = (ctx.articles && ctx.articles.semantic) || [];
+  if (ex.length) {
+    parts.push('RELATED ARTICLES (explicitly chosen — authoritative source material):');
+    ex.forEach(it => parts.push(`• [[${it.title}]]\n    ${it.snippet || ''}`));
+  }
+  if (se.length) {
+    parts.push('OTHER POTENTIALLY RELEVANT ARTICLES (retrieved by similarity):');
+    se.forEach(it => parts.push(`• [[${it.title}]]\n    ${it.snippet || ''}`));
+  }
+  return parts.join('\n\n');
+}
+
+function _conlangRelatedLangsBlock(rel) {
+  if (!rel || !rel.length) return '';
+  const lines = rel.map(l => `  • ${l.name} (${l.relation}, ${l.sampleSize || 0} words)`);
+  return 'RELATED LANGUAGES (family-tree neighbours):\n' + lines.join('\n');
+}
+
+function _conlangSampleTextsBlock(samples) {
+  if (!samples || !samples.length) return '';
+  const lines = samples.map((t, i) => {
+    const head = `${i + 1}. ${t.title || 'Untitled'}`;
+    const body = (t.text || '').slice(0, 240);
+    const tr   = t.translation ? `\n   ↳ ${String(t.translation).slice(0, 200)}` : '';
+    const gl   = t.gloss ? `\n   gloss: ${String(t.gloss).slice(0, 200)}` : '';
+    return `${head}\n   ${body}${tr}${gl}`;
+  });
+  return 'SAMPLE TEXTS in this language (canonical — emulate style):\n' + lines.join('\n');
+}
+
+function _conlangAncestorChainBlock(chain) {
+  if (!chain || !chain.length) return '';
+  const lines = chain.map(a => {
+    const lex = a.sampleLexicon
+      ? a.sampleLexicon.split('\n').map(l => '    ' + l).join('\n')
+      : '    (no lexicon)';
+    return `  ${a.name}\n${lex}`;
+  });
+  return 'ANCESTOR CHAIN (immediate parent first) with sample lexicons:\n' + lines.join('\n\n');
+}
+
+function _conlangSiblingCognatesBlock(siblings) {
+  if (!siblings || !siblings.length) return '';
+  const blocks = siblings.map(s => {
+    const rows = (s.entries || []).map(e => {
+      const defs = (e.definitions || []).join('; ');
+      const ety  = e.etymology ? ` — ${e.etymology}` : '';
+      return `    • ${e.word}: ${defs}${ety}`;
+    });
+    return `  ${s.langName}:\n${rows.join('\n')}`;
+  });
+  return 'SIBLING-LANGUAGE COGNATES (shared definitions):\n' + blocks.join('\n');
+}
+
+function _conlangPeerEtymologiesBlock(peers) {
+  if (!peers || !peers.length) return '';
+  return 'EXISTING ETYMOLOGIES IN THIS LANGUAGE (style examples):\n'
+       + peers.map(p => '  • ' + p).join('\n');
+}
+
+function _conlangLexiconStatsBlock(stats) {
+  if (!stats) return '';
+  const lines = [`Total words: ${stats.totalWords}`];
+  if (stats.byPos && Object.keys(stats.byPos).length) {
+    const top = Object.entries(stats.byPos)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+    lines.push('By POS: ' + top.map(([k, v]) => `${k}=${v}`).join(', '));
+  }
+  if (stats.topTags && stats.topTags.length) {
+    lines.push('Common tags: ' + stats.topTags.join(', '));
+  }
+  return 'EXISTING LEXICON SHAPE:\n' + lines.map(l => '  ' + l).join('\n');
+}
+
+// ── Prompt-message builders ────────────────────────────────────────────
+
+function _buildVocabPromptMessages({ spec, ctx }) {
+  const lang = ctx.language;
+  const count = Math.max(1, Math.min(50, parseInt(spec.count, 10) || 10));
+  const system = AI.getPrompt('vocabSystem');
+  const preamble = AI.getPrompt('vocabUserPreamble', {
+    semanticField: spec.semanticField || 'general vocabulary',
+    count: String(count),
+  });
+
+  const parts = [preamble];
+  const contextBlock = Conlang.buildContextBlock(lang);
+  if (contextBlock) parts.push(contextBlock);
+  const relBlock = _conlangRelatedLangsBlock(ctx.relatedLanguages);
+  if (relBlock) parts.push(relBlock);
+  const stBlock  = _conlangSampleTextsBlock(ctx.sampleTexts);
+  if (stBlock)  parts.push(stBlock);
+  const lsBlock  = _conlangLexiconStatsBlock(ctx.lexiconStats);
+  if (lsBlock)  parts.push(lsBlock);
+  const arBlock  = _conlangArticlesBlock(ctx);
+  if (arBlock)  parts.push(arBlock);
+
+  const existing = (lang.lexicon || [])
+    .slice(0, 30)
+    .map(e => e.word)
+    .filter(Boolean)
+    .join(', ');
+  parts.push('AVOID DUPLICATING THESE WORDS: ' + (existing || '(none yet)'));
+
+  if (spec.notes && String(spec.notes).trim()) {
+    parts.push('USER NOTES:\n' + String(spec.notes).trim());
+  }
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user',   content: parts.join('\n\n') },
+  ];
+}
+
+function _buildTranslatePromptMessages({ spec, ctx }) {
+  const lang = ctx.language;
+  const fromLabel = spec.direction === 'en-to-lang' ? 'English' : (lang.name || 'Conlang');
+  const toLabel   = spec.direction === 'en-to-lang' ? (lang.name || 'Conlang') : 'English';
+  const system = AI.getPrompt('translateSystem');
+  const preamble = AI.getPrompt('translateUserPreamble', {
+    fromLabel, toLabel,
+    sentence: String(spec.sentence || '').replace(/\s+/g, ' ').trim(),
+  });
+
+  const parts = [preamble];
+  const contextBlock = Conlang.buildContextBlock(lang);
+  if (contextBlock) parts.push(contextBlock);
+  const relBlock = _conlangRelatedLangsBlock(ctx.relatedLanguages);
+  if (relBlock) parts.push(relBlock);
+  if (ctx.ancestorChain && ctx.ancestorChain.length) {
+    parts.push('ANCESTOR CHAIN: ' + ctx.ancestorChain.join(' → '));
+  }
+  if (ctx.lexicalPreMatches && ctx.lexicalPreMatches.length) {
+    const lines = ctx.lexicalPreMatches.map(p => {
+      const defs = (p.definitions || []).join('; ');
+      const rom  = p.romanization && p.romanization !== p.word ? ' [' + p.romanization + ']' : '';
+      const pos  = p.partOfSpeech ? ' (' + p.partOfSpeech + ')' : '';
+      return `  • ${p.word}${rom}${pos}: ${defs}`;
+    });
+    parts.push('LEXICAL PRE-MATCHES (these lexicon entries appear directly relevant — prefer them):\n' + lines.join('\n'));
+  }
+  parts.push('LEXICON SAMPLE (up to 120 entries):\n' + Conlang.buildLexiconSummary(lang, 120));
+  const stBlock = _conlangSampleTextsBlock(ctx.sampleTexts);
+  if (stBlock) parts.push(stBlock);
+  const arBlock = _conlangArticlesBlock(ctx);
+  if (arBlock) parts.push(arBlock);
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user',   content: parts.join('\n\n') },
+  ];
+}
+
+function _buildEtymologyPromptMessages({ spec, ctx }) {
+  const lang  = ctx.language;
+  const entry = ctx.entry;
+  const system = AI.getPrompt('etymologySystem');
+  const preamble = AI.getPrompt('etymologyUserPreamble', {
+    word: entry.word || '',
+  });
+
+  const parts = [preamble];
+  const contextBlock = Conlang.buildContextBlock(lang);
+  if (contextBlock) parts.push(contextBlock);
+  const acBlock  = _conlangAncestorChainBlock(ctx.ancestorChain);
+  if (acBlock) parts.push(acBlock);
+  const sibBlock = _conlangSiblingCognatesBlock(ctx.siblingCognates);
+  if (sibBlock) parts.push(sibBlock);
+  const peerBlock = _conlangPeerEtymologiesBlock(ctx.peerEtymologies);
+  if (peerBlock) parts.push(peerBlock);
+  const stBlock = _conlangSampleTextsBlock(ctx.sampleTexts);
+  if (stBlock) parts.push(stBlock);
+  const arBlock = _conlangArticlesBlock(ctx);
+  if (arBlock) parts.push(arBlock);
+
+  const lines = [];
+  lines.push(`TARGET WORD: "${entry.word}"`);
+  if (entry.ipa) lines.push(`IPA: /${entry.ipa}/`);
+  if (entry.partOfSpeech) lines.push(`POS: ${entry.partOfSpeech}`);
+  const defs = (entry.definitions || []).join('; ');
+  lines.push(`Definitions: ${defs || '(none)'}`);
+  if (entry.etymology && entry.etymology.trim()) {
+    lines.push('Existing etymology (rewrite or extend):\n' + entry.etymology.trim());
+  } else {
+    lines.push('(No existing etymology — propose one from scratch.)');
+  }
+  parts.push(lines.join('\n'));
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user',   content: parts.join('\n\n') },
+  ];
+}

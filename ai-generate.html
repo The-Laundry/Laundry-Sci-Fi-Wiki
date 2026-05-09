@@ -440,8 +440,9 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
       <div class="data-section" style="margin-top:18px;">
         <h2 style="margin-top:0;">✨ Generate Vocabulary</h2>
         <p style="font-size:13px;color:var(--text-muted);">
-          Suggest new words that fit the language's phonology. Review and accept individual rows
-          to merge them into the lexicon.
+          Suggest new words that fit the language's phonology. The AI gathers context first
+          (related wiki articles, sibling/descendant languages, and sample texts) and then
+          drafts new vocabulary. Review and accept individual rows to merge them into the lexicon.
         </p>
         <div class="aig-form-grid">
           <div class="aig-form-row">
@@ -456,11 +457,23 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
             <label>Extra Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
             <textarea id="cl-gv-notes" class="field-input" placeholder="Tone, register, taboo words, anything to bias the output…"></textarea>
           </div>
+          <div class="aig-form-row full">
+            <label>Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional — auto-retrieval will fill in the rest)</span></label>
+            <div id="cl-gv-related-chips" class="chips-row"></div>
+            <input type="text" id="cl-gv-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+            <div id="cl-gv-related-results" class="aig-results" style="display:none;"></div>
+          </div>
         </div>
         <div class="aig-actions">
           <button type="button" class="btn btn-primary" id="cl-gv-go">Generate</button>
           <span id="cl-gv-status" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
         </div>
+
+        <div id="cl-gv-progress" class="ai-progress-wrap" style="display:none;">
+          <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+          <div id="cl-gv-phase" class="ai-phase-line"><span class="ai-spinner"></span><span id="cl-gv-phase-text">Working…</span></div>
+        </div>
+        <div id="cl-gv-context" class="ai-ctx-wrap" style="display:none;"></div>
         <div id="cl-gv-stream" class="ai-stream-preview" style="display:none;margin-top:10px;font-family:var(--font-mono, monospace);font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
         <div id="cl-gv-results"></div>
       </div>
@@ -469,8 +482,9 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
       <div class="data-section">
         <h2 style="margin-top:0;">🔤 Translate Sentence</h2>
         <p style="font-size:13px;color:var(--text-muted);">
-          Word-by-word translation with interlinear gloss, using the lexicon and grammar notes.
-          The model will note any words that aren't in the lexicon yet.
+          Word-by-word translation with interlinear gloss. The AI gathers context first
+          (lexical pre-matches, ancestor chain, related articles) before translating, then
+          flags any words it had to coin.
         </p>
         <div class="aig-form-grid">
           <div class="aig-form-row">
@@ -488,11 +502,23 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
             <label>Sentence</label>
             <textarea id="cl-tr-input" class="field-input" placeholder="Type the sentence to translate…"></textarea>
           </div>
+          <div class="aig-form-row full">
+            <label>Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional — pin in-universe articles for proper-noun translation)</span></label>
+            <div id="cl-tr-related-chips" class="chips-row"></div>
+            <input type="text" id="cl-tr-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+            <div id="cl-tr-related-results" class="aig-results" style="display:none;"></div>
+          </div>
         </div>
         <div class="aig-actions">
           <button type="button" class="btn btn-primary" id="cl-tr-go">Translate</button>
           <span id="cl-tr-status" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
         </div>
+
+        <div id="cl-tr-progress" class="ai-progress-wrap" style="display:none;">
+          <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+          <div id="cl-tr-phase" class="ai-phase-line"><span class="ai-spinner"></span><span id="cl-tr-phase-text">Working…</span></div>
+        </div>
+        <div id="cl-tr-context" class="ai-ctx-wrap" style="display:none;"></div>
         <div id="cl-tr-stream" class="ai-stream-preview" style="display:none;margin-top:10px;font-family:var(--font-mono, monospace);font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
         <div id="cl-tr-results"></div>
       </div>
@@ -501,8 +527,9 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
       <div class="data-section">
         <h2 style="margin-top:0;">🌱 Suggest Etymology</h2>
         <p style="font-size:13px;color:var(--text-muted);">
-          Propose an etymology paragraph for an existing lexicon entry. Useful for backfilling
-          ancestry across a language family.
+          Propose an etymology paragraph for an existing lexicon entry. The AI walks the full
+          ancestor chain, pulls sibling-language cognates with overlapping definitions, and
+          emulates the style of your existing etymologies for consistency.
         </p>
         <div class="aig-form-grid">
           <div class="aig-form-row">
@@ -511,13 +538,25 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
           </div>
           <div class="aig-form-row">
             <label>&nbsp;</label>
-            <span class="hint" style="align-self:center;">Parent language (if set) is consulted automatically.</span>
+            <span class="hint" style="align-self:center;">Parent + sibling languages are consulted automatically.</span>
+          </div>
+          <div class="aig-form-row full">
+            <label>Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+            <div id="cl-et-related-chips" class="chips-row"></div>
+            <input type="text" id="cl-et-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+            <div id="cl-et-related-results" class="aig-results" style="display:none;"></div>
           </div>
         </div>
         <div class="aig-actions">
           <button type="button" class="btn btn-primary" id="cl-et-go">Suggest</button>
           <span id="cl-et-status" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
         </div>
+
+        <div id="cl-et-progress" class="ai-progress-wrap" style="display:none;">
+          <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+          <div id="cl-et-phase" class="ai-phase-line"><span class="ai-spinner"></span><span id="cl-et-phase-text">Working…</span></div>
+        </div>
+        <div id="cl-et-context" class="ai-ctx-wrap" style="display:none;"></div>
         <div id="cl-et-stream" class="ai-stream-preview" style="display:none;margin-top:10px;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
         <div id="cl-et-results"></div>
       </div>
@@ -552,6 +591,10 @@ const State = {
   tlAbort:          false,
   tlStaged:         [],    // [{keep, title, year, yearEnd, importance, description, suggestStub, stubTags, _key}]
   tlBusyId:         null,
+  // Conlang tab — per-tool explicit related-article picker IDs
+  clGvRelatedIds:   [],    // Generate Vocabulary
+  clTrRelatedIds:   [],    // Translate Sentence
+  clEtRelatedIds:   [],    // Suggest Etymology
 };
 
 // ── Boot ──────────────────────────────────────────────────────────
@@ -741,15 +784,36 @@ function initRelatedPicker({ chipsEl, searchEl, resultsEl, getIds, setIds, onCha
   return { render };
 }
 
-// Context chips renderer — reused by single & timeline tabs.
+// Context chips renderer — used by every AI tool on this page.
+//
+// Article context is the original article-generator shape:
+//   { explicit: [...], semantic: [...] }
+// The conlang tools additionally populate optional fields:
+//   relatedLanguages: [{name, relation, sampleSize}]
+//   sampleTexts:      [{title, translation}]
+//   ancestorChain:    [name, ...] | [{name}, ...]
+//   lexicalPreMatches: [{word, definitions}]
+//   siblingCognates:  [{langName, count}]
+//   peerEtymologies:  [string, ...]
+// Article + timeline callers don't set these so they're rendered conditionally.
 function renderCtxInto(el, ctx) {
   const ex = Array.isArray(ctx && ctx.explicit) ? ctx.explicit : [];
   const se = Array.isArray(ctx && ctx.semantic) ? ctx.semantic : [];
-  if (!ex.length && !se.length) {
-    el.innerHTML = '<div class="ai-ctx-empty">No related articles found. The AI will write from scratch.</div>';
+  const langs   = Array.isArray(ctx && ctx.relatedLanguages)  ? ctx.relatedLanguages  : [];
+  const texts   = Array.isArray(ctx && ctx.sampleTexts)       ? ctx.sampleTexts       : [];
+  const anc     = Array.isArray(ctx && ctx.ancestorChain)     ? ctx.ancestorChain     : [];
+  const lpm     = Array.isArray(ctx && ctx.lexicalPreMatches) ? ctx.lexicalPreMatches : [];
+  const sibs    = Array.isArray(ctx && ctx.siblingCognates)   ? ctx.siblingCognates   : [];
+  const peers   = Array.isArray(ctx && ctx.peerEtymologies)   ? ctx.peerEtymologies   : [];
+
+  const hasArticles = ex.length || se.length;
+  const hasExtras   = langs.length || texts.length || anc.length || lpm.length || sibs.length || peers.length;
+  if (!hasArticles && !hasExtras) {
+    el.innerHTML = '<div class="ai-ctx-empty">No related context found. The AI will work from the language data alone.</div>';
     el.style.display = 'block';
     return;
   }
+
   const chipHtml = (item, variant) => {
     const tip = (item.summary || item.snippet || item.title || '').slice(0, 400);
     const score = (variant === 'semantic' && typeof item.score === 'number')
@@ -757,6 +821,9 @@ function renderCtxInto(el, ctx) {
       : '';
     return `<span class="ai-ctx-chip ${variant}" title="${escHtml(tip)}">${escHtml(item.title || 'Untitled')}${score}</span>`;
   };
+  const plainChip = (label, tip) =>
+    `<span class="ai-ctx-chip" title="${escHtml(tip || '')}">${escHtml(label)}</span>`;
+
   let out = '';
   if (ex.length) {
     out += `<div class="ai-ctx-heading">Explicitly referenced (${ex.length})</div>`;
@@ -765,6 +832,45 @@ function renderCtxInto(el, ctx) {
   if (se.length) {
     out += `<div class="ai-ctx-heading">Auto-retrieved (${se.length})</div>`;
     out += `<div class="ai-ctx-row">${se.map(i => chipHtml(i, 'semantic')).join('')}</div>`;
+  }
+  if (langs.length) {
+    out += `<div class="ai-ctx-heading">Related languages (${langs.length})</div>`;
+    out += `<div class="ai-ctx-row">${
+      langs.map(l => plainChip(`${l.name || 'Unnamed'} · ${l.relation || ''}`,
+                               `${l.relation || ''} — ${l.sampleSize || 0} words`)).join('')
+    }</div>`;
+  }
+  if (anc.length) {
+    const labels = anc.map(a => (typeof a === 'string' ? a : (a && a.name) || 'Unnamed'));
+    out += `<div class="ai-ctx-heading">Ancestor chain (${labels.length})</div>`;
+    out += `<div class="ai-ctx-row">${
+      labels.map(name => plainChip(name, 'ancestor language')).join('')
+    }</div>`;
+  }
+  if (lpm.length) {
+    out += `<div class="ai-ctx-heading">Lexical pre-matches (${lpm.length})</div>`;
+    out += `<div class="ai-ctx-row">${
+      lpm.map(p => plainChip(p.word || '?', (p.definitions || []).join('; '))).join('')
+    }</div>`;
+  }
+  if (sibs.length) {
+    out += `<div class="ai-ctx-heading">Sibling cognates</div>`;
+    out += `<div class="ai-ctx-row">${
+      sibs.map(s => plainChip(`${s.langName || 'Unnamed'} (${s.count || 0})`,
+                              `${s.count || 0} cognate hit(s)`)).join('')
+    }</div>`;
+  }
+  if (peers.length) {
+    out += `<div class="ai-ctx-heading">Peer etymologies (${peers.length})</div>`;
+    out += `<div class="ai-ctx-row">${
+      peers.map(p => plainChip((p.split(':')[0] || p).slice(0, 24), p)).join('')
+    }</div>`;
+  }
+  if (texts.length) {
+    out += `<div class="ai-ctx-heading">Sample texts (${texts.length})</div>`;
+    out += `<div class="ai-ctx-row">${
+      texts.map(t => plainChip(t.title || 'Untitled', t.translation || '')).join('')
+    }</div>`;
   }
   el.innerHTML = out;
   el.style.display = 'block';
@@ -1571,7 +1677,16 @@ async function commitStagedEvents() {
 
 // ── CONLANG TAB ───────────────────────────────────────────────────
 // Three tools: Generate Vocabulary, Translate Sentence, Suggest Etymology.
-// All calls go through AI.chat() with the busy indicator from js/ai.js.
+// Each follows the same flow as the article generator:
+//   Phase: context  → Conlang.gather*Context() (AI.gatherContext + family tree)
+//   Phase: writing  → AI.*Streaming() with onRawDelta into the preview pane
+//   Phase: parsing  → JSON / prose normalization inside the wrapper
+//   Phase: done     → render results
+// Prompt assembly lives in js/ai.js; this file only hooks up UI events.
+
+let _clGvPicker = null;
+let _clTrPicker = null;
+let _clEtPicker = null;
 
 function wireConlangTab() {
   refreshConlangLanguages();
@@ -1582,6 +1697,72 @@ function wireConlangTab() {
   document.getElementById('cl-gv-go')?.addEventListener('click', runGenerateVocabulary);
   document.getElementById('cl-tr-go')?.addEventListener('click', runTranslateSentence);
   document.getElementById('cl-et-go')?.addEventListener('click', runSuggestEtymology);
+
+  // Per-tool explicit related-article pickers (mirror the Single tab).
+  _clGvPicker = initRelatedPicker({
+    chipsEl:   document.getElementById('cl-gv-related-chips'),
+    searchEl:  document.getElementById('cl-gv-related-search'),
+    resultsEl: document.getElementById('cl-gv-related-results'),
+    getIds: () => State.clGvRelatedIds,
+    setIds: (v) => { State.clGvRelatedIds = v; },
+  });
+  _clTrPicker = initRelatedPicker({
+    chipsEl:   document.getElementById('cl-tr-related-chips'),
+    searchEl:  document.getElementById('cl-tr-related-search'),
+    resultsEl: document.getElementById('cl-tr-related-results'),
+    getIds: () => State.clTrRelatedIds,
+    setIds: (v) => { State.clTrRelatedIds = v; },
+  });
+  _clEtPicker = initRelatedPicker({
+    chipsEl:   document.getElementById('cl-et-related-chips'),
+    searchEl:  document.getElementById('cl-et-related-search'),
+    resultsEl: document.getElementById('cl-et-related-results'),
+    getIds: () => State.clEtRelatedIds,
+    setIds: (v) => { State.clEtRelatedIds = v; },
+  });
+}
+
+// Per-tool progress / context / stream helpers. `tool` is one of
+// 'gv' (Generate Vocabulary), 'tr' (Translate Sentence), 'et' (Suggest Etymology).
+function clResetUi(tool) {
+  const ids = {
+    progress: `cl-${tool}-progress`,
+    phase:    `cl-${tool}-phase`,
+    text:     `cl-${tool}-phase-text`,
+    ctx:      `cl-${tool}-context`,
+    stream:   `cl-${tool}-stream`,
+    results:  `cl-${tool}-results`,
+  };
+  const prog = document.getElementById(ids.progress);
+  if (prog) { prog.style.display = 'block'; }
+  const phase = document.getElementById(ids.phase);
+  if (phase) phase.classList.remove('error');
+  const text = document.getElementById(ids.text);
+  if (text) text.textContent = 'Gathering context…';
+  const ctx = document.getElementById(ids.ctx);
+  if (ctx) { ctx.style.display = 'none'; ctx.innerHTML = ''; }
+  const stream = document.getElementById(ids.stream);
+  if (stream) {
+    stream.textContent = '';
+    stream.style.display = 'none';
+    stream.classList.remove('active');
+  }
+  const results = document.getElementById(ids.results);
+  if (results) results.innerHTML = '';
+}
+
+function clSetPhase(tool, label, isError) {
+  const text  = document.getElementById(`cl-${tool}-phase-text`);
+  const phase = document.getElementById(`cl-${tool}-phase`);
+  if (text)  text.textContent = label;
+  if (phase) phase.classList.toggle('error', !!isError);
+}
+
+function clHideProgress(tool) {
+  const prog = document.getElementById(`cl-${tool}-progress`);
+  if (prog) prog.style.display = 'none';
+  const stream = document.getElementById(`cl-${tool}-stream`);
+  if (stream) stream.classList.remove('active');
 }
 
 function refreshConlangLanguages() {
@@ -1651,57 +1832,6 @@ function refreshConlangWordSelect() {
     }).join('');
 }
 
-function buildConlangContext(lang) {
-  // Compact context block for any conlang prompt.
-  const lines = [];
-  lines.push(`Language: ${lang.name}${lang.nativeName && lang.nativeName !== lang.name ? ' (' + lang.nativeName + ')' : ''}`);
-  if (lang.status) lines.push(`Status: ${lang.status}`);
-  if (lang.parentId) {
-    const parent = Conlang.getLanguage(lang.parentId);
-    if (parent) lines.push(`Parent language: ${parent.name}`);
-  }
-  if (lang.romanization) lines.push(`Romanization: ${lang.romanization}`);
-  const cons = (lang.phonology?.consonants || []).map(c => c.ipa).filter(Boolean);
-  const vows = (lang.phonology?.vowels || []).map(v => v.ipa).filter(Boolean);
-  if (cons.length) lines.push(`Consonants (IPA): ${cons.join(' ')}`);
-  if (vows.length) lines.push(`Vowels (IPA): ${vows.join(' ')}`);
-  if (lang.phonology?.notes) lines.push(`Phonotactics: ${lang.phonology.notes}`);
-  // Strip Quill HTML for grammar
-  if (lang.grammar) {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = lang.grammar;
-    const grammarText = (tmp.textContent || '').trim().slice(0, 1500);
-    if (grammarText) lines.push(`Grammar notes:\n${grammarText}`);
-  }
-  return lines.join('\n');
-}
-
-function buildLexiconSummary(lang, max = 80) {
-  const lex = (lang.lexicon || []).slice(0, max);
-  if (!lex.length) return '(empty lexicon)';
-  return lex.map(e => {
-    const defs = (e.definitions || []).join('; ');
-    return `${e.word}${e.romanization && e.romanization !== e.word ? ' [' + e.romanization + ']' : ''}${e.partOfSpeech ? ' (' + e.partOfSpeech + ')' : ''}: ${defs}`;
-  }).join('\n');
-}
-
-function parseJsonFromAi(text) {
-  // Try to peel JSON out of any chatty wrapper the model added.
-  if (!text) throw new Error('Empty AI response.');
-  const trimmed = text.trim();
-  // Strip ```json fences
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1] : trimmed;
-  // Find first { or [
-  const start = Math.min(...['{', '['].map(c => {
-    const i = candidate.indexOf(c);
-    return i === -1 ? Infinity : i;
-  }));
-  if (!isFinite(start)) throw new Error('Could not find JSON in AI response.');
-  const slice = candidate.slice(start).trim();
-  return JSON.parse(slice);
-}
-
 // ── Tool: Generate Vocabulary ─────────────────────────────────────
 async function runGenerateVocabulary() {
   if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
@@ -1711,53 +1841,58 @@ async function runGenerateVocabulary() {
   const count = Math.max(1, Math.min(50, parseInt(document.getElementById('cl-gv-count').value, 10) || 10));
   const notes = document.getElementById('cl-gv-notes').value.trim();
   const status = document.getElementById('cl-gv-status');
-  const results = document.getElementById('cl-gv-results');
   const stream  = document.getElementById('cl-gv-stream');
+  const ctxWrap = document.getElementById('cl-gv-context');
 
   const btn = document.getElementById('cl-gv-go');
   btn.disabled = true;
-  status.textContent = 'Generating… 0 chars';
-  results.innerHTML = '';
-  if (stream) {
-    stream.textContent = '';
-    stream.style.display = 'block';
-    stream.classList.add('active');
-  }
+  clResetUi('gv');
+  status.textContent = 'Gathering context…';
 
-  const ctx = buildConlangContext(lang);
-  const existing = (lang.lexicon || []).slice(0, 30).map(e => e.word).filter(Boolean).join(', ');
-
-  const sys = `You are a conlang assistant. Generate plausible new words that fit the supplied phonology. Respond with strict JSON only — no commentary, no markdown fences.`;
-  const user = `${ctx}
-
-Avoid words already in this lexicon: ${existing || '(none)'}
-
-Generate ${count} new words for the semantic field "${field || 'general'}".${notes ? '\n\nExtra guidance: ' + notes : ''}
-
-Respond as JSON: {"words":[{"word":"...","romanization":"...","ipa":"...","partOfSpeech":"...","definitions":["...","..."],"etymology":"...","notes":""}]}`;
+  const spec = {
+    langId:        lang.id,
+    semanticField: field,
+    count,
+    notes,
+    relatedIds:    State.clGvRelatedIds.slice(),
+  };
 
   try {
-    const messages = [{ role: 'system', content: sys }, { role: 'user', content: user }];
-    const opts = { jsonMode: true };
-    const onChunk = (_delta, accum) => {
-      if (stream) {
-        stream.textContent = accum;
-        stream.scrollTop = stream.scrollHeight;
-      }
-      status.textContent = `Generating… ${accum.length} chars`;
-    };
-    const txt = await AI.chatStream(messages, opts, onChunk);
-    if (stream) stream.classList.remove('active');
-    const parsed = parseJsonFromAi(txt);
-    const words = Array.isArray(parsed) ? parsed : (parsed.words || []);
-    if (!words.length) throw new Error('AI returned no words.');
-    renderGeneratedVocab(lang, words);
-    if (stream) stream.style.display = 'none';
-    status.textContent = `Generated ${words.length} word${words.length === 1 ? '' : 's'}.`;
+    const result = await AI.generateVocabularyStreaming(spec, {
+      onPhase: (p) => {
+        if (p === 'context')      { clSetPhase('gv', 'Gathering context…'); status.textContent = 'Gathering context…'; }
+        else if (p === 'writing') { clSetPhase('gv', 'Generating words…'); }
+        else if (p === 'parsing') { clSetPhase('gv', 'Parsing result…'); }
+        else if (p === 'done')    { clSetPhase('gv', 'Done.'); }
+      },
+      onContextReady: (ctx) => {
+        renderCtxInto(ctxWrap, ctx);
+        if (stream) {
+          stream.textContent = '';
+          stream.style.display = 'block';
+          stream.classList.add('active');
+        }
+      },
+      onRawDelta: (_delta, accum) => {
+        if (stream) {
+          stream.textContent = accum;
+          stream.scrollTop = stream.scrollHeight;
+        }
+        status.textContent = `Generating… ${accum.length} chars`;
+      },
+    });
+    if (stream) {
+      stream.classList.remove('active');
+      stream.style.display = 'none';
+    }
+    renderGeneratedVocab(lang, result.words);
+    clHideProgress('gv');
+    status.textContent = `Generated ${result.words.length} word${result.words.length === 1 ? '' : 's'}.`;
   } catch (e) {
     console.error(e);
     if (stream) stream.classList.remove('active');
-    status.textContent = 'Failed: ' + e.message;
+    clSetPhase('gv', 'Failed: ' + (e.message || e), true);
+    status.textContent = 'Failed: ' + (e.message || e);
   } finally {
     btn.disabled = false;
   }
@@ -1846,55 +1981,61 @@ async function runTranslateSentence() {
   const dir = document.getElementById('cl-tr-dir').value;
   const sentence = document.getElementById('cl-tr-input').value.trim();
   if (!sentence) { UI.toast('Enter a sentence first.'); return; }
-  const status = document.getElementById('cl-tr-status');
-  const results = document.getElementById('cl-tr-results');
+  const status  = document.getElementById('cl-tr-status');
   const stream  = document.getElementById('cl-tr-stream');
+  const ctxWrap = document.getElementById('cl-tr-context');
 
-  const btn = document.getElementById('cl-tr-go');
-  btn.disabled = true;
-  status.textContent = 'Translating… 0 chars';
-  results.innerHTML = '';
-  if (stream) {
-    stream.textContent = '';
-    stream.style.display = 'block';
-    stream.classList.add('active');
-  }
-
-  const ctx = buildConlangContext(lang);
-  const lex = buildLexiconSummary(lang, 120);
   const fromLabel = (dir === 'en-to-lang') ? 'English' : lang.name;
   const toLabel   = (dir === 'en-to-lang') ? lang.name : 'English';
 
-  const sys = 'You translate between English and constructed languages. Use the supplied lexicon and grammar where possible; coin words explicitly marked [coined] when needed. Respond with strict JSON only — no commentary, no markdown fences.';
-  const user = `${ctx}
+  const btn = document.getElementById('cl-tr-go');
+  btn.disabled = true;
+  clResetUi('tr');
+  status.textContent = 'Gathering context…';
 
-Lexicon (sample, up to 120 entries):
-${lex}
-
-Translate from ${fromLabel} to ${toLabel}: "${sentence}"
-
-Respond as JSON: {"translation":"...","gloss":"word-by-word interlinear gloss","words":[{"source":"...","target":"...","note":"e.g. coined, derived"}],"unknown":["words you had to coin"]}`;
+  const spec = {
+    langId:     lang.id,
+    direction:  dir,
+    sentence,
+    relatedIds: State.clTrRelatedIds.slice(),
+  };
 
   try {
-    const messages = [{ role: 'system', content: sys }, { role: 'user', content: user }];
-    const opts = { jsonMode: true };
-    const onChunk = (_delta, accum) => {
-      if (stream) {
-        stream.textContent = accum;
-        stream.scrollTop = stream.scrollHeight;
-      }
-      status.textContent = `Translating… ${accum.length} chars`;
-    };
-    const txt = await AI.chatStream(messages, opts, onChunk);
-    if (stream) stream.classList.remove('active');
-    const parsed = parseJsonFromAi(txt);
-    renderTranslation(parsed, fromLabel, toLabel);
-    if (stream) stream.style.display = 'none';
+    const result = await AI.translateSentenceStreaming(spec, {
+      onPhase: (p) => {
+        if (p === 'context')      { clSetPhase('tr', 'Gathering context…'); status.textContent = 'Gathering context…'; }
+        else if (p === 'writing') { clSetPhase('tr', 'Translating…'); }
+        else if (p === 'parsing') { clSetPhase('tr', 'Parsing result…'); }
+        else if (p === 'done')    { clSetPhase('tr', 'Done.'); }
+      },
+      onContextReady: (ctx) => {
+        renderCtxInto(ctxWrap, ctx);
+        if (stream) {
+          stream.textContent = '';
+          stream.style.display = 'block';
+          stream.classList.add('active');
+        }
+      },
+      onRawDelta: (_delta, accum) => {
+        if (stream) {
+          stream.textContent = accum;
+          stream.scrollTop = stream.scrollHeight;
+        }
+        status.textContent = `Translating… ${accum.length} chars`;
+      },
+    });
+    if (stream) {
+      stream.classList.remove('active');
+      stream.style.display = 'none';
+    }
+    renderTranslation(result, fromLabel, toLabel);
+    clHideProgress('tr');
     status.textContent = 'Done.';
   } catch (e) {
     console.error(e);
     if (stream) stream.classList.remove('active');
-    status.textContent = 'Failed: ' + e.message;
+    clSetPhase('tr', 'Failed: ' + (e.message || e), true);
+    status.textContent = 'Failed: ' + (e.message || e);
   } finally {
     btn.disabled = false;
   }
@@ -1933,58 +2074,54 @@ async function runSuggestEtymology() {
   const entry = (lang.lexicon || []).find(e => e.id === wordId);
   if (!entry) { UI.toast('No word selected.'); return; }
 
-  const status = document.getElementById('cl-et-status');
+  const status  = document.getElementById('cl-et-status');
   const results = document.getElementById('cl-et-results');
   const stream  = document.getElementById('cl-et-stream');
+  const ctxWrap = document.getElementById('cl-et-context');
+
   const btn = document.getElementById('cl-et-go');
   btn.disabled = true;
-  status.textContent = 'Thinking… 0 chars';
-  results.innerHTML = '';
-  if (stream) {
-    stream.textContent = '';
-    stream.style.display = 'block';
-    stream.classList.add('active');
-  }
+  clResetUi('et');
+  status.textContent = 'Gathering context…';
 
-  const ctx = buildConlangContext(lang);
-  let parentCtx = '';
-  if (lang.parentId) {
-    const parent = Conlang.getLanguage(lang.parentId);
-    if (parent) {
-      parentCtx = `\n\nParent language "${parent.name}" — sample lexicon:\n${buildLexiconSummary(parent, 60)}`;
-    }
-  }
-  const definitions = (entry.definitions || []).join('; ');
-  const sys = 'You propose etymologies for entries in constructed-language lexicons. Be concise (2–4 sentences) and consistent with the supplied phonology and parent language. Plain prose, not JSON.';
-  const user = `${ctx}${parentCtx}
-
-Suggest an etymology for the word: "${entry.word}"
-${entry.ipa ? 'IPA: /' + entry.ipa + '/' : ''}
-${entry.partOfSpeech ? 'POS: ' + entry.partOfSpeech : ''}
-Definitions: ${definitions}
-${entry.etymology ? 'Existing etymology (rewrite or extend): ' + entry.etymology : '(no existing etymology)'}`;
+  const spec = {
+    langId:     lang.id,
+    wordId:     entry.id,
+    relatedIds: State.clEtRelatedIds.slice(),
+  };
 
   try {
-    const messages = [
-      { role: 'system', content: sys },
-      { role: 'user',   content: user },
-    ];
-    const onChunk = (_delta, accum) => {
-      // The etymology tool emits plain prose, so we can render the running
-      // text directly into the preview pane character-by-character.
-      if (stream) {
-        stream.textContent = accum;
-        stream.scrollTop = stream.scrollHeight;
-      }
-      status.textContent = `Thinking… ${accum.length} chars`;
-    };
-    const txt = await AI.chatStream(messages, {}, onChunk);
+    const result = await AI.suggestEtymologyStreaming(spec, {
+      onPhase: (p) => {
+        if (p === 'context')      { clSetPhase('et', 'Gathering context…'); status.textContent = 'Gathering context…'; }
+        else if (p === 'writing') { clSetPhase('et', 'Thinking…'); }
+        else if (p === 'parsing') { clSetPhase('et', 'Finalizing…'); }
+        else if (p === 'done')    { clSetPhase('et', 'Done.'); }
+      },
+      onContextReady: (ctx) => {
+        renderCtxInto(ctxWrap, ctx);
+        if (stream) {
+          stream.textContent = '';
+          stream.style.display = 'block';
+          stream.classList.add('active');
+        }
+      },
+      onRawDelta: (_delta, accum) => {
+        // Plain-prose stream — render directly into the preview pane.
+        if (stream) {
+          stream.textContent = accum;
+          stream.scrollTop = stream.scrollHeight;
+        }
+        status.textContent = `Thinking… ${accum.length} chars`;
+      },
+    });
     if (stream) {
       stream.classList.remove('active');
       stream.style.display = 'none';
     }
+    clHideProgress('et');
 
-    const cleaned = (txt || '').trim();
+    const cleaned = result.text;
     results.innerHTML = `
       <div style="margin-top:14px;padding:14px;background:var(--bg-sidebar);border:1px solid var(--border);border-radius:var(--radius);">
         <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
@@ -2010,7 +2147,8 @@ ${entry.etymology ? 'Existing etymology (rewrite or extend): ' + entry.etymology
   } catch (e) {
     console.error(e);
     if (stream) stream.classList.remove('active');
-    status.textContent = 'Failed: ' + e.message;
+    clSetPhase('et', 'Failed: ' + (e.message || e), true);
+    status.textContent = 'Failed: ' + (e.message || e);
   } finally {
     btn.disabled = false;
   }

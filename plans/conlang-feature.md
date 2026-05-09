@@ -206,22 +206,72 @@ Three tools, all gated on `AI.isConfigured()`:
 
 1. **Generate Vocabulary**
    - Inputs: target language, semantic field, phonotactic notes (autofilled
-     from the language's phonology), N words to generate.
+     from the language's phonology), N words to generate, optional
+     pinned-article picker.
    - Output: candidate words with proposed definitions; user can accept
      individual rows into the lexicon.
 2. **Translate Sentence**
-   - Inputs: source language, English sentence.
+   - Inputs: source language, English sentence, optional pinned-article
+     picker.
    - Output: word-by-word + interlinear gloss + free translation, using
      the existing lexicon and grammar notes as context.
 3. **Suggest Etymology**
-   - Inputs: target language, selected word.
+   - Inputs: target language, selected word, optional pinned-article
+     picker.
    - Output: etymology paragraph; can be saved into the entry's
      `etymology` field.
 
-All three call `AI.chat()` (non-streaming for simplicity) using the same
-busy-indicator + error-toast pattern as the article generator.
+### Context-gathering phase (added in feature/conlang-context)
+
+Each tool runs the same four-phase flow as the article generator:
+
+```
+Phase: context  →  Conlang.gather*Context()    →  onContextReady(ctx)
+Phase: writing  →  AI.chatStream() with prompt →  onRawDelta(delta, accum)
+Phase: parsing  →  JSON / prose normalization
+Phase: done     →  render results
+```
+
+The gather step bundles:
+
+- **Wiki articles** retrieved via the same [`AI.gatherContext()`](../js/ai.js:455)
+  pipeline used for article generation (explicit + semantic-search hits).
+- **Family-tree neighbours** from [`Conlang.getAncestors`](../js/conlang.js:52)
+  / [`Conlang.getSiblings`](../js/conlang.js:420) /
+  [`Conlang.getDescendants`](../js/conlang.js:47) — parent + siblings + descendants
+  for vocab, parent + siblings for translation, full ancestor chain + sibling
+  cognates for etymology.
+- **Sample texts** from `lang.sampleTexts` (canonical phrasing).
+- Tool-specific extras: lexicon stats for vocab, lexical pre-matches for
+  translation, peer-etymologies for etymology.
+
+The result is rendered as on-screen chips by
+[`renderCtxInto()`](../ai-generate.html:744) before the model call begins,
+so the user can see exactly what is being passed in.
+
+### Module split
+
+- New gatherers: [`Conlang.gatherVocabContext`](../js/conlang.js:499),
+  [`Conlang.gatherTranslationContext`](../js/conlang.js:562),
+  [`Conlang.gatherEtymologyContext`](../js/conlang.js:654).
+- New shared blocks: [`Conlang.buildContextBlock`](../js/conlang.js:379),
+  [`Conlang.buildLexiconSummary`](../js/conlang.js:404).
+- New AI wrappers: [`AI.generateVocabularyStreaming`](../js/ai.js:800),
+  [`AI.translateSentenceStreaming`](../js/ai.js:907),
+  [`AI.suggestEtymologyStreaming`](../js/ai.js:998) — each owns its prompt
+  assembly and streamed chat call.
+- New prompt-override slots in `AI.DEFAULT_PROMPTS`: `vocabSystem` /
+  `vocabUserPreamble`, `translateSystem` / `translateUserPreamble`,
+  `etymologySystem` / `etymologyUserPreamble`. They show up automatically
+  in the AI settings prompt editor alongside `articleSystem` etc.
+- Per-tool UI in [`ai-generate.html`](../ai-generate.html:413): each tool gets
+  its own progress line, context-chip wrap, stream preview pane, and
+  related-article picker (state lives in `State.cl{Gv,Tr,Et}RelatedIds`).
 
 The tab is **hidden** when `DB.isReadOnly`.
+
+For full implementation reference see
+[`plans/conlang-context-gathering.md`](conlang-context-gathering.md).
 
 ---
 
