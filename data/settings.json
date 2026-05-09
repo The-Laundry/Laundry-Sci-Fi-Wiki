@@ -2,5 +2,15 @@
   "homeDesc": "",
   "activeCalendar": "hcc",
   "importanceColors": {},
-  "theme": "dark"
+  "theme": "dark",
+  "ai": {
+    "enabled": false,
+    "baseUrl": "https://api.openai.com/v1",
+    "chatModel": "gpt-4o-mini",
+    "embeddingModel": "text-embedding-3-small",
+    "temperature": 0.7,
+    "maxTokens": 2000,
+    "autoRefreshOnSave": true,
+    "topK": 5
+  }
 }

@@ -428,7 +428,7 @@ function openWbTemplateModal(id) {
     : [{ type: 'field', key: '' }];
 
   // ── render field list inside the modal ──
-  let _tmplDragIdx = null;
+  window._tmplDragIdx = null;
   function fHTML() {
     return tmpFields.map((f, i) => {
       const isSection = f.type === 'section';

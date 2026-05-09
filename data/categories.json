@@ -3,7 +3,7 @@
     "id": "cat_1778221758985_cj4o",
     "name": "Locations",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {
@@ -171,7 +171,7 @@
     "id": "cat_1778228892394_h75m",
     "name": "Organizations",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {
@@ -185,7 +185,7 @@
     "id": "cat_1778228914079_yvvg",
     "name": "Events",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
