@@ -1,6 +1,7 @@
 # CLAUDE_README.md
 # AI Context Document — Encyclopedia of Many Things
 # For AI assistant use only. Human readme is README.md.
+# Optimization roadmap is in optimization-roadmap.md.
 
 ## PROJECT SUMMARY
 Local-first worldbuilding wiki for "Phodd Communications". Vanilla HTML/CSS/JS,
@@ -18,37 +19,42 @@ Also deployed on GitHub Pages as a read-only public view.
 - Global helpers: escHtml(), mkId(), dateToDays(), ceToDisplay(), formatDate(), calendarToCE().
 
 ## FILE MAP & LINE COUNTS
-  article.html           ~345  Article viewer. Wikilinks [[Name]] or [[Name|text]].
-                               Backlinks panel ("Referenced by") computed on load.
-  editor.html            1112  Article editor. Quill.js WYSIWYG, custom cat dropdown,
+  article.html            358  Article viewer. Wikilinks [[Name]] or [[Name|text]].
+                               Backlinks panel — scans articleCache only (cached this session).
+                               Uses DB.loadArticle(id) for full content.
+  editor.html            1117  Article editor. Quill.js WYSIWYG, custom cat dropdown,
                                wikibox builder (contenteditable, stable _id drag-reorder),
                                article template picker. In-flight save guard (_articleSaving).
-  manager.html           ~521  Article + category manager. Drag-drop tree. Wikibox
+                               Uses DB.loadArticle(editingId) on load.
+  manager.html            526  Article + category manager. Drag-drop tree. Wikibox
                                templates + article templates (sections + fields, drag-reorder).
-  article-templates.html ~231  Article template manager.
-  index.html             ~113  Homepage. Stats, recent articles, category list.
-  search.html            ~449  Dedicated search page. Full-text + tag browsing.
-  timeline.html          ~1103 Timeline viewer. Full-page, fixed panels, 5-column layout.
-  timeline-manager.html  ~330  Timeline/era/event-category manager. Importance colors.
-  ai.html                ~505  AI settings. saveConfig() uses DB.saveSettings().
-  ai-generate.html       ~1457 AI Generator. Bulk event commit uses DB.saveEvents().
-  data.html              ~141  Export/import/clear. Read-only notice on GitHub Pages.
-  help.html              ~111  Usage guide.
-  css/main.css           ~915  All shared styles. Dark mode via [data-theme="dark"].
-  js/db.js                502  DB object. THREE backends + SCOPED SAVE METHODS (Phase 1).
-                               See SAVE SYSTEM section below.
+                               Uses DB.articleMeta for display, updates both meta + cache.
+  article-templates.html  231  Article template manager.
+  index.html              113  Homepage. Stats, recent articles, category list.
+  search.html             604  Search page. Index-backed fast search + async content snippets.
+                               Index built from articleMeta on load (no file reads).
+                               Falls back to metadata scan if index not ready.
+  timeline.html          1105  Timeline viewer. Full-page, fixed panels, 5-column layout.
+                               Importance icons (SVG shapes), color picker, era custom calendars.
+  timeline-manager.html   329  Timeline/era/event-category manager. Importance colors.
+  ai.html                 508  AI settings. Uses DB.saveSettings().
+  ai-generate.html       1457  AI Generator. Iterates DB.articleMeta, loads via DB.loadArticle.
+  data.html               141  Export/import/clear. Read-only notice on GitHub Pages.
+  help.html               111  Usage guide.
+  css/main.css            922  All shared styles. Dark mode via [data-theme="dark"].
+  js/db.js                617  DB object. THREE backends + SCOPED SAVES + LAZY LOADING.
+                               See SAVE SYSTEM and ARTICLE LOADING sections below.
   js/calendar.js           52  Calendar conversions. CALENDARS object, 5 calendars.
-  js/ui.js                488  Shell injection. Theme from localStorage. Sidebar uses
-                               DB.getCatCollapsed/setCatCollapsed (no disk write).
-                               Stable alphabetical sort in sidebar tree.
-  js/ai.js               ~1605 AI helper module. saveConfig → DB.saveSettings().
+  js/ui.js                521  Shell injection. Lazy sidebar tree. Theme from localStorage.
+                               Header search uses DB.articleMeta only.
+  js/ai.js               1612  AI helper module. reindexAll uses DB.loadArticle per article.
 
-## SAVE SYSTEM — CRITICAL (Phase 1 complete)
+## SAVE SYSTEM (Phase 1 — complete)
 ALWAYS use scoped saves. Never call DB.save() without an article ID except for
-article delete (the one intentional exception — updates index.json, infrequent).
+the one intentional exception: article delete (handled by DB.deleteArticleFile).
 
 Scoped save methods in db.js:
-  DB.save(articleId)          — writes one article file + updates index.json
+  DB.save(articleId)          — writes one article file + updates index.json metadata
   DB.saveSettings()           — writes settings.json only
   DB.saveCategories()         — writes categories.json only
   DB.saveTimelines()          — writes timelines.json only
@@ -57,8 +63,7 @@ Scoped save methods in db.js:
   DB.saveTimelineCategories() — writes timeline-categories.json only
   DB.saveWikiboxTemplates()   — writes wikibox-templates.json only
   DB.saveArticleTemplates()   — writes article-templates.json only
-  DB.save() (no arg)          — writes ALL shared files + ALL article files. AVOID.
-                                Only used in: article delete, data import, clearAll.
+  DB.save() (no arg)          — writes EVERYTHING. AVOID. Only in: importAll, clearAll.
 
 Call site reference:
   Category CRUD              → DB.saveCategories()
@@ -73,44 +78,105 @@ Call site reference:
   Calendar selection         → DB.saveSettings()
   AI config                  → DB.saveSettings()
   Article save/create        → DB.save(articleId)
-  Article delete             → DB.save() [intentional, infrequent]
+  Article delete             → DB.deleteArticleFile(id) — handles everything including index.json
   Theme toggle               → localStorage only, NO disk write
   Category collapse toggle   → localStorage only, NO disk write
 
-## CATEGORY COLLAPSE STATE (localStorage only)
-DB.getCatCollapsed(id) → boolean (true = collapsed, default for all categories)
-DB.setCatCollapsed(id, collapsed) → writes to localStorage('eomt_cat_open')
-Storage format: {catId: true} for OPEN categories only. Absent = collapsed.
-Default is collapsed — never stored in categories.json.
-The `collapsed` field may still exist on old category objects in data but is ignored.
+## ARTICLE LOADING SYSTEM (Phase 2 — complete)
+Two-layer architecture. DB.articles is a backward-compat getter → returns articleMeta.
+
+  DB.articleMeta[]     Always loaded at init. Lightweight: {id, title, categoryId,
+                       tags, summary, updated, hasImage}. Source: articles/index.json.
+  DB.articleCache{}    Full articles keyed by id. Populated on demand via loadArticle().
+                       Never persisted — session only.
+  DB.articles          Getter returning articleMeta. Setter updates articleMeta.
+                       All metadata reads (title, category, tags) work unchanged.
+  DB.loadArticle(id)   async. Checks cache → reads file → caches result → returns.
+                       Use for any page needing content, wikibox.fields, or embedding.
+  DB._extractMeta(art) Returns lightweight metadata object from a full article.
+
+When to use what:
+  Metadata reads (display, lists, search, sidebar) → DB.articleMeta or DB.articles getter
+  Full content needed (viewer, editor, AI, backlinks content) → await DB.loadArticle(id)
+  Write/update article → update DB.articleCache[id], then DB.save(id)
+  New article → add to DB.articleCache[id] + DB.articleMeta, then DB.save(id)
+
+articles/index.json format (NEW — metadata objects, not just IDs):
+  [{id, title, categoryId, tags[], summary, updated, hasImage}, ...]
+  Written by DB.save(articleId) on every save.
+  DB.deleteArticleFile(id) also updates it.
+  Auto-migrates from old [id, id...] format on first load with new code.
+
+Regenerate manually if needed:
+  python3 << 'EOF'
+  import os, json
+  arts_dir = 'encyclopedia/data/articles'
+  metas = []
+  for fn in sorted(os.listdir(arts_dir)):
+      if not fn.endswith('.json') or fn in ('index.json', 'undefined.json'): continue
+      a = json.load(open(os.path.join(arts_dir, fn)))
+      metas.append({'id':a.get('id',fn[:-5]),'title':a.get('title',''),
+        'categoryId':a.get('categoryId'),'tags':a.get('tags',[]),
+        'summary':a.get('summary',''),'updated':a.get('updated',0),
+        'hasImage':bool(a.get('wikibox',{}).get('image'))})
+  json.dump(metas, open(os.path.join(arts_dir,'index.json'),'w'), indent=2)
+  print(f'{len(metas)} entries written')
+  EOF
+
+## SIDEBAR (Phase 3 — complete)
+Lazy expansion: children not built until first expand click.
+Collapsed by default (DB.getCatCollapsed returns true if id absent from localStorage).
+Each category header shows name + article count hint.
+Children built once on first expand, reused on subsequent toggle.
+Stable alphabetical sort at every level.
+
+Category collapse state:
+  DB.getCatCollapsed(id)          → true if collapsed (default)
+  DB.setCatCollapsed(id, bool)    → writes localStorage('eomt_cat_open')
+  Format: {catId: true} for OPEN categories only. Absent = collapsed.
+
+## SEARCH INDEX (Phase 4 — complete)
+Built asynchronously in search.html after page load. No blocking.
+Source: DB.articleMeta (titles, tags, summary) + DB.events (title, description).
+Structure: Map<token, Map<id, score>>
+  Article tokens: title (×3), tags (×2), summary (×1)
+  Event tokens:   prefixed 'ev:' — title (×3), description (×1)
+Stop words removed. HTML stripped. Prefix matching (partial words work).
+Multi-word: intersect result sets, sum scores.
+
+Search flow:
+  1. Index lookup → results with metadata + summary snippet (immediate)
+  2. loadSnippetsAsync() → loads matching article files, updates snippets in place
+  3. Aborts async loading if query changes before completion
+  Fallback if index not ready: metadata scan (title + tags only)
+
+Header search (ui.js): metadata only, title + tags, no file reads.
 
 ## DARK MODE / THEME
-Theme stored in localStorage('eomt_theme') ONLY — never written to settings.json.
-DB.settings.theme may exist from old data but is only a fallback, never written.
-UI._applyTheme() reads localStorage first, then DB.settings.theme, then 'light'.
-UI.toggleTheme() writes localStorage only — no DB.save(), no disk write.
-CSS: [data-theme="dark"] block in main.css overrides all :root variables.
+Theme stored in localStorage('eomt_theme') ONLY.
+DB.settings.theme may exist in old data but is only a fallback, never written.
+UI._applyTheme() reads localStorage first. UI.toggleTheme() writes localStorage only.
+CSS: [data-theme="dark"] block in main.css overrides all :root CSS variables.
+ALWAYS use CSS variables for colors — never hardcode rgba/hex values.
 
 ## IN-FLIGHT SAVE GUARDS
-Prevents double-saves from impatient clicking:
-  editor.html:   _articleSaving boolean flag, button disabled during save
-  timeline.html: btn._saving flag on event modal and era modal save buttons
+  editor.html:      _articleSaving boolean, button disabled during save
+  timeline.html:    btn._saving flag on event + era modal save buttons
 
-## WIKIBOX SYSTEM (stable _id rewrite)
-Each field has a stable runtime _id (e.g. 'wb_a3f9k2') assigned on load/create.
-DOM uses data-wbid, never numeric indices. All reads/writes by _id lookup.
-_id is stripped by collectWbFields() before saving — not stored in JSON.
-contenteditable value editors, identified by .wb-value-editor[data-wbid].
-Mini-toolbar (B/I/U/↵) appears on text selection via selectionchange event.
-Drag-reorder: flushes active editor synchronously before splice, uses _id for
-fromIdx/toIdx lookups. No stale index problems possible.
+## WIKIBOX SYSTEM
+Stable runtime _id per field (e.g. 'wb_a3f9k2'). Assigned on load, stripped before save.
+DOM uses data-wbid — never numeric indices. Reads/writes by _id lookup.
+contenteditable value editors: .wb-value-editor[data-wbid="..."]
+Mini-toolbar (B/I/U/↵) appears on text selection via selectionchange.
+Drag-reorder: flushes active editor synchronously before splice, uses _id for lookups.
+collectWbFields() — flushes active editor + strips _id before save.
 
 ## DATA SCHEMA
 settings.json:     { homeDesc, activeCalendar, importanceColors:{imp:hex},
                      ai:{ enabled, baseUrl, chatModel, embeddingModel,
                           temperature, maxTokens, autoRefreshOnSave, topK } }
-                   NOTE: apiKey NEVER in settings.json. theme NEVER in settings.json.
-                   Both live in localStorage only.
+                   NOTE: apiKey NEVER in settings.json (localStorage 'eomt_ai_key' only).
+                         theme NEVER in settings.json (localStorage 'eomt_theme' only).
 categories.json:   [{id, name, parentId}]  — 'collapsed' field ignored if present
 timelines.json:    [{id, name, description, startYear, endYear}]
 events.json:       [{id, title, year, month, day, yearEnd, monthEnd, dayEnd,
@@ -121,23 +187,12 @@ eras.json:         [{id, name, startYear, endYear, color, timelineId,
 timeline-categories.json: [{id, name, color, defaultColor}]
 wikibox-templates.json:   [{id, name, fields:[{type:'field'|'section', key}]}]
 article-templates.json:   [{id, name, categoryId, tags[], content(HTML), wikibox{...}}]
-articles/index.json:      [array of article IDs] — REQUIRED for GitHub Pages
-                           Written by DB.save(articleId) on every article save.
+articles/index.json:      [{id,title,categoryId,tags[],summary,updated,hasImage}]
+                           REQUIRED for GitHub Pages. Written on every article save.
 articles/art_ID.json:     {id, title, content(HTML), categoryId, tags[],
                             wikibox:{enabled,title,subtitle,image,imagePath,imgCaption,
                             fields:[{type,key,val(HTML)}]}, created, updated,
-                            summary?(string), embedding?(number[]), embeddingModel?(string)}
-
-## PHASE 2 — NEXT SESSION (not yet implemented)
-Metadata index + lazy loading. Key changes:
-  - DB.articleMeta[] — lightweight metadata loaded at init (replaces loading all articles)
-  - DB.articleCache{} — full articles loaded on demand, keyed by id
-  - DB.loadArticle(id) — new async method, checks cache then fetches file
-  - articles/index.json — expand from [ids] to [{id,title,categoryId,tags,summary,updated}]
-  - DB.save(articleId) — after write, update DB.articleMeta entry + rewrite index.json
-  - Pages using metadata only: manager.html, index.html, search.html, sidebar, ai link pickers
-  - Pages needing full content: article.html, editor.html, ai.js (call DB.loadArticle)
-  See optimization-roadmap.md for full step-by-step.
+                            summary?(str), embedding?(number[]), embeddingModel?(str)}
 
 ## CALENDAR SYSTEM
 All dates stored as CE integers. Display is cosmetic conversion only.
@@ -153,60 +208,78 @@ Era custom calendars: customCalOffset = CE year that equals year 1.
   Backwards (countsBackward=true): year = offset - ceYear (+ 1 if no year zero)
   Default offset: era.startYear (forwards) or era.endYear (backwards)
 
+## TIMELINE PAGE ARCHITECTURE
+Full-page layout. Browser scrolls natively. Fixed viewport panels.
+CSS variables: --tl-toolbar-h:52px, --tl-nav-h:48px, --tl-detail-w:280px,
+               --tl-toggle-w:22px, --tl-mini-w:64px
+               --tl-top: calc(var(--header-h) + var(--tl-toolbar-h))
+
+Fixed elements:
+  #tl-toolbar:      fixed, top:56px,  left:264px, right:0, h:52px
+  #tl-detail-panel: fixed, top:108px, left:264px, w:280px, bottom:48px
+                    Collapsed: opacity:0; visibility:hidden — NEVER slides left
+                    (sliding would cover the sidebar — this was a persistent bug)
+  #tl-panel-toggle: fixed, left:544px open / left:264px collapsed
+  #tl-minimap:      fixed, top:108px, right:0, w:64px, bottom:48px
+  #tl-nav-bar:      fixed, bottom:0,  left:264px, right:0, h:48px
+
+5-column layout: .tl-zone-1 through .tl-zone-5 (each 20% wide, position:absolute).
+Cards fill zone via width:100%. Icon embedded in card, no connector lines.
+Col 1,2=left (spine accent right), col 3=center (accent top), col 4,5=right (accent left).
+Event color: resolveEvColor(ev) → ev.customColor → category.defaultColor → importanceColor[imp]
+Duration lines: left = column center % (10/30/50/70/90%), color = resolveEvColor.
+
+Key JS: renderTL(), resolveEvColor(ev), customEraYear(ceYear, era),
+        selectEv(id), renderDetailPanel(ev, calKey), navEvent(dir),
+        updateNavYear(), openEventModal(id), openEraModal(id),
+        openColorPicker(anchor, color, cb), _bd (cached build params)
+
+Importance icons: SVG shapes — circle (insignificant), larger circle (trivial),
+rounded square (minor), triangle (notable), star (major), 10-point burst (milestone).
+
 ## AI SYSTEM (js/ai.js)
-OpenAI-compatible. Configurable base URL (works with local models too).
-API key: localStorage('eomt_ai_key') only. Never on disk.
-Features: article generation, semantic search, content expansion, wikilink suggestion,
-auto-summary + embedding on save, full reindex.
+OpenAI-compatible. Configurable base URL (works with local models).
+API key: localStorage('eomt_ai_key') only. Never on disk. Never in settings.json.
+Features: article generation, semantic search (embeddings), content expansion,
+          wikilink suggestion, auto-summary + embedding on save, full reindex.
+reindexAll() iterates DB.articleMeta, calls DB.loadArticle() per article.
+gatherContext() uses DB.articleCache for embedding search, DB.articleMeta for lexical.
 AI busy indicator: #ai-busy-indicator in header.
-Read-only: AI Generator link hidden, AI settings still visible.
 
 ## DB READ-ONLY / STATIC MODE
-DB.isReadOnly — true on any non-localhost hostname.
+DB.isReadOnly — true on any non-localhost hostname (GitHub Pages).
 DB._mode: 'filesystem' | 'localStorage' | 'static'
-Static mode: fetches all JSON via fetch(), all save methods are NO-OPs.
-articles/index.json written by DB.save(articleId) on every local article save.
+Static mode: all JSON fetched via fetch(), all save methods are NO-OPs.
+articles/index.json must be in new metadata format for GitHub Pages to work.
 
 Pages that REDIRECT to index.html when read-only:
   editor.html, manager.html, timeline-manager.html, article-templates.html
 
 Pages that HIDE edit controls when read-only:
-  article.html — hides #article-edit-actions
-  index.html   — plain <p> for description, hides folder prompt
+  article.html  — hides #article-edit-actions
+  index.html    — plain <p> for description, hides folder prompt
   timeline.html — hides #tl-edit-btns
-  data.html    — read-only notice, hides .ro-hide sections
-
-## TIMELINE PAGE ARCHITECTURE
-Full-page layout. Fixed viewport panels.
-CSS variables: --tl-toolbar-h:52px, --tl-nav-h:48px, --tl-detail-w:280px,
-               --tl-toggle-w:22px, --tl-mini-w:64px
-Fixed elements: toolbar(top:56px), detail panel(top:108px,left:264px,w:280px),
-               toggle strip, minimap(right:0,w:64px), nav bar(bottom:0)
-Detail panel collapsed: opacity:0; visibility:hidden — never slides (would cover sidebar).
-5-column layout: .tl-zone-1..5, each 20% wide. Cards fill zone. Icon embedded in card.
-Event color: resolveEvColor(ev) → customColor → category.defaultColor → importanceColor.
-Duration lines at column center % (10/30/50/70/90%).
-Key functions: renderTL(), resolveEvColor(), customEraYear(), selectEv(),
-               navEvent(), updateNavYear(), openEventModal(), openEraModal(),
-               openColorPicker(), _bd (cached build params)
+  data.html     — read-only notice, hides .ro-hide sections
 
 ## KNOWN BUGS / WATCH OUT
 - undefined.json in data/articles/ — old save bug. Safe to delete.
-- str_replace fails on timeline.html comment lines with Unicode em-dash (──).
-  Use python3 string replacement for those sections.
-- articles/index.json must stay in sync with actual article files.
-  Regenerate: python3 -c "import os,json; ids=[f[:-5] for f in os.listdir('encyclopedia/data/articles') if f.endswith('.json') and f not in ('index.json','undefined.json')]; open('encyclopedia/data/articles/index.json','w').write(json.dumps(ids,indent=2))"
-- DO NOT call DB.save() with no args for routine operations — it writes everything.
-  Use scoped methods. See SAVE SYSTEM section.
+- DO NOT call DB.save() with no args for routine ops — writes everything.
+- DB.articleCache is session-only. Never persisted. Backlinks only find
+  articles opened this session (articles not yet loaded won't appear).
+- Search index built from metadata only — content search works only for
+  articles that happen to have their content in articleCache. Full content
+  search requires loading articles first (future: Phase 4 enhancement).
+- articles/index.json must stay in sync. See regeneration command above.
+- ALWAYS use CSS variables for colors (dark mode compatibility).
 
 ## EDITING CONVENTIONS
-- str_replace for targeted edits; full rewrites only when >60% changes.
-- Re-view file before further edits after any str_replace (output goes stale).
-- CSS: main.css shared styles, <style> blocks for page-specific.
-- Modal body: #modal-body. Checkboxes: `#modal-body input[type=checkbox]`.
-- DB.save(articleId) writes one article. See SAVE SYSTEM for all other operations.
-- Check DB.isReadOnly before adding any edit UI.
-- Use CSS variables, never hardcode colors (dark mode compatibility).
+- str_replace for targeted edits. Full rewrites only when >60% of file changes.
+- Re-view file before further str_replace — output goes stale after edits.
+- CSS: main.css for shared styles. Page <style> blocks for page-specific.
+- Modal body is #modal-body. Checkboxes: `#modal-body input[type=checkbox]`.
+- DB.save(articleId) writes one article. See SAVE SYSTEM for all other ops.
+- Check DB.isReadOnly before adding any edit UI element.
+- Test dark mode when adding new visual elements.
 
 ## SESSION WORKFLOW
 1. User uploads encyclopedia.zip
@@ -218,8 +291,13 @@ Key functions: renderTL(), resolveEvColor(), customEraYear(), selectEv(),
 6. present_files to deliver
 
 ## CURRENT WORLD DATA (as of last sync)
-  33 articles (+ undefined.json bug file), 45 categories,
-  1 timeline (Equestrian History), active calendar: HCC,
-  theme: dark (localStorage), AI: configured,
-  8 article templates, datapack backup: lau_wiki_datapack_05_08_2026.json
-  Optimization: Phase 1 complete. Phase 2 (lazy loading) is next.
+  33 articles, 45 categories, 1 timeline (Equestrian History),
+  active calendar: HCC, theme: dark (localStorage),
+  AI: configured (disabled), 8 article templates,
+  datapack backup: lau_wiki_datapack_05_08_2026.json
+  Optimization: ALL FOUR PHASES COMPLETE.
+    Phase 1: Scoped saves, localStorage for theme/collapse
+    Phase 2: Lazy article loading (articleMeta + articleCache + loadArticle)
+    Phase 3: Lazy sidebar tree (children built on first expand)
+    Phase 4: Search index (Map-based, async content snippets)
+  Next planned: Phase 5 — Category pages
