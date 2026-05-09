@@ -8,12 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/main.css">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-<link href="https://cdn.quilljs.com/1.3.6/quill.bubble.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 </head>
 <body>
 
 <header id="app-header"></header>
+
+<!-- Floating mini-toolbar for wikibox value formatting -->
+<div class="wb-mini-toolbar" id="wb-mini-toolbar">
+  <button class="wb-mini-btn" data-cmd="bold"      title="Bold (Ctrl+B)"><b>B</b></button>
+  <button class="wb-mini-btn" data-cmd="italic"    title="Italic (Ctrl+I)"><i>I</i></button>
+  <button class="wb-mini-btn" data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+  <div style="width:1px;background:rgba(255,255,255,.3);height:14px;margin:0 2px;"></div>
+  <button class="wb-mini-btn" data-cmd="br"        title="Line break (Shift+Enter)">↵</button>
+</div>
 
 <div id="layout">
   <nav id="sidebar"></nav>
@@ -200,7 +208,7 @@ let isAiDraft            = false;
   if (DB.isReadOnly) { location.replace('index.html'); return; }
   UI.init({ activePage: '' });
   initQuill();
-  initWbQuill();
+  initMiniToolbar();
 
   const params = new URLSearchParams(location.search);
   editingId = params.get('id');
@@ -717,9 +725,8 @@ document.addEventListener('click', e => {
 // Each field has a stable runtime _id. No numeric indices in the DOM.
 // A single shared Quill (bubble theme) "possesses" one field at a time.
 
-let wbActiveId  = null;   // _id of the field currently in the shared Quill
-let wbQuill     = null;   // the shared Quill instance
-let _wbDragId   = null;   // _id of the field being dragged
+let wbActiveId = null;  // _id of focused field
+let _wbDragId  = null;  // _id being dragged
 
 function _wbMkId() { return 'wb_' + Math.random().toString(36).slice(2, 8); }
 
@@ -729,106 +736,61 @@ function _ensureIds() {
 
 function addWikiboxField()   { wbFields.push({ _id: _wbMkId(), type: 'field',   key: '', val: '' }); renderWbFields(); }
 function addWikiboxSection() { wbFields.push({ _id: _wbMkId(), type: 'section', key: 'Section' });   renderWbFields(); }
-function removeWbField(id)   {
-  commitWbQuill();
-  if (wbActiveId === id) releaseWbQuill();
+function removeWbField(id) {
   wbFields = wbFields.filter(f => f._id !== id);
   renderWbFields();
 }
 
-// ── Shared Quill init ─────────────────────────────────────────────
-function initWbQuill() {
-  // Create host dynamically — Quill 1.x can't initialize into display:none elements
-  const host = document.createElement('div');
-  host.id = 'wb-quill-host';
-  host.style.cssText = 'position:fixed;z-index:200;min-width:180px;max-width:280px;' +
-    'background:var(--bg-surface);border:1px solid var(--accent);border-radius:var(--radius);' +
-    'box-shadow:0 4px 16px rgba(0,0,0,.18);overflow:hidden;' +
-    'top:-9999px;left:-9999px;'; // off-screen, not display:none
-  const inner = document.createElement('div');
-  inner.id = 'wb-quill-inner';
-  inner.style.cssText = 'min-height:28px;max-height:180px;overflow-y:auto;';
-  host.appendChild(inner);
-  document.body.appendChild(host);
-
-  wbQuill = new Quill('#wb-quill-inner', {
-    theme: 'bubble',
-    placeholder: 'Value…',
-    modules: {
-      toolbar: [
-        ['bold', 'italic', 'underline'],
-        [{ list: 'bullet' }, { list: 'ordered' }],
-        ['clean'],
-      ],
-    },
+// ── Mini-toolbar (appears on text selection) ──────────────────────
+function initMiniToolbar() {
+  const tb = document.getElementById('wb-mini-toolbar');
+  tb.querySelectorAll('.wb-mini-btn').forEach(btn => {
+    btn.onmousedown = e => {
+      e.preventDefault(); // keep focus in the contenteditable
+      const cmd = btn.dataset.cmd;
+      if (cmd === 'br') {
+        document.execCommand('insertHTML', false, '<br>');
+      } else {
+        document.execCommand(cmd);
+      }
+      // Sync back by _id
+      if (wbActiveId) {
+        const el = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+        const f  = wbFields.find(f => f._id === wbActiveId);
+        if (el && f) f.val = el.innerHTML;
+      }
+    };
   });
 
-  // When Quill content changes, sync back to wbFields by _id
-  wbQuill.on('text-change', () => {
-    if (!wbActiveId) return;
-    const f = wbFields.find(f => f._id === wbActiveId);
-    if (f) f.val = wbQuill.root.innerHTML === '<p><br></p>' ? '' : wbQuill.root.innerHTML;
-  });
-
-  // Hide host when clicking outside
-  document.addEventListener('mousedown', e => {
-    const host = document.getElementById('wb-quill-host');
-    if (!host.contains(e.target) && !e.target.closest('[data-wbid]')) {
-      releaseWbQuill();
-    }
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (!wbActiveId || !sel || sel.isCollapsed) { hideMiniToolbar(); return; }
+    const activeEl = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+    if (!activeEl || !activeEl.contains(sel.anchorNode)) { hideMiniToolbar(); return; }
+    const range = sel.getRangeAt(0);
+    const rect  = range.getBoundingClientRect();
+    if (!rect.width) { hideMiniToolbar(); return; }
+    tb.style.left = Math.max(0, rect.left + window.scrollX - 4) + 'px';
+    tb.style.top  = (rect.top + window.scrollY - 38) + 'px';
+    tb.classList.add('visible');
   });
 }
 
-function commitWbQuill() {
-  if (!wbActiveId || !wbQuill) return;
-  const f = wbFields.find(f => f._id === wbActiveId);
-  if (f) f.val = wbQuill.root.innerHTML === '<p><br></p>' ? '' : wbQuill.root.innerHTML;
+function hideMiniToolbar() {
+  document.getElementById('wb-mini-toolbar')?.classList.remove('visible');
 }
 
-function possessField(id, anchorEl) {
-  if (wbActiveId === id) return; // already editing this field
-  commitWbQuill();
-  wbActiveId = id;
-
-  const f = wbFields.find(f => f._id === id);
-  if (!f) return;
-
-  // Position host near the anchor
-  const host = document.getElementById('wb-quill-host');
-  const rect  = anchorEl.getBoundingClientRect();
-  const spaceBelow = window.innerHeight - rect.bottom;
-  if (spaceBelow < 140) {
-    host.style.top    = (rect.top + window.scrollY - 170) + 'px';
-  } else {
-    host.style.top    = (rect.bottom + window.scrollY + 4) + 'px';
+// Strip runtime _id before saving
+function collectWbFields() {
+  // Flush any active editor
+  if (wbActiveId) {
+    const el = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+    const f  = wbFields.find(f => f._id === wbActiveId);
+    if (el && f) f.val = el.innerHTML;
   }
-  host.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 296) + 'px';
-  host.style.width = Math.max(220, rect.width) + 'px';
-
-  // Load content into Quill
-  wbQuill.root.innerHTML = f.val || '';
-  wbQuill.focus();
-  // Move cursor to end
-  wbQuill.setSelection(wbQuill.getLength(), 0);
-
-  // Highlight active value display
-  document.querySelectorAll('.wb-val-display').forEach(el => el.classList.remove('active'));
-  anchorEl.classList.add('active');
-}
-
-function releaseWbQuill() {
-  if (!wbActiveId) return;
-  commitWbQuill();
-  wbActiveId = null;
-  const _host = document.getElementById('wb-quill-host'); if (_host) { _host.style.top = '-9999px'; _host.style.left = '-9999px'; }
-  // Refresh value displays
-  document.querySelectorAll('.wb-val-display').forEach(el => {
-    const id = el.closest('[data-wbid]')?.dataset.wbid;
-    if (!id) return;
-    const f = wbFields.find(f => f._id === id);
-    if (f) el.innerHTML = f.val ? f.val : `<span class="wb-val-placeholder">Value…</span>`;
-    el.classList.remove('active');
-  });
+  return wbFields
+    .filter(f => f.type === 'section' || f.key || f.val)
+    .map(({ _id, ...rest }) => rest);
 }
 
 // ── Render ─────────────────────────────────────────────────────────
@@ -873,17 +835,40 @@ function renderWbFields() {
       keyInp.style.cssText = 'font-size:12px;padding:4px 7px;';
       keyInp.oninput = () => { const fi = wbFields.find(x => x._id === f._id); if (fi) fi.key = keyInp.value; };
 
-      // Value display — click to open shared Quill
-      const valDisplay = document.createElement('div');
-      valDisplay.className = 'wb-val-display';
-      valDisplay.innerHTML = f.val ? f.val : `<span class="wb-val-placeholder">Value…</span>`;
-      if (wbActiveId === f._id) valDisplay.classList.add('active');
-      valDisplay.onclick = () => possessField(f._id, valDisplay);
+      // Contenteditable value editor — identified by data-wbid, never by index
+      const valEditor = document.createElement('div');
+      valEditor.className = 'wb-value-editor';
+      valEditor.contentEditable = 'true';
+      valEditor.dataset.wbid = f._id;
+      valEditor.dataset.placeholder = 'Value…';
+      valEditor.innerHTML = f.val || '';
+      valEditor.onfocus = () => { wbActiveId = f._id; };
+      valEditor.onblur  = () => {
+        const fi = wbFields.find(x => x._id === f._id);
+        if (fi) fi.val = valEditor.innerHTML;
+        // Only clear active if focus didn't move to mini-toolbar
+        setTimeout(() => {
+          if (!document.getElementById('wb-mini-toolbar')?.matches(':hover')) {
+            if (wbActiveId === f._id) wbActiveId = null;
+          }
+        }, 100);
+      };
+      valEditor.onkeydown = e => {
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '<br>');
+          const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML;
+        }
+        if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+        if (e.key === 'b' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('bold');      const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML; }
+        if (e.key === 'i' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('italic');    const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML; }
+        if (e.key === 'u' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('underline'); const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML; }
+      };
 
       const inner2 = document.createElement('div');
       inner2.className = 'wb-field-row-inner';
       inner2.appendChild(keyInp);
-      inner2.appendChild(valDisplay);
+      inner2.appendChild(valEditor);
 
       const del = document.createElement('button');
       del.className = 'wb-del-btn'; del.textContent = '✕'; del.title = 'Remove field';
@@ -896,7 +881,12 @@ function renderWbFields() {
 
     // Drag events — all by _id, no numeric positions
     wrap.ondragstart = e => {
-      commitWbQuill();
+      // Flush active value editor before drag
+      if (wbActiveId) {
+        const el = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+        const fi = wbFields.find(x => x._id === wbActiveId);
+        if (el && fi) fi.val = el.innerHTML;
+      }
       _wbDragId = f._id;
       e.dataTransfer.effectAllowed = 'move';
       setTimeout(() => wrap.classList.add('wb-dragging'), 0);
@@ -914,11 +904,6 @@ function renderWbFields() {
       const [moved] = wbFields.splice(fromIdx, 1);
       wbFields.splice(toIdx, 0, moved);
       renderWbFields();
-      // Re-possess if the active field was moved
-      if (wbActiveId) {
-        const el = document.querySelector(`[data-wbid="${wbActiveId}"] .wb-val-display`);
-        if (el) possessField(wbActiveId, el);
-      }
     };
 
     list.appendChild(wrap);
@@ -927,7 +912,7 @@ function renderWbFields() {
 
 // Strip runtime _id before saving
 function collectWbFields() {
-  commitWbQuill();
+  wbActiveId = null;
   return wbFields
     .filter(f => f.type === 'section' || f.key || f.val)
     .map(({ _id, ...rest }) => rest);  // eslint-disable-line no-unused-vars
@@ -949,7 +934,7 @@ function populateWbTemplateSelect() {
 function loadWikiboxTemplate() {
   const val = document.getElementById('editor-wikibox-template').value;
   if (!val) return;
-  releaseWbQuill();
+  wbActiveId = null; hideMiniToolbar();
   if (val.startsWith('custom_')) {
     const t = DB.wikiboxTemplates.find(t => t.id === val.slice(7));
     if (t) wbFields = t.fields.map(f => ({ _id: _wbMkId(), type: f.type || 'field', key: f.key, val: '' }));
