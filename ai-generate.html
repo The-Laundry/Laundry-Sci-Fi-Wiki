@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Generator — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+/* ── Page shell ───────────────────────────────────────────────────── */
+.aig-page-sub {
+  font-size: 13px; color: var(--text-muted); margin: -14px 0 18px 0; max-width: 70ch;
+}
+.aig-not-ready {
+  padding: 16px 20px; border: 1px solid var(--border);
+  background: var(--bg-sidebar); border-radius: var(--radius);
+  font-size: 13.5px; color: var(--text-muted); margin-bottom: 24px;
+}
+.aig-not-ready strong { color: var(--text); }
+
+/* ── Tab bar ──────────────────────────────────────────────────────── */
+.aig-tabs {
+  display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+}
+.aig-tab {
+  padding: 9px 16px; border: 1px solid transparent; border-bottom: none;
+  background: transparent; color: var(--text-muted); font-size: 13.5px;
+  font-weight: 500; cursor: pointer; border-radius: var(--radius) var(--radius) 0 0;
+  margin-bottom: -1px;
+}
+.aig-tab:hover { color: var(--text); background: var(--bg-sidebar); }
+.aig-tab.active {
+  color: var(--accent); background: var(--bg-card);
+  border-color: var(--border); border-bottom-color: var(--bg-card);
+  font-weight: 600;
+}
+.aig-tab .aig-tab-count {
+  display: inline-block; padding: 1px 6px; margin-left: 6px;
+  background: var(--bg-sidebar); color: var(--text-muted);
+  border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.aig-tab.active .aig-tab-count { background: var(--accent-light); color: var(--accent); }
+
+/* ── Panels ───────────────────────────────────────────────────────── */
+.aig-panel { display: none; }
+.aig-panel.active { display: block; }
+.aig-panel-title {
+  font-family: var(--font-display); font-size: 18px; color: var(--text);
+  margin: 0 0 4px 0;
+}
+.aig-panel-desc {
+  font-size: 13px; color: var(--text-muted); margin: 0 0 18px 0; max-width: 70ch;
+}
+
+.aig-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px;
+}
+.aig-form-grid .full { grid-column: 1 / -1; }
+.aig-form-row { display: flex; flex-direction: column; gap: 5px; }
+.aig-form-row > label {
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.aig-form-row textarea.field-input { min-height: 72px; resize: vertical; font-family: var(--font-body); line-height: 1.5; }
+.aig-form-row .hint { font-size: 11.5px; color: var(--text-faint); line-height: 1.45; }
+
+.aig-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px;
+  padding-top: 14px; border-top: 1px solid var(--border-light);
+}
+
+/* ── Batch queue ──────────────────────────────────────────────────── */
+.batch-titles-input { min-height: 140px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; }
+
+.batch-queue {
+  margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; background: var(--bg-card);
+}
+.bq-empty { padding: 18px; text-align: center; color: var(--text-faint); font-size: 13px; font-style: italic; }
+.bq-row {
+  display: grid; grid-template-columns: auto 1fr auto auto auto;
+  align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light); font-size: 13px;
+}
+.bq-row:last-child { border-bottom: none; }
+.bq-row .bq-idx { font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); min-width: 24px; text-align: right; }
+.bq-row .bq-title { color: var(--text); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bq-row .bq-title.skipped { color: var(--text-faint); text-decoration: line-through; }
+.bq-row .bq-meta { font-size: 11px; color: var(--text-faint); }
+.bq-row .bq-meta-row { display: flex; gap: 8px; align-items: center; font-family: var(--font-mono); }
+
+.bq-status {
+  padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  letter-spacing: .03em; text-transform: uppercase; white-space: nowrap;
+}
+.bq-status.pending   { background: var(--bg-sidebar);  color: var(--text-muted); }
+.bq-status.streaming { background: var(--accent-light); color: var(--accent); }
+.bq-status.saved     { background: rgba(27, 115, 64, .12); color: #1b7340; }
+.bq-status.failed    { background: rgba(181, 53, 53, .12); color: #b53535; }
+.bq-status.skipped   { background: var(--bg-sidebar);  color: var(--text-faint); }
+[data-theme="dark"] .bq-status.saved  { background: rgba(120, 200, 150, .15); color: #8ae0a8; }
+[data-theme="dark"] .bq-status.failed { background: rgba(230, 110, 110, .16); color: #f1a0a0; }
+
+.bq-row .bq-act {
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted);
+  padding: 3px 9px; font-size: 11px; border-radius: var(--radius); cursor: pointer;
+}
+.bq-row .bq-act:hover { border-color: var(--accent); color: var(--accent); }
+.bq-row.is-streaming { background: var(--accent-light); }
+
+.bq-stream-preview {
+  grid-column: 1 / -1; margin-top: 8px; padding: 10px 12px;
+  background: var(--bg-sidebar); border: 1px solid var(--border-light);
+  border-radius: var(--radius); font-size: 12.5px; line-height: 1.55;
+  max-height: 180px; overflow-y: auto;
+}
+.bq-stream-preview.empty::before {
+  content: 'Waiting…'; color: var(--text-faint); font-style: italic;
+}
+
+.batch-log {
+  margin-top: 12px; padding: 10px 12px; max-height: 160px; overflow-y: auto;
+  background: var(--bg-sidebar); border: 1px solid var(--border-light);
+  border-radius: var(--radius); font-family: var(--font-mono); font-size: 11.5px;
+  color: var(--text-muted);
+}
+.batch-log .log-ok   { color: var(--green); }
+.batch-log .log-err  { color: var(--red); }
+.batch-log .log-info { color: var(--text-muted); }
+
+/* ── Pre-flight collision resolver ────────────────────────────────── */
+.batch-preflight {
+  margin-top: 14px; padding: 12px 14px;
+  background: rgba(232, 180, 50, .08);
+  border: 1px solid rgba(232, 180, 50, .4);
+  border-radius: var(--radius); font-size: 13px;
+}
+.batch-preflight h4 {
+  margin: 0 0 6px 0; font-size: 13px; color: var(--text);
+}
+.batch-preflight .pf-row {
+  display: flex; align-items: center; gap: 10px; padding: 5px 0;
+  border-top: 1px dashed rgba(232, 180, 50, .3);
+}
+.batch-preflight .pf-row:first-of-type { border-top: none; }
+.batch-preflight .pf-title { flex: 1; min-width: 0; font-weight: 500; }
+.batch-preflight select {
+  padding: 3px 6px; font-size: 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg-card); color: var(--text);
+}
+
+/* ── Timeline staging ─────────────────────────────────────────────── */
+.tl-staging-wrap {
+  margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; background: var(--bg-card);
+}
+.tl-staging-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.tl-staging-head .ts-count { font-family: var(--font-mono); color: var(--text-muted); }
+.tl-staging-empty { padding: 18px; text-align: center; color: var(--text-faint); font-size: 13px; font-style: italic; }
+
+table.tl-staging-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.tl-staging-table th {
+  text-align: left; padding: 7px 8px; background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .04em; font-weight: 600;
+  position: sticky; top: 0; z-index: 1;
+}
+table.tl-staging-table td {
+  padding: 6px 8px; border-bottom: 1px solid var(--border-light); vertical-align: top;
+}
+table.tl-staging-table tr.ts-row-dropped td { opacity: .42; }
+table.tl-staging-table tr.ts-row-new td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+table.tl-staging-table input[type="text"],
+table.tl-staging-table input[type="number"],
+table.tl-staging-table select,
+table.tl-staging-table textarea {
+  width: 100%; border: 1px solid var(--border-light); border-radius: 3px;
+  padding: 4px 6px; font-size: 12px; background: var(--bg-card); color: var(--text);
+  font-family: var(--font-body);
+}
+table.tl-staging-table textarea { min-height: 42px; resize: vertical; line-height: 1.4; }
+table.tl-staging-table .ts-col-year { width: 70px; }
+table.tl-staging-table .ts-col-imp  { width: 110px; }
+table.tl-staging-table .ts-col-stub { width: 68px; text-align: center; }
+table.tl-staging-table .ts-col-keep { width: 36px; text-align: center; }
+table.tl-staging-table input[type="checkbox"] { cursor: pointer; }
+
+/* Row-fade-in on stream arrival */
+@keyframes ts-row-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: none; }
+}
+table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
+
+@media (max-width: 900px) {
+  .aig-form-grid { grid-template-columns: 1fr; }
+  .bq-row { grid-template-columns: 1fr auto; grid-auto-flow: row; }
+  .bq-row .bq-idx, .bq-row .bq-meta { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <h1 class="page-title" style="margin-bottom:6px;">🪄 AI Generator</h1>
+    <p class="aig-page-sub">
+      Generate new articles one-at-a-time, in batches, or populate a timeline with a run of events.
+      Context is pulled from your existing wiki via summaries and semantic search.
+    </p>
+
+    <div id="aig-not-ready" class="aig-not-ready" style="display:none;">
+      <strong>AI is not configured.</strong>
+      Visit <a href="ai.html">AI Settings</a> to set a base URL, API key and chat model, then come back.
+    </div>
+
+    <div class="aig-tabs" role="tablist">
+      <button type="button" class="aig-tab active" data-tab="single" role="tab">Single</button>
+      <button type="button" class="aig-tab" data-tab="batch" role="tab">Batch <span class="aig-tab-count" id="batch-tab-count" style="display:none;">0</span></button>
+      <button type="button" class="aig-tab" data-tab="timeline" role="tab">Timeline</button>
+    </div>
+
+    <!-- ─────────────────────────── SINGLE TAB ─────────────────────────── -->
+    <section id="panel-single" class="aig-panel active" role="tabpanel">
+      <h2 class="aig-panel-title">Generate one article</h2>
+      <p class="aig-panel-desc">
+        The AI will draft a single article and open it in the editor for review. If you opened
+        this page with a <em>Regenerate</em> button, submitting will overwrite the original.
+      </p>
+
+      <div class="aig-form-grid">
+        <div class="aig-form-row full">
+          <label>Article Title</label>
+          <input type="text" id="s-title" class="field-input" placeholder="e.g. Admiral Veya Solis">
+        </div>
+        <div class="aig-form-row">
+          <label>Template</label>
+          <select id="s-template" class="field-input"></select>
+          <span class="hint">Gives the AI a structural hint and, optionally, a wikibox to fill.</span>
+        </div>
+        <div class="aig-form-row">
+          <label>Regenerating</label>
+          <input type="text" id="s-regen-label" class="field-input" readonly placeholder="(a brand-new article)">
+          <span class="hint">When set, saving overwrites this article in place.</span>
+        </div>
+        <div class="aig-form-row full">
+          <label>Additional Guidance <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+          <textarea id="s-guidance" class="field-input" placeholder="Key facts, tone, era, relationships, anything you want the AI to know…"></textarea>
+        </div>
+        <div class="aig-form-row full">
+          <label>Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional — auto-retrieval will fill in the rest)</span></label>
+          <div id="s-related-chips" class="chips-row"></div>
+          <input type="text" id="s-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+          <div id="s-related-results" class="aig-results" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="aig-actions">
+        <button type="button" class="btn btn-primary" id="s-generate-btn">✨ Generate</button>
+        <button type="button" class="btn btn-secondary" onclick="history.back()">Cancel</button>
+      </div>
+
+      <div id="s-progress" class="ai-progress-wrap" style="display:none;">
+        <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+        <div id="s-phase" class="ai-phase-line"><span class="ai-spinner"></span><span id="s-phase-text">Working…</span></div>
+      </div>
+
+      <div id="s-context" class="ai-ctx-wrap" style="display:none;"></div>
+
+      <div id="s-stream-wrap" class="ai-stream-wrap" style="display:none;">
+        <div class="ai-stream-head">
+          <div class="ai-stream-title">
+            <span class="ai-spinner sm" id="s-stream-spin"></span>
+            <span id="s-stream-title-text">Writing article…</span>
+          </div>
+          <div class="ai-stream-count"><span id="s-stream-count">0</span> chars</div>
+        </div>
+        <div id="s-stream-summary" class="ai-stream-summary" style="display:none;"></div>
+        <div id="s-stream-preview" class="ai-stream-preview empty"></div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── BATCH TAB ─────────────────────────── -->
+    <section id="panel-batch" class="aig-panel" role="tabpanel">
+      <h2 class="aig-panel-title">Batch generation</h2>
+      <p class="aig-panel-desc">
+        Paste a list of titles (one per line). The same template, guidance and related articles
+        are used for each. Requests run sequentially — no parallelism — so you stay inside rate limits
+        and the running log stays readable. Completed articles are saved to disk immediately.
+      </p>
+
+      <div class="aig-form-grid">
+        <div class="aig-form-row full">
+          <label>Article Titles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(one per line)</span></label>
+          <textarea id="b-titles" class="field-input batch-titles-input" placeholder="Captain Ada Voss&#10;The Fall of Terrus&#10;Omega Relay Station"></textarea>
+        </div>
+        <div class="aig-form-row">
+          <label>Shared Template</label>
+          <select id="b-template" class="field-input"></select>
+        </div>
+        <div class="aig-form-row">
+          <label>&nbsp;</label>
+          <div class="hint">All titles get the same template + guidance + related set. Edit individual titles afterwards in the editor.</div>
+        </div>
+        <div class="aig-form-row full">
+          <label>Shared Guidance <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+          <textarea id="b-guidance" class="field-input" placeholder="Era, faction, tone, or anything every article in this batch should know…"></textarea>
+        </div>
+        <div class="aig-form-row full">
+          <label>Shared Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+          <div id="b-related-chips" class="chips-row"></div>
+          <input type="text" id="b-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+          <div id="b-related-results" class="aig-results" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div id="b-preflight" class="batch-preflight" style="display:none;"></div>
+
+      <div class="aig-actions">
+        <button type="button" class="btn btn-primary" id="b-start-btn">▶ Start Batch</button>
+        <button type="button" class="btn btn-danger"  id="b-stop-btn" style="display:none;">■ Stop</button>
+        <button type="button" class="btn btn-secondary" id="b-reset-btn" style="display:none;">Reset Queue</button>
+        <span id="b-summary" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
+      </div>
+
+      <div class="batch-queue" id="b-queue">
+        <div class="bq-empty">No titles queued yet.</div>
+      </div>
+
+      <div class="batch-log" id="b-log" style="display:none;"></div>
+    </section>
+
+    <!-- ─────────────────────────── TIMELINE TAB ─────────────────────────── -->
+    <section id="panel-timeline" class="aig-panel" role="tabpanel">
+      <h2 class="aig-panel-title">Timeline event generation</h2>
+      <p class="aig-panel-desc">
+        Pick an existing timeline, specify an optional year range and target count, and the AI will
+        propose a batch of events. Review the staging table, edit freely, uncheck rows you don't want,
+        and <strong>Save All</strong> commits the selected events to <code>events.json</code> (and optionally
+        creates a stub article for each flagged event).
+      </p>
+
+      <div class="aig-form-grid">
+        <div class="aig-form-row">
+          <label>Timeline</label>
+          <select id="t-timeline" class="field-input"></select>
+        </div>
+        <div class="aig-form-row">
+          <label>Target Event Count</label>
+          <input type="number" id="t-count" class="field-input" min="1" max="25" value="10">
+          <span class="hint">Hard-capped at 25 per run.</span>
+        </div>
+        <div class="aig-form-row">
+          <label>Year Start <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(CE, optional)</span></label>
+          <input type="number" id="t-year-start" class="field-input" placeholder="e.g. -1000">
+        </div>
+        <div class="aig-form-row">
+          <label>Year End <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(CE, optional)</span></label>
+          <input type="number" id="t-year-end" class="field-input" placeholder="e.g. 2500">
+        </div>
+        <div class="aig-form-row full">
+          <label>Theme / Guidance <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+          <textarea id="t-guidance" class="field-input" placeholder="Anchor events around a theme — wars, diplomatic developments, cultural shifts, specific factions…"></textarea>
+        </div>
+        <div class="aig-form-row full">
+          <label>Related Articles <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+          <div id="t-related-chips" class="chips-row"></div>
+          <input type="text" id="t-related-search" class="field-input" placeholder="Search existing articles…" autocomplete="off">
+          <div id="t-related-results" class="aig-results" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="aig-actions">
+        <button type="button" class="btn btn-primary" id="t-generate-btn">✨ Generate Events</button>
+        <button type="button" class="btn btn-danger"  id="t-stop-btn" style="display:none;">■ Stop</button>
+        <button type="button" class="btn btn-secondary" id="t-reset-btn" style="display:none;">Clear Staging</button>
+      </div>
+
+      <div id="t-progress" class="ai-progress-wrap" style="display:none;">
+        <div class="ai-progress-bar"><div class="ai-progress-fill indeterminate"></div></div>
+        <div id="t-phase" class="ai-phase-line"><span class="ai-spinner"></span><span id="t-phase-text">Working…</span></div>
+      </div>
+
+      <div id="t-context" class="ai-ctx-wrap" style="display:none;"></div>
+
+      <div class="tl-staging-wrap" id="t-staging-wrap" style="display:none;">
+        <div class="tl-staging-head">
+          <div><strong>Proposed events</strong> — edit freely, uncheck to drop.</div>
+          <div class="ts-count"><span id="t-staging-count">0</span> events</div>
+        </div>
+        <div id="t-staging-body"></div>
+      </div>
+
+      <div class="aig-actions" id="t-commit-row" style="display:none;">
+        <button type="button" class="btn btn-primary" id="t-commit-btn">💾 Save All Kept Events</button>
+        <span id="t-commit-summary" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
+<script>
+'use strict';
+
+// ── Page state ─────────────────────────────────────────────────────
+const State = {
+  tab:          'single',
+  // Single tab
+  singleRelatedIds: [],
+  regenerateFor:    null,  // article id when opened via ?regenerateFor=ID
+  returnTo:         null,  // sanitized relative URL to redirect to on completion
+  // Batch tab
+  batchRelatedIds:  [],
+  batchRunning:     false,
+  batchAbort:       false,
+  batchItems:       [],    // [{title, status, error, resolution, articleId}]
+  // Timeline tab
+  tlRelatedIds:     [],
+  tlRunning:        false,
+  tlAbort:          false,
+  tlStaged:         [],    // [{keep, title, year, yearEnd, importance, description, suggestStub, stubTags, _key}]
+  tlBusyId:         null,
+};
+
+// ── Boot ──────────────────────────────────────────────────────────
+(async () => {
+  await DB.init();
+  if (DB.isReadOnly) { location.replace('index.html'); return; }
+  UI.init({ activePage: '' });
+
+  const params = new URLSearchParams(location.search);
+  const mode = (params.get('mode') || 'single').toLowerCase();
+  State.tab = (['single', 'batch', 'timeline'].includes(mode)) ? mode : 'single';
+  State.returnTo = sanitizeReturnTo(params.get('returnTo'));
+
+  populateTemplateSelects();
+  populateTimelineSelect();
+  wireTabs();
+  wireSingleTab();
+  wireBatchTab();
+  wireTimelineTab();
+
+  // Prefill single tab from URL
+  const prefillTitle = params.get('title') || '';
+  const regenId = params.get('regenerateFor') || '';
+  if (regenId) {
+    const art = DB.articles.find(a => a.id === regenId);
+    if (art) {
+      State.regenerateFor = regenId;
+      document.getElementById('s-regen-label').value = art.title || regenId;
+      document.getElementById('s-title').value = art.title || '';
+      const spec = art.aiSourceSpec || {};
+      document.getElementById('s-guidance').value = spec.guidance || '';
+      const tmpl = document.getElementById('s-template');
+      if (spec.templateId && [...tmpl.options].some(o => o.value === spec.templateId)) {
+        tmpl.value = spec.templateId;
+      }
+      if (Array.isArray(spec.relatedIds)) {
+        State.singleRelatedIds = spec.relatedIds.slice();
+        renderSingleChips();
+      }
+    } else {
+      UI.toast('Article to regenerate was not found.');
+    }
+  } else if (prefillTitle) {
+    document.getElementById('s-title').value = prefillTitle;
+  }
+
+  // Prefill timeline tab
+  const tlId = params.get('timelineId') || '';
+  if (tlId) {
+    const sel = document.getElementById('t-timeline');
+    if ([...sel.options].some(o => o.value === tlId)) sel.value = tlId;
+  }
+
+  setTab(State.tab, { replaceUrl: false });
+  refreshConfigWarning();
+  // Re-check periodically in case the user opens ai.html in another tab
+  window.addEventListener('focus', refreshConfigWarning);
+})();
+
+// ── Helpers ───────────────────────────────────────────────────────
+
+function refreshConfigWarning() {
+  const warn = document.getElementById('aig-not-ready');
+  const ready = AI.isConfigured();
+  warn.style.display = ready ? 'none' : 'block';
+  // Disable primary actions when not configured
+  document.getElementById('s-generate-btn').disabled = !ready;
+  document.getElementById('b-start-btn').disabled    = !ready;
+  document.getElementById('t-generate-btn').disabled = !ready;
+}
+
+function sanitizeReturnTo(url) {
+  if (!url) return null;
+  const s = String(url).trim();
+  if (!s) return null;
+  // Reject absolute URLs, protocol-relative URLs, and anything that tries to escape the app.
+  if (/^(https?:|\/\/|javascript:|data:)/i.test(s)) return null;
+  if (s.startsWith('/')) return null;
+  // Allow simple same-folder URLs with optional query string.
+  if (!/^[a-zA-Z0-9_.\-]+\.html(\?.*)?$/.test(s)) return null;
+  return s;
+}
+
+function populateTemplateSelects() {
+  const opts = ['<option value="">— No template (generic) —</option>']
+    .concat(DB.articleTemplates.map(t =>
+      `<option value="${t.id}">${escHtml(t.name)}</option>`
+    )).join('');
+  document.getElementById('s-template').innerHTML = opts;
+  document.getElementById('b-template').innerHTML = opts;
+}
+
+function populateTimelineSelect() {
+  const sel = document.getElementById('t-timeline');
+  if (!DB.timelines.length) {
+    sel.innerHTML = '<option value="">(no timelines — create one in Timelines)</option>';
+    return;
+  }
+  sel.innerHTML = DB.timelines.map(t =>
+    `<option value="${t.id}">${escHtml(t.name || 'Untitled timeline')}</option>`
+  ).join('');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────
+
+function wireTabs() {
+  document.querySelectorAll('.aig-tab').forEach(btn => {
+    btn.addEventListener('click', () => setTab(btn.dataset.tab, { replaceUrl: true }));
+  });
+}
+
+function setTab(name, { replaceUrl }) {
+  if (!['single', 'batch', 'timeline'].includes(name)) name = 'single';
+  State.tab = name;
+  document.querySelectorAll('.aig-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.aig-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  if (replaceUrl) {
+    const params = new URLSearchParams(location.search);
+    params.set('mode', name);
+    // Drop tab-specific params that no longer apply
+    if (name !== 'single') {
+      params.delete('title');
+      params.delete('regenerateFor');
+    }
+    if (name !== 'timeline') {
+      params.delete('timelineId');
+    }
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+  }
+}
+
+// ── Shared related-article chip picker ────────────────────────────
+// Renders chip list, wires search box + results pane. The caller owns
+// the backing array (`idsRef`) via a pair of accessors.
+function initRelatedPicker({ chipsEl, searchEl, resultsEl, getIds, setIds, onChange }) {
+  function render() {
+    const ids = getIds();
+    chipsEl.innerHTML = ids.map(id => {
+      const a = DB.articles.find(x => x.id === id);
+      if (!a) return '';
+      return `<span class="chip" data-id="${a.id}">${escHtml(a.title || 'Untitled')} <button type="button" class="chip-x" data-rm="${a.id}" title="Remove">✕</button></span>`;
+    }).join('');
+    if (typeof onChange === 'function') onChange(ids);
+  }
+  chipsEl.addEventListener('click', (e) => {
+    const rm = e.target.getAttribute && e.target.getAttribute('data-rm');
+    if (!rm) return;
+    const ids = getIds().filter(id => id !== rm);
+    setIds(ids);
+    render();
+  });
+  searchEl.addEventListener('input', () => {
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+    const ids = getIds();
+    const matches = DB.articles
+      .filter(a => !ids.includes(a.id))
+      .filter(a => (a.title || '').toLowerCase().includes(q) ||
+                   (a.tags || []).some(t => t.toLowerCase().includes(q)))
+      .slice(0, 8);
+    if (!matches.length) {
+      resultsEl.innerHTML = '<div class="aig-result-empty">No matches.</div>';
+    } else {
+      resultsEl.innerHTML = matches.map(a =>
+        `<div class="aig-result" data-id="${a.id}">
+           <div class="aig-result-title">${escHtml(a.title || 'Untitled')}</div>
+           <div class="aig-result-cat">${escHtml(DB.getCatPath(a.categoryId) || 'Uncategorized')}</div>
+         </div>`
+      ).join('');
+    }
+    resultsEl.style.display = 'block';
+  });
+  resultsEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.aig-result');
+    if (!row) return;
+    const id = row.getAttribute('data-id');
+    if (!id) return;
+    const ids = getIds();
+    if (!ids.includes(id)) setIds(ids.concat([id]));
+    searchEl.value = '';
+    resultsEl.style.display = 'none';
+    render();
+  });
+  render();
+  return { render };
+}
+
+// Context chips renderer — reused by single & timeline tabs.
+function renderCtxInto(el, ctx) {
+  const ex = Array.isArray(ctx && ctx.explicit) ? ctx.explicit : [];
+  const se = Array.isArray(ctx && ctx.semantic) ? ctx.semantic : [];
+  if (!ex.length && !se.length) {
+    el.innerHTML = '<div class="ai-ctx-empty">No related articles found. The AI will write from scratch.</div>';
+    el.style.display = 'block';
+    return;
+  }
+  const chipHtml = (item, variant) => {
+    const tip = (item.summary || item.snippet || item.title || '').slice(0, 400);
+    const score = (variant === 'semantic' && typeof item.score === 'number')
+      ? `<span class="ai-ctx-score">${(item.score * 100).toFixed(0)}%</span>`
+      : '';
+    return `<span class="ai-ctx-chip ${variant}" title="${escHtml(tip)}">${escHtml(item.title || 'Untitled')}${score}</span>`;
+  };
+  let out = '';
+  if (ex.length) {
+    out += `<div class="ai-ctx-heading">Explicitly referenced (${ex.length})</div>`;
+    out += `<div class="ai-ctx-row">${ex.map(i => chipHtml(i, 'explicit')).join('')}</div>`;
+  }
+  if (se.length) {
+    out += `<div class="ai-ctx-heading">Auto-retrieved (${se.length})</div>`;
+    out += `<div class="ai-ctx-row">${se.map(i => chipHtml(i, 'semantic')).join('')}</div>`;
+  }
+  el.innerHTML = out;
+  el.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SINGLE TAB
+// ═══════════════════════════════════════════════════════════════════
+
+let _singlePicker = null;
+function renderSingleChips() { if (_singlePicker) _singlePicker.render(); }
+
+function wireSingleTab() {
+  _singlePicker = initRelatedPicker({
+    chipsEl:   document.getElementById('s-related-chips'),
+    searchEl:  document.getElementById('s-related-search'),
+    resultsEl: document.getElementById('s-related-results'),
+    getIds: () => State.singleRelatedIds,
+    setIds: (v) => { State.singleRelatedIds = v; },
+  });
+  document.getElementById('s-generate-btn').addEventListener('click', runSingle);
+}
+
+async function runSingle() {
+  if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
+
+  const title      = document.getElementById('s-title').value.trim();
+  const guidance   = document.getElementById('s-guidance').value.trim();
+  const templateId = document.getElementById('s-template').value || '';
+  if (!title) { UI.toast('Please enter a title.'); return; }
+
+  const btn = document.getElementById('s-generate-btn');
+  btn.disabled = true;
+  const origLabel = btn.textContent;
+  btn.textContent = '…working';
+
+  const progress  = document.getElementById('s-progress');
+  const phaseText = document.getElementById('s-phase-text');
+  const phaseLine = document.getElementById('s-phase');
+  const ctxWrap   = document.getElementById('s-context');
+  const streamWrap= document.getElementById('s-stream-wrap');
+  const streamEl  = document.getElementById('s-stream-preview');
+  const streamTit = document.getElementById('s-stream-title-text');
+  const streamSum = document.getElementById('s-stream-summary');
+  const streamCnt = document.getElementById('s-stream-count');
+
+  phaseLine.classList.remove('error');
+  progress.style.display = 'block';
+  phaseText.textContent = 'Gathering context…';
+  ctxWrap.style.display = 'none';
+  streamWrap.style.display = 'none';
+  streamEl.classList.remove('empty'); streamEl.innerHTML = '';
+  streamSum.style.display = 'none'; streamSum.textContent = '';
+  streamCnt.textContent = '0';
+  streamTit.textContent = 'Writing article…';
+
+  const fullSpec = { title, guidance, templateId, relatedIds: State.singleRelatedIds.slice() };
+  const busyId = UI.aiBusyBegin((State.regenerateFor ? 'Regenerating: ' : 'Generating: ') + (title || 'article'));
+
+  try {
+    const draft = await AI.generateArticleStreaming(fullSpec, {
+      onPhase: (p) => {
+        if (p === 'context') phaseText.textContent = 'Gathering context…';
+        else if (p === 'writing') phaseText.textContent = 'Writing article…';
+        else if (p === 'parsing') phaseText.textContent = 'Parsing result…';
+        else if (p === 'done')    phaseText.textContent = 'Done.';
+        if (p === 'writing') UI.aiBusyUpdate(busyId, 'Streaming article…');
+      },
+      onContextReady: (ctx) => {
+        renderCtxInto(ctxWrap, ctx);
+        streamWrap.style.display = 'flex';
+        streamEl.classList.add('active');
+      },
+      onTitle: (t) => { if (t) streamTit.textContent = t; },
+      onSummary: (s) => {
+        if (s) { streamSum.textContent = s; streamSum.style.display = 'block'; }
+      },
+      onContentDelta: (html) => {
+        streamEl.classList.remove('empty');
+        streamEl.innerHTML = html;
+        streamCnt.textContent = String(html.length);
+        streamEl.scrollTop = streamEl.scrollHeight;
+      },
+    });
+    streamEl.classList.remove('active');
+    phaseText.textContent = 'Saving draft…';
+
+    if (State.regenerateFor) {
+      // In-place overwrite of the existing article.
+      const art = DB.articles.find(a => a.id === State.regenerateFor);
+      if (!art) throw new Error('Original article was removed while regenerating.');
+      art.title   = draft.title || title;
+      art.content = draft.contentHTML || '';
+      art.summary = draft.summary || '';
+      art.tags    = Array.isArray(draft.tags) ? draft.tags : [];
+      if (draft.wikibox) {
+        art.wikibox = {
+          enabled:    draft.wikibox.enabled !== false,
+          title:      draft.wikibox.title    || art.title || '',
+          subtitle:   draft.wikibox.subtitle || '',
+          image:      null,
+          imagePath:  false,
+          imgCaption: draft.wikibox.imgCaption || '',
+          fields:     (draft.wikibox.fields || []).map(f => ({
+            type: f.type === 'section' ? 'section' : 'field',
+            key:  f.key || '',
+            val:  f.type === 'section' ? '' : (f.val || ''),
+          })),
+        };
+      }
+      art.aiSourceSpec = draft.sourceSpec || fullSpec;
+      art.updated = Date.now();
+      await DB.save(art.id);
+      UI.toast('Article regenerated.');
+      UI.aiBusyEnd(busyId);
+      location.href = State.returnTo || ('article.html?id=' + encodeURIComponent(art.id));
+      return;
+    }
+
+    // Fresh draft — hand off to editor via sessionStorage.
+    const draftKey = 'eomt_ai_draft_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify(draft));
+    } catch (e) {
+      UI.toast('Draft too large for sessionStorage.');
+      throw e;
+    }
+    UI.aiBusyEnd(busyId);
+    location.href = 'editor.html?id=new&draftKey=' + encodeURIComponent(draftKey);
+
+  } catch (e) {
+    streamEl.classList.remove('active');
+    phaseLine.classList.add('error');
+    phaseText.textContent = 'Failed: ' + (e.message || e);
+    btn.disabled = false;
+    btn.textContent = origLabel;
+    UI.aiBusyEnd(busyId);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  BATCH TAB
+// ═══════════════════════════════════════════════════════════════════
+
+let _batchPicker = null;
+
+function wireBatchTab() {
+  _batchPicker = initRelatedPicker({
+    chipsEl:   document.getElementById('b-related-chips'),
+    searchEl:  document.getElementById('b-related-search'),
+    resultsEl: document.getElementById('b-related-results'),
+    getIds: () => State.batchRelatedIds,
+    setIds: (v) => { State.batchRelatedIds = v; },
+  });
+  document.getElementById('b-start-btn').addEventListener('click', startBatch);
+  document.getElementById('b-stop-btn').addEventListener('click', () => {
+    State.batchAbort = true;
+    document.getElementById('b-stop-btn').disabled = true;
+    document.getElementById('b-stop-btn').textContent = '■ Stopping…';
+  });
+  document.getElementById('b-reset-btn').addEventListener('click', resetBatch);
+  document.getElementById('b-titles').addEventListener('input', updateBatchTabCount);
+  updateBatchTabCount();
+}
+
+function parseTitles(raw) {
+  return (raw || '')
+    .split(/\r?\n/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    // de-duplicate case-insensitively, first-writer-wins
+    .reduce((acc, t) => {
+      const key = t.toLowerCase();
+      if (!acc._seen.has(key)) { acc._seen.add(key); acc.out.push(t); }
+      return acc;
+    }, { _seen: new Set(), out: [] })
+    .out;
+}
+
+function updateBatchTabCount() {
+  const titles = parseTitles(document.getElementById('b-titles').value);
+  const badge = document.getElementById('batch-tab-count');
+  if (titles.length) {
+    badge.textContent = String(titles.length);
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function resetBatch() {
+  State.batchRunning = false;
+  State.batchAbort = false;
+  State.batchItems = [];
+  document.getElementById('b-queue').innerHTML = '<div class="bq-empty">No titles queued yet.</div>';
+  document.getElementById('b-log').style.display = 'none';
+  document.getElementById('b-log').innerHTML = '';
+  document.getElementById('b-preflight').style.display = 'none';
+  document.getElementById('b-preflight').innerHTML = '';
+  document.getElementById('b-stop-btn').style.display = 'none';
+  document.getElementById('b-reset-btn').style.display = 'none';
+  document.getElementById('b-start-btn').style.display = '';
+  document.getElementById('b-start-btn').disabled = !AI.isConfigured();
+  document.getElementById('b-start-btn').textContent = '▶ Start Batch';
+  document.getElementById('b-summary').textContent = '';
+}
+
+function renderBatchQueue() {
+  const host = document.getElementById('b-queue');
+  if (!State.batchItems.length) {
+    host.innerHTML = '<div class="bq-empty">No titles queued yet.</div>';
+    return;
+  }
+  host.innerHTML = State.batchItems.map((it, i) => {
+    const statusCls = it.status;
+    const titleCls  = it.status === 'skipped' ? 'bq-title skipped' : 'bq-title';
+    const rowCls    = it.status === 'streaming' ? 'bq-row is-streaming' : 'bq-row';
+    const meta = it.status === 'failed'
+      ? `<span class="bq-meta" title="${escHtml(it.error || '')}">${escHtml((it.error || 'Error').slice(0, 60))}</span>`
+      : it.status === 'saved' && it.articleId
+        ? `<a class="bq-meta" href="article.html?id=${it.articleId}" target="_blank">view ↗</a>`
+        : it.resolution && it.resolution !== 'proceed' && it.status === 'pending'
+          ? `<span class="bq-meta">${escHtml(it.resolution)}</span>`
+          : '<span class="bq-meta"></span>';
+    const retry = (it.status === 'failed')
+      ? `<button type="button" class="bq-act" data-retry="${i}">Retry</button>`
+      : '';
+    const preview = (it.status === 'streaming')
+      ? `<div class="bq-stream-preview" id="bq-stream-${i}"></div>`
+      : '';
+    return `
+      <div class="${rowCls}" data-idx="${i}">
+        <span class="bq-idx">${i + 1}.</span>
+        <span class="${titleCls}" title="${escHtml(it.title)}">${escHtml(it.displayTitle || it.title)}</span>
+        <span class="bq-status ${statusCls}">${escHtml(it.status)}</span>
+        ${meta}
+        ${retry}
+        ${preview}
+      </div>`;
+  }).join('');
+  // Wire retry buttons
+  host.querySelectorAll('button[data-retry]').forEach(b => {
+    b.addEventListener('click', () => retryBatchItem(parseInt(b.getAttribute('data-retry'), 10)));
+  });
+}
+
+async function startBatch() {
+  if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
+  if (State.batchRunning) return;
+
+  const titles = parseTitles(document.getElementById('b-titles').value);
+  if (!titles.length) { UI.toast('Enter at least one title, one per line.'); return; }
+
+  // Pre-flight collision check
+  const colliding = titles
+    .map(t => ({ title: t, existing: DB.articles.find(a => (a.title || '').toLowerCase() === t.toLowerCase()) }))
+    .filter(x => x.existing);
+
+  if (colliding.length) {
+    renderPreflight(titles, colliding);
+    return;
+  }
+  // Nothing to resolve — go straight in.
+  kickOffBatch(titles.map(t => ({
+    title: t,
+    displayTitle: t,
+    status: 'pending',
+    resolution: 'create',
+    error: null,
+    articleId: null,
+  })));
+}
+
+function renderPreflight(allTitles, colliding) {
+  const pf = document.getElementById('b-preflight');
+  pf.style.display = 'block';
+  pf.innerHTML = `
+    <h4>⚠ ${colliding.length} of ${allTitles.length} title${colliding.length === 1 ? '' : 's'} already exist${colliding.length === 1 ? 's' : ''}.</h4>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Choose what to do with each. Unique titles will run as-is.</div>
+    ${colliding.map((c, i) => `
+      <div class="pf-row">
+        <span class="pf-title" title="${escHtml(c.title)}">${escHtml(c.title)}</span>
+        <select data-pf-idx="${i}">
+          <option value="skip" selected>Skip this title</option>
+          <option value="suffix">Save with " (2)" suffix</option>
+          <option value="overwrite">Overwrite existing article</option>
+        </select>
+      </div>
+    `).join('')}
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button type="button" class="btn btn-primary btn-sm" id="pf-confirm">Run batch with these choices</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="pf-cancel">Cancel</button>
+    </div>
+  `;
+  document.getElementById('pf-cancel').addEventListener('click', () => {
+    pf.style.display = 'none'; pf.innerHTML = '';
+  });
+  document.getElementById('pf-confirm').addEventListener('click', () => {
+    const resolutions = new Map();
+    pf.querySelectorAll('select[data-pf-idx]').forEach(s => {
+      const idx = parseInt(s.getAttribute('data-pf-idx'), 10);
+      const origTitle = colliding[idx].title;
+      resolutions.set(origTitle.toLowerCase(), s.value);
+    });
+    pf.style.display = 'none'; pf.innerHTML = '';
+    const items = allTitles.map(t => {
+      const rule = resolutions.get(t.toLowerCase());
+      if (!rule) {
+        return { title: t, displayTitle: t, status: 'pending', resolution: 'create', error: null, articleId: null };
+      }
+      if (rule === 'skip') {
+        return { title: t, displayTitle: t + ' (exists — skipped)', status: 'skipped', resolution: 'skip', error: null, articleId: null };
+      }
+      if (rule === 'suffix') {
+        const newTitle = uniqueTitle(t);
+        return { title: newTitle, displayTitle: newTitle + ' (suffixed)', status: 'pending', resolution: 'suffix', error: null, articleId: null };
+      }
+      if (rule === 'overwrite') {
+        const existing = DB.articles.find(a => (a.title || '').toLowerCase() === t.toLowerCase());
+        return { title: t, displayTitle: t + ' (overwrite)', status: 'pending', resolution: 'overwrite', error: null, articleId: existing ? existing.id : null };
+      }
+      return { title: t, displayTitle: t, status: 'pending', resolution: 'create', error: null, articleId: null };
+    });
+    kickOffBatch(items);
+  });
+}
+
+function uniqueTitle(base) {
+  let n = 2;
+  while (n < 100) {
+    const candidate = `${base} (${n})`;
+    if (!DB.articles.some(a => (a.title || '').toLowerCase() === candidate.toLowerCase())) return candidate;
+    n++;
+  }
+  return `${base} (${Date.now()})`;
+}
+
+function kickOffBatch(items) {
+  State.batchItems = items;
+  State.batchRunning = true;
+  State.batchAbort = false;
+  document.getElementById('b-start-btn').style.display = 'none';
+  document.getElementById('b-stop-btn').style.display = '';
+  document.getElementById('b-stop-btn').disabled = false;
+  document.getElementById('b-stop-btn').textContent = '■ Stop';
+  document.getElementById('b-reset-btn').style.display = '';
+  document.getElementById('b-log').style.display = 'block';
+  document.getElementById('b-log').innerHTML = '';
+  renderBatchQueue();
+  logBatch(`Starting batch of ${items.filter(it => it.status === 'pending').length} article${items.length === 1 ? '' : 's'}.`, 'info');
+  runBatchLoop().catch(err => {
+    logBatch('Batch loop crashed: ' + (err.message || err), 'err');
+  });
+}
+
+async function runBatchLoop() {
+  const pending = State.batchItems.filter(it => it.status === 'pending');
+  const allTitles = State.batchItems.map(it => it.title);
+  const busyId = UI.aiBusyBegin(`Batch (${pending.length})`);
+
+  // Pre-resolve batch preamble (prepended to shared guidance per-article)
+  const sharedGuidance = document.getElementById('b-guidance').value.trim();
+  const sharedTemplate = document.getElementById('b-template').value || '';
+  const sharedRelated  = State.batchRelatedIds.slice();
+
+  let done = 0, saved = 0, failed = 0, skipped = State.batchItems.filter(it => it.status === 'skipped').length;
+
+  for (let i = 0; i < State.batchItems.length; i++) {
+    const item = State.batchItems[i];
+    if (item.status !== 'pending') continue;
+    if (State.batchAbort) {
+      logBatch('Stopped by user.', 'info');
+      break;
+    }
+
+    item.status = 'streaming';
+    renderBatchQueue();
+    UI.aiBusyUpdate(busyId, `Batch ${i + 1}/${State.batchItems.length}: ${item.title}`);
+
+    const preview = document.getElementById('bq-stream-' + i);
+    if (preview) preview.classList.add('empty');
+
+    const batchPre = AI.getPrompt('batchArticlePreamble', {
+      count: String(State.batchItems.length),
+      allTitles: allTitles.map(t => '• ' + t).join('\n'),
+    });
+    const fullGuidance = [batchPre, sharedGuidance].filter(Boolean).join('\n\n');
+
+    try {
+      const draft = await AI.generateArticleStreaming({
+        title: item.title,
+        guidance: fullGuidance,
+        templateId: sharedTemplate,
+        relatedIds: sharedRelated,
+      }, {
+        onContentDelta: (html) => {
+          const el = document.getElementById('bq-stream-' + i);
+          if (!el) return;
+          el.classList.remove('empty');
+          el.innerHTML = html;
+          el.scrollTop = el.scrollHeight;
+        },
+      });
+
+      // Commit draft → DB.articles
+      await commitBatchDraft(item, draft);
+      item.status = 'saved';
+      saved++;
+      logBatch(`✓ ${item.title}`, 'ok');
+    } catch (e) {
+      item.status = 'failed';
+      item.error = String(e.message || e);
+      failed++;
+      logBatch(`✕ ${item.title} — ${item.error.slice(0, 140)}`, 'err');
+    }
+    done++;
+    renderBatchQueue();
+  }
+
+  State.batchRunning = false;
+  UI.aiBusyEnd(busyId);
+  document.getElementById('b-stop-btn').style.display = 'none';
+  document.getElementById('b-start-btn').style.display = '';
+  document.getElementById('b-start-btn').disabled = !AI.isConfigured();
+  document.getElementById('b-start-btn').textContent = '▶ Start Batch';
+  const total = State.batchItems.length;
+  const runnable = total - skipped;
+  const msg = State.batchAbort
+    ? `Stopped. ${saved}/${runnable} saved, ${failed} failed, ${skipped} skipped.`
+    : `Done. ${saved}/${runnable} saved, ${failed} failed, ${skipped} skipped.`;
+  document.getElementById('b-summary').textContent = msg;
+  logBatch(msg, saved === runnable ? 'ok' : 'info');
+}
+
+// Turn an AI article draft into a persisted DB.articles entry.
+// For 'overwrite' items, we reuse the existing article id/categoryId.
+async function commitBatchDraft(item, draft) {
+  let art;
+  if (item.resolution === 'overwrite' && item.articleId) {
+    art = DB.articles.find(a => a.id === item.articleId);
+    if (!art) throw new Error('Target article was deleted during batch.');
+  } else {
+    art = {
+      id: mkId('art'),
+      title: '',
+      content: '',
+      categoryId: null,
+      tags: [],
+      wikibox: null,
+      created: Date.now(),
+    };
+    DB.articles.push(art);
+    item.articleId = art.id;
+  }
+  art.title   = draft.title || item.title;
+  art.content = draft.contentHTML || '';
+  art.summary = draft.summary || '';
+  art.tags    = Array.isArray(draft.tags) ? draft.tags : [];
+  if (draft.wikibox) {
+    art.wikibox = {
+      enabled:    draft.wikibox.enabled !== false,
+      title:      draft.wikibox.title    || art.title || '',
+      subtitle:   draft.wikibox.subtitle || '',
+      image:      null,
+      imagePath:  false,
+      imgCaption: draft.wikibox.imgCaption || '',
+      fields:     (draft.wikibox.fields || []).map(f => ({
+        type: f.type === 'section' ? 'section' : 'field',
+        key:  f.key || '',
+        val:  f.type === 'section' ? '' : (f.val || ''),
+      })),
+    };
+  }
+  art.aiSourceSpec = draft.sourceSpec || null;
+  art.updated = Date.now();
+  await DB.save(art.id);
+}
+
+async function retryBatchItem(idx) {
+  const item = State.batchItems[idx];
+  if (!item || item.status !== 'failed') return;
+  if (State.batchRunning) { UI.toast('Wait for the current batch to finish first.'); return; }
+  item.status = 'pending';
+  item.error = null;
+  renderBatchQueue();
+  kickOffBatch(State.batchItems); // will skip already-saved/skipped rows
+}
+
+function logBatch(msg, cls) {
+  const log = document.getElementById('b-log');
+  const d = document.createElement('div');
+  d.textContent = msg;
+  if (cls === 'ok')   d.className = 'log-ok';
+  else if (cls === 'err') d.className = 'log-err';
+  else                d.className = 'log-info';
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TIMELINE TAB
+// ═══════════════════════════════════════════════════════════════════
+
+let _tlPicker = null;
+const IMPORTANCE_ORDER = ['milestone', 'notable', 'trivial', 'insignificant'];
+
+function wireTimelineTab() {
+  _tlPicker = initRelatedPicker({
+    chipsEl:   document.getElementById('t-related-chips'),
+    searchEl:  document.getElementById('t-related-search'),
+    resultsEl: document.getElementById('t-related-results'),
+    getIds: () => State.tlRelatedIds,
+    setIds: (v) => { State.tlRelatedIds = v; },
+  });
+  document.getElementById('t-generate-btn').addEventListener('click', runTimeline);
+  document.getElementById('t-stop-btn').addEventListener('click', () => {
+    State.tlAbort = true;
+    const b = document.getElementById('t-stop-btn');
+    b.disabled = true; b.textContent = '■ Stopping…';
+  });
+  document.getElementById('t-reset-btn').addEventListener('click', resetTimeline);
+  document.getElementById('t-commit-btn').addEventListener('click', commitStagedEvents);
+
+  // Staging body is rendered on demand; delegate row edits.
+  document.getElementById('t-staging-body').addEventListener('input', onStagingEdit);
+  document.getElementById('t-staging-body').addEventListener('change', onStagingEdit);
+}
+
+function resetTimeline() {
+  State.tlStaged = [];
+  State.tlAbort = false;
+  State.tlRunning = false;
+  renderStaging();
+  document.getElementById('t-staging-wrap').style.display = 'none';
+  document.getElementById('t-commit-row').style.display = 'none';
+  document.getElementById('t-reset-btn').style.display = 'none';
+  document.getElementById('t-stop-btn').style.display = 'none';
+  document.getElementById('t-generate-btn').style.display = '';
+  document.getElementById('t-generate-btn').disabled = !AI.isConfigured();
+  document.getElementById('t-generate-btn').textContent = '✨ Generate Events';
+  document.getElementById('t-progress').style.display = 'none';
+  document.getElementById('t-context').style.display = 'none';
+  document.getElementById('t-commit-summary').textContent = '';
+}
+
+async function runTimeline() {
+  if (!AI.isConfigured()) { UI.toast('AI is not configured.'); return; }
+  if (State.tlRunning) return;
+  if (!DB.timelines.length) {
+    UI.toast('Create a timeline first — Timelines page.');
+    return;
+  }
+
+  const timelineId = document.getElementById('t-timeline').value || '';
+  const yearStartRaw = document.getElementById('t-year-start').value;
+  const yearEndRaw   = document.getElementById('t-year-end').value;
+  const yearStart = yearStartRaw === '' ? null : parseInt(yearStartRaw, 10);
+  const yearEnd   = yearEndRaw   === '' ? null : parseInt(yearEndRaw,   10);
+  const count = Math.min(25, Math.max(1, parseInt(document.getElementById('t-count').value, 10) || 10));
+  const guidance = document.getElementById('t-guidance').value.trim();
+
+  if (yearStart !== null && yearEnd !== null && yearStart > yearEnd) {
+    UI.toast('Year Start must be ≤ Year End.');
+    return;
+  }
+
+  // Append new events to an existing staging set — don't clobber the user's edits
+  // unless they explicitly Reset. If staging isn't empty, warn first.
+  if (State.tlStaged.length) {
+    if (!confirm(`You have ${State.tlStaged.length} staged events already. New events will be appended. Continue?`)) return;
+  }
+
+  State.tlRunning = true;
+  State.tlAbort = false;
+  document.getElementById('t-generate-btn').style.display = 'none';
+  document.getElementById('t-stop-btn').style.display = '';
+  document.getElementById('t-stop-btn').disabled = false;
+  document.getElementById('t-stop-btn').textContent = '■ Stop';
+  document.getElementById('t-reset-btn').style.display = '';
+  document.getElementById('t-staging-wrap').style.display = '';
+  document.getElementById('t-commit-row').style.display = '';
+
+  const progress = document.getElementById('t-progress');
+  const phaseText = document.getElementById('t-phase-text');
+  const phaseLine = document.getElementById('t-phase');
+  const ctxWrap = document.getElementById('t-context');
+  phaseLine.classList.remove('error');
+  progress.style.display = 'block';
+  phaseText.textContent = 'Gathering context…';
+
+  const busyId = UI.aiBusyBegin('Generating timeline events…');
+  State.tlBusyId = busyId;
+
+  const spec = {
+    timelineId,
+    yearStart: yearStart === null || Number.isNaN(yearStart) ? undefined : yearStart,
+    yearEnd:   yearEnd   === null || Number.isNaN(yearEnd)   ? undefined : yearEnd,
+    count,
+    guidance,
+    relatedIds: State.tlRelatedIds.slice(),
+  };
+
+  try {
+    await AI.generateTimelineEventsStreaming(spec, {
+      onPhase: (p) => {
+        if (p === 'context') phaseText.textContent = 'Gathering context…';
+        else if (p === 'writing') phaseText.textContent = 'Streaming events…';
+        else if (p === 'parsing') phaseText.textContent = 'Parsing result…';
+        else if (p === 'done')    phaseText.textContent = 'Done.';
+        if (p === 'writing') UI.aiBusyUpdate(busyId, 'Streaming timeline events…');
+      },
+      onContextReady: (ctx) => {
+        renderCtxInto(ctxWrap, ctx);
+      },
+      onEvent: (evt) => {
+        // Append into the staging list; duplicates guarded by (title+year).
+        const key = (evt.title || '').toLowerCase() + '|' + evt.year;
+        if (State.tlStaged.some(s => s._dedupKey === key)) return;
+        State.tlStaged.push({
+          keep: true,
+          title: evt.title,
+          year: evt.year,
+          yearEnd: evt.yearEnd,
+          importance: evt.importance,
+          description: evt.description,
+          suggestStub: !!evt.suggestStubArticle,
+          stubTags: Array.isArray(evt.stubTags) ? evt.stubTags.slice() : [],
+          _key: 'stg_' + (Date.now().toString(36)) + '_' + Math.random().toString(36).slice(2, 5),
+          _dedupKey: key,
+          _fresh: true,
+        });
+        renderStaging();
+      },
+    });
+    phaseText.textContent = 'Done.';
+  } catch (e) {
+    phaseLine.classList.add('error');
+    phaseText.textContent = 'Failed: ' + (e.message || e);
+  } finally {
+    State.tlRunning = false;
+    UI.aiBusyEnd(busyId);
+    State.tlBusyId = null;
+    document.getElementById('t-stop-btn').style.display = 'none';
+    document.getElementById('t-generate-btn').style.display = '';
+    document.getElementById('t-generate-btn').disabled = !AI.isConfigured();
+    document.getElementById('t-generate-btn').textContent = '✨ Generate More';
+  }
+}
+
+function renderStaging() {
+  const body = document.getElementById('t-staging-body');
+  const countEl = document.getElementById('t-staging-count');
+  countEl.textContent = String(State.tlStaged.length);
+  if (!State.tlStaged.length) {
+    body.innerHTML = '<div class="tl-staging-empty">Events will appear here as the model streams them in.</div>';
+    return;
+  }
+  const impOpts = (current) => IMPORTANCE_ORDER.map(i =>
+    `<option value="${i}" ${i === current ? 'selected' : ''}>${i}</option>`).join('');
+  body.innerHTML = `
+    <table class="tl-staging-table">
+      <thead>
+        <tr>
+          <th class="ts-col-keep">Keep</th>
+          <th>Title</th>
+          <th class="ts-col-year">Year</th>
+          <th class="ts-col-year">End</th>
+          <th class="ts-col-imp">Importance</th>
+          <th>Description</th>
+          <th class="ts-col-stub" title="Create a stub article linked to this event">Stub</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${State.tlStaged.map((s, i) => {
+          const drop = !s.keep;
+          const cls = [drop ? 'ts-row-dropped' : '', 'ts-row-new', s._fresh ? 'ts-row-fresh' : ''].filter(Boolean).join(' ');
+          return `
+            <tr class="${cls}" data-key="${s._key}">
+              <td class="ts-col-keep"><input type="checkbox" data-field="keep" ${s.keep ? 'checked' : ''}></td>
+              <td><input type="text" data-field="title" value="${escHtml(s.title)}"></td>
+              <td class="ts-col-year"><input type="number" data-field="year" value="${s.year}"></td>
+              <td class="ts-col-year"><input type="number" data-field="yearEnd" value="${s.yearEnd == null ? '' : s.yearEnd}"></td>
+              <td class="ts-col-imp"><select data-field="importance">${impOpts(s.importance)}</select></td>
+              <td><textarea data-field="description">${escHtml(s.description || '')}</textarea></td>
+              <td class="ts-col-stub"><input type="checkbox" data-field="suggestStub" ${s.suggestStub ? 'checked' : ''} title="${escHtml(s.stubTags.join(', ') || 'no tags')}"></td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  // Clear the fresh marker after paint so the animation doesn't re-play on subsequent re-renders
+  setTimeout(() => { State.tlStaged.forEach(s => { s._fresh = false; }); }, 400);
+}
+
+function onStagingEdit(e) {
+  const target = e.target;
+  const field = target.getAttribute && target.getAttribute('data-field');
+  if (!field) return;
+  const row = target.closest('tr[data-key]');
+  if (!row) return;
+  const key = row.getAttribute('data-key');
+  const rec = State.tlStaged.find(s => s._key === key);
+  if (!rec) return;
+  if (field === 'keep' || field === 'suggestStub') {
+    rec[field === 'keep' ? 'keep' : 'suggestStub'] = !!target.checked;
+    if (field === 'keep') row.classList.toggle('ts-row-dropped', !rec.keep);
+    return;
+  }
+  if (field === 'year') {
+    const v = parseInt(target.value, 10);
+    if (Number.isFinite(v)) rec.year = v;
+    return;
+  }
+  if (field === 'yearEnd') {
+    if (target.value === '') { rec.yearEnd = null; return; }
+    const v = parseInt(target.value, 10);
+    rec.yearEnd = Number.isFinite(v) ? v : null;
+    return;
+  }
+  if (field === 'importance') {
+    if (IMPORTANCE_ORDER.includes(target.value)) rec.importance = target.value;
+    return;
+  }
+  rec[field] = target.value;
+}
+
+async function commitStagedEvents() {
+  const kept = State.tlStaged.filter(s => s.keep);
+  if (!kept.length) { UI.toast('Nothing to save — every event is unchecked.'); return; }
+
+  const timelineId = document.getElementById('t-timeline').value || '';
+  const btn = document.getElementById('t-commit-btn');
+  btn.disabled = true;
+  btn.textContent = '…saving';
+
+  const busyId = UI.aiBusyBegin(`Saving ${kept.length} event${kept.length === 1 ? '' : 's'}…`);
+
+  try {
+    let eventsAdded = 0, stubsAdded = 0;
+    for (const rec of kept) {
+      const eventId = mkId('ev');
+      let articleId = null;
+
+      // Create a stub article if requested
+      if (rec.suggestStub) {
+        const stub = {
+          id: mkId('art'),
+          title: rec.title,
+          content: rec.description ? `<p>${escHtml(rec.description)}</p>` : '',
+          categoryId: null,
+          tags: Array.isArray(rec.stubTags) ? rec.stubTags.slice() : [],
+          wikibox: null,
+          summary: rec.description || '',
+          created: Date.now(),
+          updated: Date.now(),
+          aiSourceSpec: { source: 'timelineEvent', eventId, timelineId: timelineId || null },
+        };
+        DB.articles.push(stub);
+        articleId = stub.id;
+        stubsAdded++;
+      }
+
+      const ev = {
+        id: eventId,
+        title: rec.title,
+        year: rec.year,
+        month: null,
+        day: null,
+        yearEnd: rec.yearEnd == null ? null : rec.yearEnd,
+        monthEnd: null,
+        dayEnd: null,
+        eventCategoryId: null,
+        importance: rec.importance || 'notable',
+        description: rec.description || '',
+        articleId,
+        timelineIds: timelineId ? [timelineId] : [],
+        tlColumn: 3,
+        customColor: null,
+        aiGenerated: true,
+      };
+      DB.events.push(ev);
+      eventsAdded++;
+    }
+    await DB.save();
+    document.getElementById('t-commit-summary').textContent =
+      `✓ Saved ${eventsAdded} event${eventsAdded === 1 ? '' : 's'}` +
+      (stubsAdded ? `, ${stubsAdded} stub article${stubsAdded === 1 ? '' : 's'}` : '') + '.';
+    // Drop committed rows from staging
+    State.tlStaged = State.tlStaged.filter(s => !s.keep);
+    renderStaging();
+    if (!State.tlStaged.length) {
+      document.getElementById('t-staging-wrap').style.display = 'none';
+      document.getElementById('t-commit-row').style.display = 'none';
+    }
+    UI.toast(`Saved ${eventsAdded} event${eventsAdded === 1 ? '' : 's'}.`);
+  } catch (e) {
+    UI.toast('Save failed: ' + (e.message || e));
+    document.getElementById('t-commit-summary').textContent = 'Failed: ' + (e.message || e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Save All Kept Events';
+    UI.aiBusyEnd(busyId);
+  }
+}
+</script>
+</body>
+</html>

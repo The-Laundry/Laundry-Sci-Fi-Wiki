@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Article Templates — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+  .atpl-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+  .atpl-list {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .atpl-list-head {
+    padding: 10px 14px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;
+  }
+  .atpl-row {
+    padding: 9px 14px; border-bottom: 1px solid var(--border-light);
+    cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+    transition: background .12s;
+  }
+  .atpl-row:last-child { border-bottom: none; }
+  .atpl-row:hover { background: var(--bg-sidebar); }
+  .atpl-row.active { background: var(--accent-light); }
+  .atpl-row-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .atpl-row-sub  { font-size: 11px; color: var(--text-faint); }
+  .atpl-empty { padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px; }
+
+  .atpl-editor {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+  .atpl-editor h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+  .atpl-form-row { margin-bottom: 14px; }
+  .atpl-form-row label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; }
+  .atpl-form-row input[type=text],
+  .atpl-form-row select,
+  .atpl-form-row textarea {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--bg); font-family: var(--font-body);
+    font-size: 13.5px; color: var(--text); outline: none;
+  }
+  .atpl-form-row textarea { resize: vertical; min-height: 120px; font-family: var(--font-body); line-height: 1.5; }
+  .atpl-form-row input:focus, .atpl-form-row select:focus, .atpl-form-row textarea:focus { border-color: var(--accent); background: #fff; }
+  .atpl-hint { font-size: 11.5px; color: var(--text-faint); margin-top: 4px; }
+  .atpl-actions { display: flex; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+</style>
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <h1 class="page-title" style="margin-bottom:6px;">Article Templates</h1>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;">
+      Article templates are used by the <strong>Infinite Wiki</strong> AI generator. Each template gives the AI a structural hint (section outline), optional wikibox shape, and a freeform instruction prompt describing the kind of article being written.
+    </p>
+
+    <div class="atpl-layout">
+
+      <div class="atpl-list">
+        <div class="atpl-list-head">
+          Templates
+          <button class="btn btn-primary btn-sm" onclick="newTemplate()">+ New</button>
+        </div>
+        <div id="atpl-list-body"></div>
+      </div>
+
+      <div id="atpl-editor" class="atpl-editor">
+        <div class="empty-state">
+          <p style="color:var(--text-faint);">Select a template on the left, or create a new one.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
+<script>
+let selectedId = null;
+
+(async () => {
+  await DB.init();
+  UI.init({ activePage: '' });
+  renderList();
+})();
+
+function renderList() {
+  const body = document.getElementById('atpl-list-body');
+  body.innerHTML = '';
+  if (!DB.articleTemplates.length) {
+    body.innerHTML = '<div class="atpl-empty">No templates yet. Click <strong>+ New</strong> to create one.</div>';
+    return;
+  }
+  DB.articleTemplates.forEach(t => {
+    const wb = t.wikiboxTemplateId ? DB.wikiboxTemplates.find(w => w.id === t.wikiboxTemplateId) : null;
+    const row = document.createElement('div');
+    row.className = 'atpl-row' + (t.id === selectedId ? ' active' : '');
+    row.innerHTML = `
+      <div class="atpl-row-name">${escHtml(t.name || '(untitled template)')}</div>
+      <div class="atpl-row-sub">${wb ? 'Wikibox: ' + escHtml(wb.name) : 'No wikibox'} • ${(t.sectionOutline || []).length} section hint${(t.sectionOutline || []).length === 1 ? '' : 's'}</div>
+    `;
+    row.onclick = () => { selectedId = t.id; renderList(); renderEditor(); };
+    body.appendChild(row);
+  });
+}
+
+function renderEditor() {
+  const host = document.getElementById('atpl-editor');
+  const t = DB.articleTemplates.find(x => x.id === selectedId);
+  if (!t) {
+    host.innerHTML = '<div class="empty-state"><p style="color:var(--text-faint);">Select a template on the left, or create a new one.</p></div>';
+    return;
+  }
+
+  const wbOptions = ['<option value="">— None —</option>']
+    .concat(DB.wikiboxTemplates.map(w =>
+      `<option value="${w.id}" ${w.id === t.wikiboxTemplateId ? 'selected' : ''}>${escHtml(w.name)}</option>`
+    )).join('');
+
+  host.innerHTML = `
+    <h2>Edit Template</h2>
+
+    <div class="atpl-form-row">
+      <label>Name</label>
+      <input type="text" id="atpl-name" value="${escHtml(t.name || '')}" placeholder="e.g. Character">
+      <div class="atpl-hint">Displayed in the AI generation modal's template dropdown.</div>
+    </div>
+
+    <div class="atpl-form-row">
+      <label>Wikibox Template</label>
+      <select id="atpl-wb">${wbOptions}</select>
+      <div class="atpl-hint">If set, the AI will be shown this wikibox's fields and asked to fill them in. Manage these on the <a href="manager.html">Article Manager</a> page.</div>
+    </div>
+
+    <div class="atpl-form-row">
+      <label>Article Prompt</label>
+      <textarea id="atpl-prompt" placeholder="Describe how this kind of article should be written…">${escHtml(t.articlePrompt || '')}</textarea>
+      <div class="atpl-hint">Free-form instructions injected into the AI prompt. Describe the tone, structure, and priorities for this type of article.</div>
+    </div>
+
+    <div class="atpl-form-row">
+      <label>Section Outline <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(one heading per line, optional)</span></label>
+      <textarea id="atpl-outline" placeholder="Biography&#10;Early Life&#10;Career" style="min-height:90px;">${escHtml((t.sectionOutline || []).join('\n'))}</textarea>
+      <div class="atpl-hint">Suggested H1/H2 sections. The AI may rename/reorder as appropriate.</div>
+    </div>
+
+    <div class="atpl-form-row">
+      <label>Default Tags <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(comma-separated, optional)</span></label>
+      <input type="text" id="atpl-tags" value="${escHtml((t.defaultTags || []).join(', '))}" placeholder="e.g. character, npc">
+      <div class="atpl-hint">Added automatically to generated articles.</div>
+    </div>
+
+    <div class="atpl-actions">
+      <button class="btn btn-primary" onclick="saveTemplate()">Save</button>
+      <button class="btn btn-secondary" onclick="duplicateTemplate()">Duplicate</button>
+      <button class="btn btn-danger" style="margin-left:auto;" onclick="deleteTemplate()">Delete</button>
+    </div>
+  `;
+}
+
+function newTemplate() {
+  const t = {
+    id: mkId('atpl'),
+    name: 'New Template',
+    wikiboxTemplateId: '',
+    articlePrompt: '',
+    sectionOutline: [],
+    defaultTags: [],
+  };
+  DB.articleTemplates.push(t);
+  selectedId = t.id;
+  renderList();
+  renderEditor();
+}
+
+async function saveTemplate() {
+  const t = DB.articleTemplates.find(x => x.id === selectedId);
+  if (!t) return;
+  t.name = document.getElementById('atpl-name').value.trim() || 'Untitled';
+  t.wikiboxTemplateId = document.getElementById('atpl-wb').value || '';
+  t.articlePrompt = document.getElementById('atpl-prompt').value;
+  t.sectionOutline = document.getElementById('atpl-outline').value
+    .split('\n').map(s => s.trim()).filter(Boolean);
+  t.defaultTags = document.getElementById('atpl-tags').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  await DB.save();
+  UI.toast('Template saved.');
+  renderList();
+}
+
+async function duplicateTemplate() {
+  const t = DB.articleTemplates.find(x => x.id === selectedId);
+  if (!t) return;
+  const copy = JSON.parse(JSON.stringify(t));
+  copy.id = mkId('atpl');
+  copy.name = (t.name || 'Template') + ' (copy)';
+  DB.articleTemplates.push(copy);
+  selectedId = copy.id;
+  await DB.save();
+  UI.toast('Template duplicated.');
+  renderList();
+  renderEditor();
+}
+
+async function deleteTemplate() {
+  const t = DB.articleTemplates.find(x => x.id === selectedId);
+  if (!t) return;
+  if (!confirm(`Delete template "${t.name}"? This cannot be undone.`)) return;
+  DB.articleTemplates = DB.articleTemplates.filter(x => x.id !== selectedId);
+  selectedId = null;
+  await DB.save();
+  UI.toast('Template deleted.');
+  renderList();
+  renderEditor();
+}
+</script>
+</body>
+</html>

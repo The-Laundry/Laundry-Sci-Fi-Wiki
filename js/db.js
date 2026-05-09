@@ -16,7 +16,7 @@ const DB = {
   timelineCategories: [],
   wikiboxTemplates: [],
   articleTemplates: [],
-  settings: { homeDesc: '', activeCalendar: 'hcc', importanceColors: {} },
+  settings: { homeDesc: '', activeCalendar: 'hcc', importanceColors: {}, ai: null },
 
   // File system handles (null when using localStorage or static)
   _dirHandle: null,
@@ -242,6 +242,31 @@ const DB = {
     if (!this.settings) this.settings = { homeDesc: '', activeCalendar: 'hcc', importanceColors: {} };
     if (!this.settings.importanceColors) this.settings.importanceColors = {};
     if (!this.settings.activeCalendar) this.settings.activeCalendar = 'hcc';
+    // AI block: never stores apiKey (that lives only in localStorage 'eomt_ai_key')
+    if (!this.settings.ai || typeof this.settings.ai !== 'object') {
+      this.settings.ai = {
+        enabled: false,
+        baseUrl: 'https://api.openai.com/v1',
+        chatModel: 'gpt-4o-mini',
+        embeddingModel: 'text-embedding-3-small',
+        temperature: 0.7,
+        maxTokens: 2000,
+        autoRefreshOnSave: true,
+        topK: 5,
+      };
+    } else {
+      const ai = this.settings.ai;
+      if (typeof ai.enabled !== 'boolean')            ai.enabled = false;
+      if (typeof ai.baseUrl !== 'string')             ai.baseUrl = 'https://api.openai.com/v1';
+      if (typeof ai.chatModel !== 'string')           ai.chatModel = 'gpt-4o-mini';
+      if (typeof ai.embeddingModel !== 'string')      ai.embeddingModel = 'text-embedding-3-small';
+      if (typeof ai.temperature !== 'number')         ai.temperature = 0.7;
+      if (typeof ai.maxTokens !== 'number')           ai.maxTokens = 2000;
+      if (typeof ai.autoRefreshOnSave !== 'boolean')  ai.autoRefreshOnSave = true;
+      if (typeof ai.topK !== 'number')                ai.topK = 5;
+      // Scrub any apiKey that may have been imported from an old export
+      if ('apiKey' in ai) delete ai.apiKey;
+    }
     if (!this.articles)           this.articles = [];
     if (!this.categories)         this.categories = [];
     if (!this.timelines)          this.timelines = [];
@@ -270,6 +295,8 @@ const DB = {
       if (!e.timelineIds) e.timelineIds = [];
       if (!e.importance) e.importance = 'notable';
     });
+    // AI-related article fields — optional, leave undefined unless present
+    // (summary?: string, embedding?: number[], embeddingModel?: string)
   },
 
   // ── SAVE ─────────────────────────────────────────────────────────────
@@ -328,8 +355,9 @@ const DB = {
         articles: this.articles, categories: this.categories,
         timelines: this.timelines, events: this.events, eras: this.eras,
         timelineCategories: this.timelineCategories,
-        wikiboxTemplates: this.wikiboxTemplates, settings: this.settings,
+        wikiboxTemplates: this.wikiboxTemplates,
         articleTemplates: this.articleTemplates,
+        settings: this.settings,
       };
       localStorage.setItem('eomt_db', JSON.stringify(snapshot));
     } catch (e) {
@@ -340,12 +368,16 @@ const DB = {
   // ── EXPORT / IMPORT ──────────────────────────────────────────────────
 
   exportAll() {
+    // Scrub apiKey from settings.ai before export (defensive; it shouldn't be there).
+    const safeSettings = JSON.parse(JSON.stringify(this.settings || {}));
+    if (safeSettings.ai && 'apiKey' in safeSettings.ai) delete safeSettings.ai.apiKey;
     const data = {
       articles: this.articles, categories: this.categories,
       timelines: this.timelines, events: this.events, eras: this.eras,
       timelineCategories: this.timelineCategories,
-      wikiboxTemplates: this.wikiboxTemplates, articleTemplates: this.articleTemplates,
-      settings: this.settings,
+      wikiboxTemplates: this.wikiboxTemplates,
+      articleTemplates: this.articleTemplates,
+      settings: safeSettings,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -370,6 +402,7 @@ const DB = {
     this.wikiboxTemplates = [];
     this.articleTemplates = [];
     this.settings = { homeDesc: '', activeCalendar: 'hcc' };
+    this._ensureDefaults();
     if (this._mode === 'filesystem') {
       // Delete all article files
       try {
