@@ -451,7 +451,7 @@ function openWbTemplateModal(id) {
         ondragend="this.style.opacity='1';_tmplDragIdx=null;"
         ondragover="event.preventDefault();this.style.outline='2px dashed var(--accent)';"
         ondragleave="this.style.outline='';"
-        ondrop="event.preventDefault();this.style.outline='';if(_tmplDragIdx!==null&&_tmplDragIdx!==${i}){const m=tmpFields.splice(_tmplDragIdx,1)[0];tmpFields.splice(${i},0,m);rebuild();}">
+        ondrop="event.preventDefault();this.style.outline='';wbTmplDrop(${i});">
         <span style="cursor:grab;color:var(--text-faint);font-size:13px;flex-shrink:0;user-select:none;">⠿</span>
         <input type="text" class="field-input" id="wbtf_${i}" placeholder="${isSection?'Section name':'Field label'}"
           value="${escHtml(f.key||'')}" style="margin:0;flex:1;${inputStyle}">
@@ -470,6 +470,13 @@ function openWbTemplateModal(id) {
     });
   }
 
+  window.wbTmplDrop = targetIdx => {
+    if (_tmplDragIdx === null || _tmplDragIdx === targetIdx) return;
+    syncCurrentValues();
+    const moved = tmpFields.splice(_tmplDragIdx, 1)[0];
+    tmpFields.splice(targetIdx, 0, moved);
+    rebuild();
+  };
   window.wbTmplRemove = i => {
     syncCurrentValues();
     tmpFields.splice(i, 1);
