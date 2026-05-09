@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Category — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<style>
+.cat-page-header {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px 24px;
+  margin-bottom: 24px;
+}
+.cat-breadcrumb {
+  font-size: 12px; color: var(--text-faint);
+  display: flex; align-items: center; gap: 5px;
+  margin-bottom: 10px; flex-wrap: wrap;
+}
+.cat-breadcrumb a { color: var(--accent); text-decoration: none; }
+.cat-breadcrumb a:hover { text-decoration: underline; }
+.cat-breadcrumb-sep { color: var(--border); }
+.cat-page-title {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 600;
+  color: var(--text); line-height: 1.2;
+  margin-bottom: 6px;
+}
+.cat-page-meta {
+  font-size: 13px; color: var(--text-faint); margin-bottom: 0;
+}
+.cat-page-desc {
+  font-size: 14.5px; color: var(--text-muted);
+  line-height: 1.7; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--border-light);
+}
+.cat-page-desc-edit {
+  width: 100%; margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+  box-sizing: border-box;
+}
+
+/* Section labels */
+.cat-section-label {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 14px;
+}
+
+/* Subcategory card grid */
+.subcat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.subcat-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  text-decoration: none; color: inherit;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.subcat-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 2px 8px rgba(58,110,168,.1);
+}
+.subcat-card-name {
+  font-size: 13.5px; font-weight: 600; color: var(--text);
+}
+.subcat-card-meta {
+  font-size: 11.5px; color: var(--text-faint);
+}
+
+/* Article card grid */
+.article-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.article-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  text-decoration: none; color: inherit;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.article-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 2px 10px rgba(58,110,168,.12);
+}
+.article-card-title {
+  font-size: 15px; font-weight: 600; color: var(--text);
+  line-height: 1.3;
+}
+.article-card-summary {
+  font-size: 12.5px; color: var(--text-muted);
+  line-height: 1.5; flex: 1;
+  display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.article-card-footer {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px;
+}
+.article-card-img {
+  width: 100%; aspect-ratio: 16/7;
+  object-fit: cover; border-radius: 4px;
+  margin-bottom: 2px; background: var(--bg-sidebar);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); font-size: 24px;
+}
+
+/* Empty state */
+.cat-empty {
+  text-align: center; padding: 48px 24px;
+  color: var(--text-faint); font-size: 14px;
+}
+.cat-empty svg { opacity: .3; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+    <div id="cat-not-found" style="display:none;" class="cat-empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <p>Category not found.</p>
+      <a href="index.html" class="btn btn-secondary" style="margin-top:12px;">Back to Home</a>
+    </div>
+
+    <div id="cat-content">
+      <!-- Header -->
+      <div class="cat-page-header" id="cat-header">
+        <div class="cat-breadcrumb" id="cat-breadcrumb"></div>
+        <div class="cat-page-title" id="cat-title"></div>
+        <div class="cat-page-meta" id="cat-meta"></div>
+        <div id="cat-desc-area"></div>
+      </div>
+
+      <!-- Subcategories -->
+      <div id="cat-subcats-section" style="display:none;">
+        <div class="cat-section-label">Subcategories</div>
+        <div class="subcat-grid" id="cat-subcats-grid"></div>
+      </div>
+
+      <!-- Articles -->
+      <div id="cat-articles-section">
+        <div class="cat-section-label" id="cat-articles-label">Articles</div>
+        <div class="article-grid" id="cat-articles-grid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
+<script>
+(async () => {
+  await DB.init();
+  UI.init({ activePage: '' });
+
+  const params = new URLSearchParams(location.search);
+  const catId  = params.get('id');
+  const cat    = DB.getCatById(catId);
+
+  if (!cat) {
+    document.getElementById('cat-content').style.display   = 'none';
+    document.getElementById('cat-not-found').style.display = 'block';
+    document.title = 'Not Found — Encyclopedia of Many Things';
+    return;
+  }
+
+  document.title = `${cat.name} — Encyclopedia of Many Things`;
+
+  // ── Breadcrumb ───────────────────────────────────────────────────
+  const breadcrumbEl = document.getElementById('cat-breadcrumb');
+  const pathCats = [];
+  let cur = cat;
+  while (cur) {
+    pathCats.unshift(cur);
+    cur = DB.getCatById(cur.parentId);
+  }
+  const crumbs = [{ name: 'Home', href: 'index.html' }];
+  // If root cat, just show Home > This
+  // If nested, show Home > Root > ... > Parent > This
+  pathCats.forEach((c, i) => {
+    if (i < pathCats.length - 1) {
+      crumbs.push({ name: c.name, href: `category.html?id=${c.id}` });
+    }
+  });
+  breadcrumbEl.innerHTML = crumbs.map((c, i) =>
+    `<a href="${c.href}">${escHtml(c.name)}</a>${i < crumbs.length - 1 ? '<span class="cat-breadcrumb-sep">›</span>' : ''}`
+  ).join('') + (crumbs.length ? '<span class="cat-breadcrumb-sep">›</span>' : '') + `<span>${escHtml(cat.name)}</span>`;
+
+  // ── Title & meta ─────────────────────────────────────────────────
+  document.getElementById('cat-title').textContent = cat.name;
+  const directCount = DB.getArticlesInCat(catId).length;
+  const totalCount  = DB.countInSubtree(catId);
+  const childCats   = DB.getChildCats(catId).sort((a, b) => a.name.localeCompare(b.name));
+  const metaParts   = [];
+  if (totalCount > 0) metaParts.push(`${totalCount} article${totalCount !== 1 ? 's' : ''} total`);
+  if (childCats.length > 0) metaParts.push(`${childCats.length} subcategor${childCats.length !== 1 ? 'ies' : 'y'}`);
+  document.getElementById('cat-meta').textContent = metaParts.join(' · ');
+
+  // ── Description ──────────────────────────────────────────────────
+  const descArea = document.getElementById('cat-desc-area');
+  if (DB.isReadOnly) {
+    if (cat.description) {
+      const p = document.createElement('p');
+      p.className = 'cat-page-desc';
+      p.textContent = cat.description;
+      descArea.appendChild(p);
+    }
+  } else {
+    const ta = document.createElement('textarea');
+    ta.className = 'field-input cat-page-desc-edit';
+    ta.rows = 3;
+    ta.placeholder = 'Add a description for this category…';
+    ta.value = cat.description || '';
+    ta.oninput = async () => {
+      cat.description = ta.value.trim() || undefined;
+      await DB.saveCategories();
+    };
+    descArea.appendChild(ta);
+  }
+
+  // ── Subcategory cards ────────────────────────────────────────────
+  if (childCats.length) {
+    document.getElementById('cat-subcats-section').style.display = 'block';
+    document.getElementById('cat-subcats-grid').innerHTML = childCats.map(c => {
+      const n     = DB.countInSubtree(c.id);
+      const kids  = DB.getChildCats(c.id);
+      const hints = kids.slice(0, 3).map(k => escHtml(k.name)).join(', ');
+      return `<a class="subcat-card" href="category.html?id=${c.id}">
+        <div class="subcat-card-name">📁 ${escHtml(c.name)}</div>
+        <div class="subcat-card-meta">${n} article${n !== 1 ? 's' : ''}${kids.length ? ` · ${kids.length} sub` : ''}</div>
+        ${hints ? `<div class="subcat-card-meta" style="opacity:.7;font-size:10.5px;">${hints}</div>` : ''}
+      </a>`;
+    }).join('');
+  }
+
+  // ── Article cards ────────────────────────────────────────────────
+  const articles = DB.getArticlesInCat(catId)
+    .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+  const articlesLabel = document.getElementById('cat-articles-label');
+  if (childCats.length && articles.length) {
+    articlesLabel.textContent = `Articles directly in ${cat.name}`;
+  } else if (!articles.length) {
+    articlesLabel.style.display = 'none';
+  }
+
+  if (articles.length) {
+    document.getElementById('cat-articles-grid').innerHTML = articles.map(a => {
+      const tagsHtml = (a.tags || []).slice(0, 3).map(t =>
+        `<a href="search.html?tag=${encodeURIComponent(t)}" class="tag" onclick="event.stopPropagation()">${escHtml(t)}</a>`
+      ).join('');
+      const imgHtml = a.hasImage
+        ? `<div class="article-card-img">🖼</div>`
+        : '';
+      return `<a class="article-card" href="article.html?id=${a.id}">
+        ${imgHtml}
+        <div class="article-card-title">${escHtml(a.title || 'Untitled')}</div>
+        ${a.summary ? `<div class="article-card-summary">${escHtml(a.summary)}</div>` : ''}
+        ${tagsHtml ? `<div class="article-card-footer">${tagsHtml}</div>` : ''}
+      </a>`;
+    }).join('');
+  } else if (!childCats.length) {
+    document.getElementById('cat-articles-grid').innerHTML = `
+      <div class="cat-empty" style="grid-column:1/-1;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <p>No articles in this category yet.</p>
+      </div>`;
+  }
+})();
+</script>
+</body>
+</html>

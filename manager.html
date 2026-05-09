@@ -137,7 +137,7 @@ function renderManager() {
     const articles = DB.getArticlesInCat(cid);
     const children = DB.getChildCats(cid).sort((a, b) => a.name.localeCompare(b.name));
     const hasKids   = children.length + articles.length > 0;
-    const isOpen    = !cat.collapsed;
+    const isOpen    = !DB.getCatCollapsed(cid);  // read from localStorage
     const frag      = document.createDocumentFragment();
 
     const header = document.createElement('div');
@@ -151,7 +151,7 @@ function renderManager() {
     const tog = document.createElement('div');
     tog.className = 'tree-toggle' + (hasKids ? (isOpen ? ' open' : '') : '  leaf');
     tog.textContent = hasKids ? '▶' : '';
-    if (hasKids) { tog.onclick = e => { e.stopPropagation(); DB.setCatCollapsed(cat.id, !DB.getCatCollapsed(cat.id)); renderManager(); }; }
+    if (hasKids) { tog.onclick = e => { e.stopPropagation(); DB.setCatCollapsed(cid, !DB.getCatCollapsed(cid)); renderManager(); }; }
     header.appendChild(tog);
 
     const fi = document.createElement('span'); fi.textContent = '📁'; fi.style.cssText = 'font-size:14px;margin-right:4px;flex-shrink:0;'; header.appendChild(fi);
@@ -236,16 +236,23 @@ function startRename(cid) {
 
 function openNewCatModal(parentId) {
   UI.showModal('New Category', `
-    <div class="field-row">
-      <div class="field-label">Category Name</div>
-      <input id="new-cat-name" class="field-input" placeholder="e.g. Planets">
-      ${parentId ? `<div style="margin-top:6px;font-size:12px;color:var(--text-faint);">Nested inside: <strong>${escHtml(DB.getCatName(parentId))}</strong></div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field-row">
+        <div class="field-label">Category Name *</div>
+        <input id="new-cat-name" class="field-input" placeholder="e.g. Planets">
+        ${parentId ? `<div style="margin-top:6px;font-size:12px;color:var(--text-faint);">Nested inside: <strong>${escHtml(DB.getCatName(parentId))}</strong></div>` : ''}
+      </div>
+      <div class="field-row">
+        <div class="field-label">Description <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text-faint);">(optional)</span></div>
+        <textarea id="new-cat-desc" class="field-input" rows="2" placeholder="Briefly describe what belongs in this category…"></textarea>
+      </div>
     </div>`,
     [{ label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
      { label: 'Create', cls: 'btn-primary', action: async () => {
         const name = document.getElementById('new-cat-name').value.trim();
         if (!name) { UI.toast('Enter a name.'); return; }
-        DB.categories.push({ id: mkId('cat'), name, parentId: parentId || null, collapsed: false });
+        const desc = document.getElementById('new-cat-desc').value.trim() || undefined;
+        DB.categories.push({ id: mkId('cat'), name, parentId: parentId || null, description: desc });
         await DB.saveCategories(); UI.closeModal(); UI.renderSidebar(); renderManager(); UI.toast('Category created.');
      }}]
   );

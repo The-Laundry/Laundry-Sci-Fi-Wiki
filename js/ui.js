@@ -261,8 +261,8 @@ const UI = {
         : '';
       header.innerHTML = `
         <span class="sb-toggle ${hasKids ? (isOpen ? 'open' : '') : 'leaf'}">▶</span>
-        <span style="font-size:12px;margin-right:2px;">📁</span>
-        <span class="sb-cat-name">${escHtml(cat.name)}</span>
+        <span style="font-size:12px;margin-right:2px;flex-shrink:0;">📁</span>
+        <a class="sb-cat-name" href="category.html?id=${cid}" onclick="event.stopPropagation()">${escHtml(cat.name)}</a>
         ${countHint}`;
 
       // Children container — may be empty until first expand

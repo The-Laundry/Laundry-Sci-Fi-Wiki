@@ -29,6 +29,12 @@
       </div>
     </div>
 
+    <!-- Dynamic category cards — root categories only -->
+    <div id="home-cat-cards-section" style="margin-top:24px;margin-bottom:24px;">
+      <div class="home-cat-cards-label">Categories</div>
+      <div class="home-cat-grid" id="home-cat-grid"></div>
+    </div>
+
     <div class="home-grid">
       <div class="home-card">
         <div class="home-card-title">Recent Articles</div>
@@ -97,16 +103,48 @@
         </a>`).join('')
     : '<div style="color:var(--text-faint);font-size:13px;padding:8px 0;">No articles yet.</div>';
 
-  // Categories
+  // Quick browse list (compact, links to category pages)
   document.getElementById('home-categories').innerHTML = DB.getRootCats().length
     ? DB.getRootCats().sort((a, b) => a.name.localeCompare(b.name)).map(c => {
         const n = DB.countInSubtree(c.id);
-        return `<a class="home-article-link" href="manager.html">
+        return `<a class="home-article-link" href="category.html?id=${c.id}">
           <span class="hal-title">${escHtml(c.name)}</span>
           <span class="hal-cat">${n} article${n !== 1 ? 's' : ''}</span>
         </a>`;
       }).join('')
     : '<div style="color:var(--text-faint);font-size:13px;padding:8px 0;">No categories yet.</div>';
+
+  // Dynamic category card grid — root categories only
+  const rootCats = DB.getRootCats().sort((a, b) => a.name.localeCompare(b.name));
+  const catGrid  = document.getElementById('home-cat-grid');
+  if (!rootCats.length) {
+    document.getElementById('home-cat-cards-section').style.display = 'none';
+  } else {
+    catGrid.innerHTML = rootCats.map(c => {
+      const total    = DB.countInSubtree(c.id);
+      const children = DB.getChildCats(c.id).sort((a, b) => a.name.localeCompare(b.name));
+      // Show up to 4 subcategory names as hints
+      const hints = children.slice(0, 4).map(k => escHtml(k.name));
+      const hintsHtml = hints.length
+        ? `<div class="home-cat-card-hints">${hints.join('<span class="home-cat-card-sep">·</span>')}${children.length > 4 ? `<span class="home-cat-card-sep">·</span><span style="opacity:.6">+${children.length - 4} more</span>` : ''}</div>`
+        : '';
+      const desc = c.description
+        ? `<div class="home-cat-card-desc">${escHtml(c.description)}</div>`
+        : '';
+      return `<a class="home-cat-card" href="category.html?id=${c.id}">
+        <div class="home-cat-card-header">
+          <span class="home-cat-card-icon">📁</span>
+          <span class="home-cat-card-name">${escHtml(c.name)}</span>
+        </div>
+        ${desc}
+        ${hintsHtml}
+        <div class="home-cat-card-footer">
+          <span class="home-cat-card-count">${total} article${total !== 1 ? 's' : ''}</span>
+          ${children.length ? `<span class="home-cat-card-subs">${children.length} subcategor${children.length !== 1 ? 'ies' : 'y'}</span>` : ''}
+        </div>
+      </a>`;
+    }).join('');
+  }
 })();
 </script>
 </body>
