@@ -29,7 +29,9 @@ Also deployed on GitHub Pages as a read-only public view.
   manager.html            526  Article + category manager. Drag-drop tree. Wikibox
                                templates + article templates (sections + fields, drag-reorder).
                                Uses DB.articleMeta for display, updates both meta + cache.
-  article-templates.html  231  Article template manager.
+  article-templates.html  231  Article template manager. Templates store: name,
+                               categoryId, tags[], content(HTML), wikibox{...}.
+                               Split-pane: list on left, editor on right.
   index.html              113  Homepage. Stats, recent articles, category list.
   search.html             604  Search page. Index-backed fast search + async content snippets.
                                Index built from articleMeta on load (no file reads).
@@ -38,16 +40,39 @@ Also deployed on GitHub Pages as a read-only public view.
                                Importance icons (SVG shapes), color picker, era custom calendars.
   timeline-manager.html   329  Timeline/era/event-category manager. Importance colors.
   ai.html                 508  AI settings. Uses DB.saveSettings().
-  ai-generate.html       1457  AI Generator. Iterates DB.articleMeta, loads via DB.loadArticle.
+  ai-generate.html       1457  AI Generator — tabbed interface:
+                               • Article Generator: generate full article from prompt
+                               • Semantic Search: embedding-based similarity search
+                               • Content Expander: expand article sections with AI
+                               • Article Linker: suggest wikilinks for an article
+                               • Conlang: vocab gen, sentence translate, etymology
+                               Iterates DB.articleMeta, loads via DB.loadArticle.
+  languages.html               Languages manager + viewer + editor (split-pane).
+                               Tabs: Overview / Phonology / Lexicon / Grammar /
+                               Texts / Used In. Auto-saves on blur. Quill for
+                               description and grammar. Honors DB.isReadOnly.
   data.html               141  Export/import/clear. Read-only notice on GitHub Pages.
   help.html               111  Usage guide.
   css/main.css            922  All shared styles. Dark mode via [data-theme="dark"].
   js/db.js                617  DB object. THREE backends + SCOPED SAVES + LAZY LOADING.
                                See SAVE SYSTEM and ARTICLE LOADING sections below.
+                               Also manages languages (lightweight index + per-language files).
   js/calendar.js           52  Calendar conversions. CALENDARS object, 5 calendars.
   js/ui.js                521  Shell injection. Lazy sidebar tree. Theme from localStorage.
                                Header search uses DB.articleMeta only.
-  js/ai.js               1612  AI helper module. reindexAll uses DB.loadArticle per article.
+                               Nav includes Search, AI, Article Templates, Languages links.
+  js/ai.js               1612  AI helper module. OpenAI-compatible API.
+                               AI.chat(), AI.chatStream(), AI.embed(), AI.cosine(),
+                               AI.generateSummary(), AI.generateEmbedding(),
+                               AI.reindexAll() (uses DB.loadArticle per article).
+                               API key stored only in localStorage ('eomt_ai_key'),
+                               never in settings.json.
+  js/conlang.js                Conlang helpers. Conlang.findLanguage(name),
+                               Conlang.findEntry(lang, word), getDescendants/Ancestors,
+                               findBacklinks(lang), parseHtml(html) (string),
+                               applyToElement(root) (text-node walker, never
+                               touches existing wikilink anchors), CSV import/export.
+                               Used by languages.html, article.html, ai-generate.html.
 
 ## SAVE SYSTEM (Phase 1 — complete)
 ALWAYS use scoped saves. Never call DB.save() without an article ID except for
@@ -170,6 +195,7 @@ contenteditable value editors: .wb-value-editor[data-wbid="..."]
 Mini-toolbar (B/I/U/↵) appears on text selection via selectionchange.
 Drag-reorder: flushes active editor synchronously before splice, uses _id for lookups.
 collectWbFields() — flushes active editor + strips _id before save.
+>>>>>>> main
 
 ## DATA SCHEMA
 settings.json:     { homeDesc, activeCalendar, importanceColors:{imp:hex},
@@ -186,9 +212,23 @@ eras.json:         [{id, name, startYear, endYear, color, timelineId,
                      customCalAbbrev, customCalOffset, hasYearZero, countsBackward}]
 timeline-categories.json: [{id, name, color, defaultColor}]
 wikibox-templates.json:   [{id, name, fields:[{type:'field'|'section', key}]}]
-article-templates.json:   [{id, name, categoryId, tags[], content(HTML), wikibox{...}}]
+article-templates.json:   [{id, name, categoryId, tags[], content(HTML),
+                             wikibox:{enabled,title,subtitle,image,fields[]}}]
 articles/index.json:      [{id,title,categoryId,tags[],summary,updated,hasImage}]
                            REQUIRED for GitHub Pages. Written on every article save.
+languages.json:           lightweight summary array — auto-regenerated on save:
+                          [{id, name, nativeName, status, parentId, articleId,
+                            wordCount, updated}]
+languages/index.json:     [array of language IDs] — REQUIRED for GitHub Pages
+languages/lang_ID.json:   {id, name, nativeName, romanization, status,
+                            parentId, articleId, speakerArticleIds[],
+                            description(HTML), writingSystem{name,notes,sampleImage},
+                            phonology{consonants[],vowels[],notes},
+                            grammar(HTML),
+                            lexicon[{id,word,romanization,ipa,partOfSpeech,
+                                     definitions[],etymology,notes,tags[],examples[]}],
+                            sampleTexts[{id,title,text,translation,gloss}],
+                            created, updated}
 articles/art_ID.json:     {id, title, content(HTML), categoryId, tags[],
                             wikibox:{enabled,title,subtitle,image,imagePath,imgCaption,
                             fields:[{type,key,val(HTML)}]}, created, updated,
@@ -253,13 +293,34 @@ Static mode: all JSON fetched via fetch(), all save methods are NO-OPs.
 articles/index.json must be in new metadata format for GitHub Pages to work.
 
 Pages that REDIRECT to index.html when read-only:
-  editor.html, manager.html, timeline-manager.html, article-templates.html
+  editor.html, manager.html, timeline-manager.html, article-templates.html,
+  ai-generate.html
 
 Pages that HIDE edit controls when read-only:
-  article.html  — hides #article-edit-actions
-  index.html    — plain <p> for description, hides folder prompt
-  timeline.html — hides #tl-edit-btns
-  data.html     — read-only notice, hides .ro-hide sections
+  article.html     — hides #article-edit-actions
+  index.html       — plain <p> instead of editable textarea, hides folder prompt
+  timeline.html    — hides #tl-edit-btns
+  data.html        — shows read-only notice, hides .ro-hide sections
+  languages.html   — hides "+ New" / "Save" / "Delete" / CSV-import; inputs disabled;
+                     shows banner. Read-only viewer is identical structure with disabled
+                     inputs (no separate viewer page).
+  ai-generate.html — link hidden from sidebar on read-only
+
+## CONLANG FEATURE (languages.html, js/conlang.js)
+Inline syntax in any article: {{LangName:word}} or {{LangName:word|display}}
+  - Resolved against DB.languages by name (case-insensitive, also matches nativeName).
+  - Word matched against lexicon[].word and lexicon[].romanization.
+  - Hits render <a class="conlang-ref"> with a hover tooltip (CSS data-conlang-tip).
+  - Misses render <span class="conlang-ref conlang-miss"> with red dotted underline.
+  - Parser runs AFTER processWikilinks() in article.html — never touches [[...]].
+  - applyToElement() walks text nodes only, so HTML attributes are safe.
+Storage layout mirrors articles/: lightweight index (languages.json) + per-language
+files in languages/ + languages/index.json for static-fetch mode.
+DB methods: saveLanguage(id), deleteLanguageFile(id), _writeLanguagesIndex().
+AI tools (ai-generate.html "Conlang" tab):
+  - Generate Vocabulary (jsonMode) — accepts rows individually or all
+  - Translate Sentence (jsonMode, EN↔Lang) — interlinear gloss + unknown words
+  - Suggest Etymology (plain text) — saves or appends to entry.etymology
 
 ## KNOWN BUGS / WATCH OUT
 - undefined.json in data/articles/ — old save bug. Safe to delete.

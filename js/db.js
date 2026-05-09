@@ -25,6 +25,7 @@ const DB = {
   timelineCategories: [],
   wikiboxTemplates: [],
   articleTemplates: [],
+  languages: [],
   settings: { homeDesc: '', activeCalendar: 'hcc', importanceColors: {}, ai: null },
 
   // DB.articles is a backward-compat getter — returns articleMeta
@@ -34,7 +35,8 @@ const DB = {
 
   _dirHandle: null,
   _articlesHandle: null,
-  _mode: 'localStorage',
+  _languagesHandle: null,
+  _mode: 'localStorage', // 'filesystem' | 'localStorage' | 'static'
 
   // ── READ-ONLY DETECTION ──────────────────────────────────────────────
 
@@ -95,6 +97,22 @@ const DB = {
     this.timelineCategories = await fetchJson(base + 'data/timeline-categories.json', []);
     this.wikiboxTemplates   = await fetchJson(base + 'data/wikibox-templates.json',   []);
     this.articleTemplates   = await fetchJson(base + 'data/article-templates.json',   []);
+
+    // ── Languages: lightweight index + per-language files ────────────
+    // Try the lightweight index first; fall back to the static index file.
+    const langIndexFull = await fetchJson(base + 'data/languages.json', null);
+    const langIds = await fetchJson(base + 'data/languages/index.json', null);
+    const idsToLoad = Array.isArray(langIds)
+      ? langIds
+      : (Array.isArray(langIndexFull) ? langIndexFull.map(l => l.id).filter(Boolean) : []);
+    if (idsToLoad.length) {
+      const langs = await Promise.all(
+        idsToLoad.map(id => fetchJson(base + `data/languages/${id}.json`, null))
+      );
+      this.languages = langs.filter(Boolean);
+    } else {
+      this.languages = [];
+    }
 
     // Load article metadata index — full articles fetched on demand
     const artIndex = await fetchJson(base + 'data/articles/index.json', null);
@@ -199,7 +217,8 @@ const DB = {
   // ── FILESYSTEM HELPERS ───────────────────────────────────────────────
 
   async _ensureSubfolders() {
-    this._articlesHandle = await this._dirHandle.getDirectoryHandle('articles', { create: true });
+    this._articlesHandle  = await this._dirHandle.getDirectoryHandle('articles',  { create: true });
+    this._languagesHandle = await this._dirHandle.getDirectoryHandle('languages', { create: true });
   },
 
   async _readJson(dirHandle, filename, fallback = null) {
@@ -249,6 +268,18 @@ const DB = {
       this.articleMeta = [];
     }
     this.articleCache = {};
+
+    // Load individual language files (skip the index.json sidecar if present)
+    this.languages = [];
+    try {
+      for await (const entry of this._languagesHandle.values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json') && entry.name !== 'index.json') {
+          const data = await this._readJson(this._languagesHandle, entry.name);
+          if (data) this.languages.push(data);
+        }
+      }
+    } catch (e) {}
+
     this._migrate();
   },
 
@@ -323,6 +354,7 @@ const DB = {
     if (!this.timelineCategories) this.timelineCategories = [];
     if (!this.wikiboxTemplates)   this.wikiboxTemplates = [];
     if (!this.articleTemplates)   this.articleTemplates = [];
+    if (!this.languages)          this.languages = [];
   },
 
   _migrate() {
@@ -442,6 +474,70 @@ const DB = {
     else this._saveToLocalStorage();
   },
 
+  // ── LANGUAGE SAVE / DELETE ───────────────────────────────────────────
+  // Lightweight index lives in data/languages.json (denormalized summary
+  // for fast sidebar / picker rendering). Each full language record lives
+  // in data/languages/lang_XXXX.json. data/languages/index.json mirrors
+  // articles/index.json so static (GitHub Pages) mode can list IDs to fetch.
+
+  _languageSummary(lang) {
+    return {
+      id: lang.id,
+      name: lang.name || '',
+      nativeName: lang.nativeName || '',
+      status: lang.status || '',
+      parentId: lang.parentId || null,
+      articleId: lang.articleId || null,
+      wordCount: Array.isArray(lang.lexicon) ? lang.lexicon.length : 0,
+      updated: lang.updated || 0,
+    };
+  },
+
+  async _writeLanguagesIndex() {
+    if (this._mode !== 'filesystem') return;
+    const summaries = this.languages.map(l => this._languageSummary(l));
+    await this._writeJson(this._dirHandle,    'languages.json',         summaries);
+    await this._writeJson(this._languagesHandle, 'index.json',          this.languages.map(l => l.id));
+  },
+
+  // Save a single language. Pass null to rewrite all languages.
+  async saveLanguage(changedLanguageId = null) {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') {
+      if (changedLanguageId) {
+        const lang = this.languages.find(l => l.id === changedLanguageId);
+        if (lang) {
+          lang.updated = Date.now();
+          if (!lang.created) lang.created = lang.updated;
+          await this._writeJson(this._languagesHandle, `${lang.id}.json`, lang);
+        }
+      } else {
+        await Promise.all(this.languages.map(l =>
+          this._writeJson(this._languagesHandle, `${l.id}.json`, l)
+        ));
+      }
+      await this._writeLanguagesIndex();
+    } else {
+      // localStorage backend bundles everything together
+      const lang = changedLanguageId ? this.languages.find(l => l.id === changedLanguageId) : null;
+      if (lang) {
+        lang.updated = Date.now();
+        if (!lang.created) lang.created = lang.updated;
+      }
+      this._saveToLocalStorage();
+    }
+  },
+
+  async deleteLanguageFile(id) {
+    this.languages = this.languages.filter(l => l.id !== id);
+    if (this._mode === 'filesystem') {
+      await this._deleteFile(this._languagesHandle, `${id}.json`);
+      await this._writeLanguagesIndex();
+    } else if (this._mode === 'localStorage') {
+      this._saveToLocalStorage();
+    }
+  },
+
   async _saveToFilesystem(changedArticleId) {
     const dir = this._dirHandle;
     // Always write shared files
@@ -480,6 +576,12 @@ const DB = {
 
     // Write expanded metadata index (not just IDs)
     await this._writeJson(this._articlesHandle, 'index.json', this.articleMeta);
+
+    // Write all language files (full save) and refresh the languages index
+    await Promise.all(this.languages.map(l =>
+      this._writeJson(this._languagesHandle, `${l.id}.json`, l)
+    ));
+    await this._writeLanguagesIndex();
   },
 
   // ── CATEGORY COLLAPSE STATE (localStorage only — never written to disk) ──
@@ -523,6 +625,7 @@ const DB = {
         timelineCategories: this.timelineCategories,
         wikiboxTemplates: this.wikiboxTemplates,
         articleTemplates: this.articleTemplates,
+        languages: this.languages,
         settings: this.settings,
       };
       localStorage.setItem('eomt_db', JSON.stringify(snapshot));
@@ -544,6 +647,7 @@ const DB = {
       timelineCategories: this.timelineCategories,
       wikiboxTemplates: this.wikiboxTemplates,
       articleTemplates: this.articleTemplates,
+      languages: this.languages,
       settings: safeSettings,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -576,12 +680,19 @@ const DB = {
     this.events = []; this.eras = []; this.timelineCategories = [];
     this.wikiboxTemplates = [];
     this.articleTemplates = [];
+    this.languages = [];
     this.settings = { homeDesc: '', activeCalendar: 'hcc' };
     this._ensureDefaults();
     if (this._mode === 'filesystem') {
       try {
         for await (const entry of this._articlesHandle.values()) {
           if (entry.kind === 'file') await this._articlesHandle.removeEntry(entry.name);
+        }
+      } catch (e) {}
+      // Delete all language files
+      try {
+        for await (const entry of this._languagesHandle.values()) {
+          if (entry.kind === 'file') await this._languagesHandle.removeEntry(entry.name);
         }
       } catch (e) {}
     }
