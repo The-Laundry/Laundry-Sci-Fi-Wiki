@@ -461,6 +461,7 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
           <button type="button" class="btn btn-primary" id="cl-gv-go">Generate</button>
           <span id="cl-gv-status" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
         </div>
+        <div id="cl-gv-stream" class="ai-stream-preview" style="display:none;margin-top:10px;font-family:var(--font-mono, monospace);font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
         <div id="cl-gv-results"></div>
       </div>
 
@@ -492,6 +493,7 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
           <button type="button" class="btn btn-primary" id="cl-tr-go">Translate</button>
           <span id="cl-tr-status" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
         </div>
+        <div id="cl-tr-stream" class="ai-stream-preview" style="display:none;margin-top:10px;font-family:var(--font-mono, monospace);font-size:12px;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
         <div id="cl-tr-results"></div>
       </div>
 
@@ -516,6 +518,7 @@ table.tl-staging-table tr.ts-row-fresh { animation: ts-row-in .2s ease; }
           <button type="button" class="btn btn-primary" id="cl-et-go">Suggest</button>
           <span id="cl-et-status" style="align-self:center;font-size:12.5px;color:var(--text-muted);"></span>
         </div>
+        <div id="cl-et-stream" class="ai-stream-preview" style="display:none;margin-top:10px;white-space:pre-wrap;max-height:240px;overflow:auto;"></div>
         <div id="cl-et-results"></div>
       </div>
     </section>
@@ -1709,11 +1712,17 @@ async function runGenerateVocabulary() {
   const notes = document.getElementById('cl-gv-notes').value.trim();
   const status = document.getElementById('cl-gv-status');
   const results = document.getElementById('cl-gv-results');
+  const stream  = document.getElementById('cl-gv-stream');
 
   const btn = document.getElementById('cl-gv-go');
   btn.disabled = true;
-  status.textContent = 'Generating…';
+  status.textContent = 'Generating… 0 chars';
   results.innerHTML = '';
+  if (stream) {
+    stream.textContent = '';
+    stream.style.display = 'block';
+    stream.classList.add('active');
+  }
 
   const ctx = buildConlangContext(lang);
   const existing = (lang.lexicon || []).slice(0, 30).map(e => e.word).filter(Boolean).join(', ');
@@ -1728,17 +1737,26 @@ Generate ${count} new words for the semantic field "${field || 'general'}".${not
 Respond as JSON: {"words":[{"word":"...","romanization":"...","ipa":"...","partOfSpeech":"...","definitions":["...","..."],"etymology":"...","notes":""}]}`;
 
   try {
-    const txt = await AI.chat(
-      [{ role: 'system', content: sys }, { role: 'user', content: user }],
-      { jsonMode: true }
-    );
+    const messages = [{ role: 'system', content: sys }, { role: 'user', content: user }];
+    const opts = { jsonMode: true };
+    const onChunk = (_delta, accum) => {
+      if (stream) {
+        stream.textContent = accum;
+        stream.scrollTop = stream.scrollHeight;
+      }
+      status.textContent = `Generating… ${accum.length} chars`;
+    };
+    const txt = await AI.chatStream(messages, opts, onChunk);
+    if (stream) stream.classList.remove('active');
     const parsed = parseJsonFromAi(txt);
     const words = Array.isArray(parsed) ? parsed : (parsed.words || []);
     if (!words.length) throw new Error('AI returned no words.');
     renderGeneratedVocab(lang, words);
+    if (stream) stream.style.display = 'none';
     status.textContent = `Generated ${words.length} word${words.length === 1 ? '' : 's'}.`;
   } catch (e) {
     console.error(e);
+    if (stream) stream.classList.remove('active');
     status.textContent = 'Failed: ' + e.message;
   } finally {
     btn.disabled = false;
@@ -1830,11 +1848,17 @@ async function runTranslateSentence() {
   if (!sentence) { UI.toast('Enter a sentence first.'); return; }
   const status = document.getElementById('cl-tr-status');
   const results = document.getElementById('cl-tr-results');
+  const stream  = document.getElementById('cl-tr-stream');
 
   const btn = document.getElementById('cl-tr-go');
   btn.disabled = true;
-  status.textContent = 'Translating…';
+  status.textContent = 'Translating… 0 chars';
   results.innerHTML = '';
+  if (stream) {
+    stream.textContent = '';
+    stream.style.display = 'block';
+    stream.classList.add('active');
+  }
 
   const ctx = buildConlangContext(lang);
   const lex = buildLexiconSummary(lang, 120);
@@ -1852,15 +1876,24 @@ Translate from ${fromLabel} to ${toLabel}: "${sentence}"
 Respond as JSON: {"translation":"...","gloss":"word-by-word interlinear gloss","words":[{"source":"...","target":"...","note":"e.g. coined, derived"}],"unknown":["words you had to coin"]}`;
 
   try {
-    const txt = await AI.chat(
-      [{ role: 'system', content: sys }, { role: 'user', content: user }],
-      { jsonMode: true }
-    );
+    const messages = [{ role: 'system', content: sys }, { role: 'user', content: user }];
+    const opts = { jsonMode: true };
+    const onChunk = (_delta, accum) => {
+      if (stream) {
+        stream.textContent = accum;
+        stream.scrollTop = stream.scrollHeight;
+      }
+      status.textContent = `Translating… ${accum.length} chars`;
+    };
+    const txt = await AI.chatStream(messages, opts, onChunk);
+    if (stream) stream.classList.remove('active');
     const parsed = parseJsonFromAi(txt);
     renderTranslation(parsed, fromLabel, toLabel);
+    if (stream) stream.style.display = 'none';
     status.textContent = 'Done.';
   } catch (e) {
     console.error(e);
+    if (stream) stream.classList.remove('active');
     status.textContent = 'Failed: ' + e.message;
   } finally {
     btn.disabled = false;
@@ -1902,10 +1935,16 @@ async function runSuggestEtymology() {
 
   const status = document.getElementById('cl-et-status');
   const results = document.getElementById('cl-et-results');
+  const stream  = document.getElementById('cl-et-stream');
   const btn = document.getElementById('cl-et-go');
   btn.disabled = true;
-  status.textContent = 'Thinking…';
+  status.textContent = 'Thinking… 0 chars';
   results.innerHTML = '';
+  if (stream) {
+    stream.textContent = '';
+    stream.style.display = 'block';
+    stream.classList.add('active');
+  }
 
   const ctx = buildConlangContext(lang);
   let parentCtx = '';
@@ -1926,22 +1965,37 @@ Definitions: ${definitions}
 ${entry.etymology ? 'Existing etymology (rewrite or extend): ' + entry.etymology : '(no existing etymology)'}`;
 
   try {
-    const txt = await AI.chat([
+    const messages = [
       { role: 'system', content: sys },
       { role: 'user',   content: user },
-    ]);
+    ];
+    const onChunk = (_delta, accum) => {
+      // The etymology tool emits plain prose, so we can render the running
+      // text directly into the preview pane character-by-character.
+      if (stream) {
+        stream.textContent = accum;
+        stream.scrollTop = stream.scrollHeight;
+      }
+      status.textContent = `Thinking… ${accum.length} chars`;
+    };
+    const txt = await AI.chatStream(messages, {}, onChunk);
+    if (stream) {
+      stream.classList.remove('active');
+      stream.style.display = 'none';
+    }
+
+    const cleaned = (txt || '').trim();
     results.innerHTML = `
       <div style="margin-top:14px;padding:14px;background:var(--bg-sidebar);border:1px solid var(--border);border-radius:var(--radius);">
         <div style="font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
           Proposed etymology for ${escHtml(entry.word)}
         </div>
-        <div style="font-size:14px;line-height:1.5;white-space:pre-wrap;" id="cl-et-text">${escHtml(txt.trim())}</div>
+        <div style="font-size:14px;line-height:1.5;white-space:pre-wrap;" id="cl-et-text">${escHtml(cleaned)}</div>
         <div style="margin-top:12px;display:flex;gap:8px;">
           <button class="btn btn-primary btn-sm" id="cl-et-save">Save to entry</button>
           <button class="btn btn-secondary btn-sm" id="cl-et-append">Append to existing</button>
         </div>
       </div>`;
-    const cleaned = txt.trim();
     document.getElementById('cl-et-save').addEventListener('click', async () => {
       entry.etymology = cleaned;
       await DB.saveLanguage(lang.id);
@@ -1955,6 +2009,7 @@ ${entry.etymology ? 'Existing etymology (rewrite or extend): ' + entry.etymology
     status.textContent = 'Done.';
   } catch (e) {
     console.error(e);
+    if (stream) stream.classList.remove('active');
     status.textContent = 'Failed: ' + e.message;
   } finally {
     btn.disabled = false;

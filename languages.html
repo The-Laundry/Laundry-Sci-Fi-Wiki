@@ -742,7 +742,48 @@ function removePhonRow(kind, idx) {
 }
 
 // ── Tab: LEXICON ───────────────────────────────────────────────────
+//
+// Two-stage render so the search input keeps focus while typing:
+//   • renderLexicon() mounts the toolbar (including <input id="lex-search">)
+//     and three stable container divs exactly once per tab open.
+//   • renderLexiconBody() repaints only the tag-chip filter, the table
+//     (or empty state), the count stat, and the editor drawer.
+//
+// All search/sort/tag-filter callbacks now call renderLexiconBody() rather
+// than re-running renderTab(), so the <input> is never destroyed and focus
+// is preserved between keystrokes.
 function renderLexicon(lang, host) {
+  if (!lang.lexicon) lang.lexicon = [];
+  const lex = lang.lexicon;
+
+  host.innerHTML = `
+    <div class="lex-toolbar">
+      <input type="text" class="lex-search" id="lex-search" value="${escHtml(lexSearch)}" placeholder="Search words, definitions, tags…">
+      ${isReadOnly ? '' : `
+        <button class="btn btn-primary btn-sm" onclick="newLexEntry()">+ New Word</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('lex-csv-input').click()">⇪ Import CSV</button>
+        <input type="file" id="lex-csv-input" accept=".csv" style="display:none" onchange="importLexCsv(event)">
+      `}
+      <button class="btn btn-secondary btn-sm" onclick="exportLexCsv()" ${lex.length ? '' : 'disabled'}>⇩ Export CSV</button>
+      <span class="lex-stat" id="lex-count-stat"></span>
+    </div>
+    <div id="lex-tagfilter-host"></div>
+    <div id="lex-table-host"></div>
+    <div id="lex-edit-host"></div>
+  `;
+
+  // Bind the search input with addEventListener (not oninput=) so its DOM
+  // identity is preserved across body-only refreshes.
+  const searchEl = document.getElementById('lex-search');
+  if (searchEl) {
+    searchEl.addEventListener('input', (e) => onLexSearch(e.target.value));
+  }
+
+  renderLexiconBody(lang);
+}
+
+function renderLexiconBody(lang) {
+  if (!lang) return;
   if (!lang.lexicon) lang.lexicon = [];
   const lex = lang.lexicon;
   const allTags = [...new Set(lex.flatMap(e => e.tags || []))].sort();
@@ -772,25 +813,24 @@ function renderLexicon(lang, host) {
   const sortArrow = (col) => `<span class="sort-arrow">${lexSort.col === col ? (lexSort.dir === 'asc' ? '▲' : '▼') : '▲▼'}</span>`;
   const sortClass = (col) => lexSort.col === col ? 'sorted' : '';
 
-  host.innerHTML = `
-    <div class="lex-toolbar">
-      <input type="text" class="lex-search" id="lex-search" value="${escHtml(lexSearch)}" placeholder="Search words, definitions, tags…" oninput="onLexSearch(this.value)">
-      ${isReadOnly ? '' : `
-        <button class="btn btn-primary btn-sm" onclick="newLexEntry()">+ New Word</button>
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('lex-csv-input').click()">⇪ Import CSV</button>
-        <input type="file" id="lex-csv-input" accept=".csv" style="display:none" onchange="importLexCsv(event)">
-      `}
-      <button class="btn btn-secondary btn-sm" onclick="exportLexCsv()" ${lex.length ? '' : 'disabled'}>⇩ Export CSV</button>
-      <span class="lex-stat">${filtered.length} of ${lex.length} word${lex.length === 1 ? '' : 's'}</span>
-    </div>
+  // Count stat
+  const countEl = document.getElementById('lex-count-stat');
+  if (countEl) countEl.textContent = `${filtered.length} of ${lex.length} word${lex.length === 1 ? '' : 's'}`;
 
-    ${allTags.length ? `<div class="lex-tag-filter">
+  // Tag filter row
+  const tagHost = document.getElementById('lex-tagfilter-host');
+  if (tagHost) {
+    tagHost.innerHTML = allTags.length ? `<div class="lex-tag-filter">
       <span style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Tag:</span>
       <span class="lex-tag-chip ${!lexTagFilter ? 'active' : ''}" onclick="setLexTagFilter('')">all</span>
       ${allTags.map(t => `<span class="lex-tag-chip ${lexTagFilter === t ? 'active' : ''}" onclick="setLexTagFilter('${escHtml(t)}')">${escHtml(t)}</span>`).join('')}
-    </div>` : ''}
+    </div>` : '';
+  }
 
-    ${filtered.length ? `
+  // Table or empty state
+  const tableHost = document.getElementById('lex-table-host');
+  if (tableHost) {
+    tableHost.innerHTML = filtered.length ? `
       <table class="lex-table">
         <thead>
           <tr>
@@ -818,10 +858,8 @@ function renderLexicon(lang, host) {
           `).join('')}
         </tbody>
       </table>
-    ` : `<div class="lex-empty">${lex.length ? 'No matches.' : (isReadOnly ? 'No words yet.' : 'No words yet. Click <strong>+ New Word</strong> or import a CSV.')}</div>`}
-
-    <div id="lex-edit-host"></div>
-  `;
+    ` : `<div class="lex-empty">${lex.length ? 'No matches.' : (isReadOnly ? 'No words yet.' : 'No words yet. Click <strong>+ New Word</strong> or import a CSV.')}</div>`;
+  }
 
   if (activeLexId) {
     const entry = lex.find(e => e.id === activeLexId);
@@ -829,12 +867,18 @@ function renderLexicon(lang, host) {
   }
 }
 
-function onLexSearch(v) { lexSearch = v; renderTab(); }
-function setLexTagFilter(t) { lexTagFilter = t; renderTab(); }
+// Helper: get the currently-selected language record (used by the body-only
+// refresh callbacks below).
+function _currentLang() {
+  return DB.languages.find(l => l.id === selectedId) || null;
+}
+
+function onLexSearch(v) { lexSearch = v; renderLexiconBody(_currentLang()); }
+function setLexTagFilter(t) { lexTagFilter = t; renderLexiconBody(_currentLang()); }
 function setLexSort(col) {
   if (lexSort.col === col) lexSort.dir = lexSort.dir === 'asc' ? 'desc' : 'asc';
   else { lexSort.col = col; lexSort.dir = 'asc'; }
-  renderTab();
+  renderLexiconBody(_currentLang());
 }
 
 function newLexEntry() {
