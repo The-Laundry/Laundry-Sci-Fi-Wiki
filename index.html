@@ -84,7 +84,7 @@
     descEl.replaceWith(p);
   } else {
     descEl.value = DB.settings.homeDesc || '';
-    descEl.oninput = async () => { DB.settings.homeDesc = descEl.value; await DB.save(); };
+    descEl.oninput = async () => { DB.settings.homeDesc = descEl.value; await DB.saveSettings(); };
   }
 
   // Recent articles

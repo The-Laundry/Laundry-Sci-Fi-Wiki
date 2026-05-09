@@ -1431,7 +1431,7 @@ async function commitStagedEvents() {
       DB.events.push(ev);
       eventsAdded++;
     }
-    await DB.save();
+    await DB.saveEvents();
     document.getElementById('t-commit-summary').textContent =
       `✓ Saved ${eventsAdded} event${eventsAdded === 1 ? '' : 's'}` +
       (stubsAdded ? `, ${stubsAdded} stub article${stubsAdded === 1 ? '' : 's'}` : '') + '.';

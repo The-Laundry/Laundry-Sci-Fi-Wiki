@@ -196,7 +196,7 @@ async function saveTemplate() {
     .split('\n').map(s => s.trim()).filter(Boolean);
   t.defaultTags = document.getElementById('atpl-tags').value
     .split(',').map(s => s.trim()).filter(Boolean);
-  await DB.save();
+  await DB.saveArticleTemplates();
   UI.toast('Template saved.');
   renderList();
 }
@@ -209,7 +209,7 @@ async function duplicateTemplate() {
   copy.name = (t.name || 'Template') + ' (copy)';
   DB.articleTemplates.push(copy);
   selectedId = copy.id;
-  await DB.save();
+  await DB.saveArticleTemplates();
   UI.toast('Template duplicated.');
   renderList();
   renderEditor();
@@ -221,7 +221,7 @@ async function deleteTemplate() {
   if (!confirm(`Delete template "${t.name}"? This cannot be undone.`)) return;
   DB.articleTemplates = DB.articleTemplates.filter(x => x.id !== selectedId);
   selectedId = null;
-  await DB.save();
+  await DB.saveArticleTemplates();
   UI.toast('Template deleted.');
   renderList();
   renderEditor();

@@ -134,7 +134,7 @@ const AI = {
 
     // Defensive: never persist apiKey to disk.
     if ('apiKey' in DB.settings.ai) delete DB.settings.ai.apiKey;
-    await DB.save();
+    await DB.saveSettings();
   },
 
   isConfigured() {

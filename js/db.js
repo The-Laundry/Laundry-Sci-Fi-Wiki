@@ -301,13 +301,57 @@ const DB = {
 
   // ── SAVE ─────────────────────────────────────────────────────────────
 
+  // ── SAVE — scoped methods (always prefer these over save()) ──────────
+
   async save(changedArticleId = null) {
-    if (this._mode === 'static') return; // read-only on GitHub Pages
+    if (this._mode === 'static') return;
     if (this._mode === 'filesystem') {
       await this._saveToFilesystem(changedArticleId);
     } else {
       this._saveToLocalStorage();
     }
+  },
+
+  // Scoped saves — each writes only its own file(s)
+  async saveSettings() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'settings.json', this.settings);
+    else this._saveToLocalStorage();
+  },
+  async saveCategories() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'categories.json', this.categories);
+    else this._saveToLocalStorage();
+  },
+  async saveTimelines() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'timelines.json', this.timelines);
+    else this._saveToLocalStorage();
+  },
+  async saveEvents() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'events.json', this.events);
+    else this._saveToLocalStorage();
+  },
+  async saveEras() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'eras.json', this.eras);
+    else this._saveToLocalStorage();
+  },
+  async saveTimelineCategories() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'timeline-categories.json', this.timelineCategories);
+    else this._saveToLocalStorage();
+  },
+  async saveWikiboxTemplates() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'wikibox-templates.json', this.wikiboxTemplates);
+    else this._saveToLocalStorage();
+  },
+  async saveArticleTemplates() {
+    if (this._mode === 'static') return;
+    if (this._mode === 'filesystem') await this._writeJson(this._dirHandle, 'article-templates.json', this.articleTemplates);
+    else this._saveToLocalStorage();
   },
 
   async _saveToFilesystem(changedArticleId) {
@@ -329,18 +373,33 @@ const DB = {
       const art = this.articles.find(a => a.id === changedArticleId);
       if (art) await this._writeJson(this._articlesHandle, `${art.id}.json`, art);
     } else {
-      // Write all articles (bulk save)
       await Promise.all(this.articles.map(a =>
         this._writeJson(this._articlesHandle, `${a.id}.json`, a)
       ));
     }
 
-    // Always keep index.json current so GitHub Pages can discover articles
-    await this._writeJson(
-      this._articlesHandle,
-      'index.json',
-      this.articles.map(a => a.id)
-    );
+    // Always keep index.json current
+    await this._writeJson(this._articlesHandle, 'index.json', this.articles.map(a => a.id));
+  },
+
+  // ── CATEGORY COLLAPSE STATE (localStorage only — never written to disk) ──
+
+  // Open categories stored as {id: true}. Absent = collapsed (default).
+  getCatCollapsed(id) {
+    try {
+      const s = localStorage.getItem('eomt_cat_open');
+      const open = s ? JSON.parse(s) : {};
+      return !open[id]; // collapsed = not open
+    } catch (e) { return true; }
+  },
+  setCatCollapsed(id, collapsed) {
+    try {
+      const s = localStorage.getItem('eomt_cat_open');
+      const open = s ? JSON.parse(s) : {};
+      if (collapsed) delete open[id];
+      else open[id] = true;
+      localStorage.setItem('eomt_cat_open', JSON.stringify(open));
+    } catch (e) {}
   },
 
   async deleteArticleFile(id) {

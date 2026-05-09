@@ -335,6 +335,7 @@ async function deleteArticle() {
   if (!confirm(`Delete "${art?.title || 'this article'}"? This cannot be undone.`)) return;
   await DB.deleteArticleFile(artId);
   DB.articles = DB.articles.filter(a => a.id !== artId);
+  // Full save needed here to update index.json — acceptable since delete is infrequent
   await DB.save();
   UI.toast('Article deleted.');
   location.href = 'index.html';

@@ -1027,7 +1027,12 @@ function applyArticleTemplate(tmpl) {
 }
 
 // ── SAVE ─────────────────────────────────────────────────────────
+let _articleSaving = false;
 async function saveArticle() {
+  if (_articleSaving) return;
+  _articleSaving = true;
+  const saveBtn = document.querySelector('button[onclick="saveArticle()"]');
+  if (saveBtn) saveBtn.disabled = true;
   const title = document.getElementById('editor-title').value.trim();
   if (!title) { UI.toast('Please enter a title.'); return; }
 
@@ -1064,6 +1069,7 @@ async function saveArticle() {
     await DB.save(savedId);
   }
   UI.toast(editingId ? 'Article saved.' : 'Article created.');
+  _articleSaving = false;
 
   // Optional AI auto-refresh of summary + embedding.
   const cfg = (typeof AI !== 'undefined') ? AI.getConfig() : null;

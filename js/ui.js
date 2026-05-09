@@ -123,18 +123,22 @@ const UI = {
   // ── THEME ─────────────────────────────────────────────────────────────
 
   _applyTheme() {
-    const theme = DB.settings.theme || 'light';
+    // Theme lives in localStorage only — never written to settings.json
+    const theme = localStorage.getItem('eomt_theme') || DB.settings.theme || 'light';
     document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
   },
 
   toggleTheme() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const next = isDark ? 'light' : 'dark';
-    DB.settings.theme = next;
+    // Store in localStorage only — no disk write
+    localStorage.setItem('eomt_theme', next);
     document.documentElement.setAttribute('data-theme', next);
     const icon = document.getElementById('theme-toggle-icon');
     if (icon) icon.textContent = next === 'dark' ? '☀️' : '🌙';
-    DB.save();
+    // Update the SVG toggle button state too
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) btn.setAttribute('data-theme', next);
   },
 
   _injectSidebar() {
@@ -226,10 +230,12 @@ const UI = {
     const renderCat = (cid, depth) => {
       const cat = DB.getCatById(cid);
       if (!cat) return null;
-      const articles = DB.getArticlesInCat(cid);
+      // Stable alphabetical sort
+      const articles = DB.getArticlesInCat(cid).sort((a, b) => (a.title||'').localeCompare(b.title||''));
       const children = DB.getChildCats(cid).sort((a, b) => a.name.localeCompare(b.name));
       const hasKids = children.length + articles.length > 0;
-      const isOpen = !cat.collapsed;
+      // Collapse state from localStorage — default collapsed
+      const isOpen = !DB.getCatCollapsed(cid);
 
       const wrap = document.createElement('div');
       wrap.style.paddingLeft = depth * 12 + 'px';
@@ -242,12 +248,12 @@ const UI = {
         <span class="sb-cat-name">${escHtml(cat.name)}</span>`;
       if (hasKids) {
         header.onclick = () => {
-          cat.collapsed = !cat.collapsed;
-          DB.save();
+          const nowOpen = DB.getCatCollapsed(cid); // currently collapsed → opening
+          DB.setCatCollapsed(cid, !nowOpen);        // toggle (no disk write)
           const ch = wrap.querySelector('.sb-children');
           const tog = header.querySelector('.sb-toggle');
-          ch.classList.toggle('open', !cat.collapsed);
-          tog.classList.toggle('open', !cat.collapsed);
+          ch.classList.toggle('open', nowOpen);
+          tog.classList.toggle('open', nowOpen);
         };
       }
       wrap.appendChild(header);

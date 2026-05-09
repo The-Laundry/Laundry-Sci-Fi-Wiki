@@ -141,7 +141,7 @@ function openTimelineModal(id) {
         const description = document.getElementById('tl-desc').value.trim();
         if (tl) { Object.assign(tl, { name, description, startYear, endYear }); }
         else { DB.timelines.push({ id: mkId('tl'), name, description, startYear, endYear, created: Date.now() }); }
-        await DB.save(); UI.closeModal(); UI.renderSidebar(); renderTimelineManager(); UI.toast(tl ? 'Timeline updated.' : 'Timeline created.');
+        await DB.saveTimelines(); UI.closeModal(); UI.renderSidebar(); renderTimelineManager(); UI.toast(tl ? 'Timeline updated.' : 'Timeline created.');
      }}]
   );
   setTimeout(() => document.getElementById('tl-name')?.focus(), 50);
@@ -153,7 +153,7 @@ async function deleteTimeline(id) {
   DB.events.forEach(e => { if (e.timelineIds) e.timelineIds = e.timelineIds.filter(x => x !== id); });
   DB.eras     = DB.eras.filter(e => e.timelineId !== id);
   DB.timelines = DB.timelines.filter(t => t.id !== id);
-  await DB.save(); UI.renderSidebar(); renderTimelineManager(); UI.toast('Timeline deleted.');
+  await DB.saveTimelines(); UI.renderSidebar(); renderTimelineManager(); UI.toast('Timeline deleted.');
 }
 
 // ── EVENT CATEGORIES ──────────────────────────────────────────────
@@ -212,7 +212,7 @@ function openEventCatModal(id) {
         const defaultColor = document.getElementById('ec-dv').value || null;
         if (cat) { cat.name = name; cat.color = color; cat.defaultColor = defaultColor; }
         else DB.timelineCategories.push({ id: mkId('ec'), name, color, defaultColor });
-        await DB.save(); UI.closeModal(); renderEventCatList(); UI.toast(cat ? 'Category updated.' : 'Category created.');
+        await DB.saveTimelineCategories(); UI.closeModal(); renderEventCatList(); UI.toast(cat ? 'Category updated.' : 'Category created.');
      }}]
   );
   setTimeout(() => document.getElementById('ec-name')?.focus(), 50);
@@ -229,7 +229,7 @@ async function deleteEventCat(id) {
   if (!confirm('Delete this event category? Events using it will become uncategorized.')) return;
   DB.events.forEach(e => { if (e.eventCategoryId === id) e.eventCategoryId = null; });
   DB.timelineCategories = DB.timelineCategories.filter(c => c.id !== id);
-  await DB.save(); renderEventCatList(); UI.toast('Category deleted.');
+  await DB.saveTimelineCategories(); renderEventCatList(); UI.toast('Category deleted.');
 }
 
 // ── IMPORTANCE COLORS ─────────────────────────────────────────────
@@ -262,8 +262,7 @@ function openImpColorPicker(imp, anchorEl) {
     const hexEl   = document.getElementById(`imp-hex-${imp}`);
     if (preview) preview.style.background = color;
     if (hexEl)   hexEl.textContent = color;
-    await DB.save();
-    // Re-render the icon with new color
+    await DB.saveSettings();
     const iconEl = preview?.parentElement?.querySelector('svg');
     if (iconEl) iconEl.outerHTML = impIconSVG(imp, color, 16);
   });
@@ -272,7 +271,7 @@ function openImpColorPicker(imp, anchorEl) {
 async function resetImpColor(imp) {
   if (!DB.settings.importanceColors) DB.settings.importanceColors = {};
   delete DB.settings.importanceColors[imp];
-  await DB.save();
+  await DB.saveSettings();
   renderImpColorList();
   UI.toast(`${IMP_LABELS[imp]} color reset to default.`);
 }
