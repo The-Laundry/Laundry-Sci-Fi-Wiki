@@ -1,37 +1,311 @@
 [
-  "art_1778223427027_5mql",
-  "art_1778224967359_hnty",
-  "art_1778224741836_a92m",
-  "art_1778227212804_6654",
-  "art_1778226584074_6dbj",
-  "art_1778227859736_rbsb",
-  "art_1778245151683_mkbi",
-  "art_1778227516079_faja",
-  "art_1778257046998_szym",
-  "art_1778255469934_q8b4",
-  "art_1778258494179_uvng",
-  "art_1778258866347_0oqy",
-  "art_1778259001030_x5fw",
-  "art_1778259074949_ig7h",
-  "art_1778259525245_gjpr",
-  "art_1778259211557_t88r",
-  "art_1778259149696_wrbi",
-  "art_1778260554805_rbh6",
-  "art_1778259989861_e1za",
-  "art_1778275982983_0tca",
-  "art_1778276184741_audy",
-  "art_1778278668260_rc60",
-  "art_1778279397572_6yp1",
-  "art_1778279921926_s78r",
-  "art_1778280021776_g7x2",
-  "art_1778280201369_a3tv",
-  "art_1778280099170_arel",
-  "art_1778280737568_zlyk",
-  "art_1778297308360_1j3i",
-  "art_1778280652202_njsn",
-  "art_1778298053293_382r",
-  "art_1778298170693_p4sq",
-  null,
-  null,
-  "art_1778298586797_o0oh"
+  {
+    "id": "art_1778223427027_5mql",
+    "title": "Earth",
+    "categoryId": "cat_1778221765054_tsjq",
+    "tags": [
+      "Class-A World"
+    ],
+    "summary": "",
+    "updated": 1778281942120,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778224741836_a92m",
+    "title": "Airehai",
+    "categoryId": "cat_1778221765054_tsjq",
+    "tags": [
+      "Class-A World"
+    ],
+    "summary": "",
+    "updated": 1778281958689,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778224967359_hnty",
+    "title": "Equus",
+    "categoryId": "cat_1778221765054_tsjq",
+    "tags": [
+      "Class-A World"
+    ],
+    "summary": "",
+    "updated": 1778282018610,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778226584074_6dbj",
+    "title": "Mars",
+    "categoryId": "cat_1778221765054_tsjq",
+    "tags": [
+      "Class-A World"
+    ],
+    "summary": "",
+    "updated": 1778281985074,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778227212804_6654",
+    "title": "Proxima",
+    "categoryId": "cat_1778221765054_tsjq",
+    "tags": [
+      "Class-A World"
+    ],
+    "summary": "",
+    "updated": 1778281974757,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778227516079_faja",
+    "title": "Terra Astra",
+    "categoryId": "cat_1778221765054_tsjq",
+    "tags": [
+      "Class-A World"
+    ],
+    "summary": "",
+    "updated": 1778281993006,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778227859736_rbsb",
+    "title": "United Systems",
+    "categoryId": "cat_1778227730187_cic5",
+    "tags": [],
+    "summary": "",
+    "updated": 1778289538072,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778245151683_mkbi",
+    "title": "United Equus",
+    "categoryId": "cat_1778244873078_8sfm",
+    "tags": [],
+    "summary": "",
+    "updated": 1778245151683,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778255469934_q8b4",
+    "title": "United Systems Confederacy",
+    "categoryId": "cat_1778227740346_uaf9",
+    "tags": [],
+    "summary": "",
+    "updated": 1778256161059,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778257046998_szym",
+    "title": "Solar Empire",
+    "categoryId": "cat_1778244865404_7zi4",
+    "tags": [],
+    "summary": "",
+    "updated": 1778257312962,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778258494179_uvng",
+    "title": "Ichizhou Empire",
+    "categoryId": "cat_1778258337565_79vv",
+    "tags": [],
+    "summary": "",
+    "updated": 1778258494179,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778258866347_0oqy",
+    "title": "Equus Star Navy",
+    "categoryId": "cat_1778244931126_1dlw",
+    "tags": [],
+    "summary": "",
+    "updated": 1778258897232,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778259001030_x5fw",
+    "title": "Ferax",
+    "categoryId": "cat_1778228650628_hdaz",
+    "tags": [],
+    "summary": "",
+    "updated": 1778259001030,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778259074949_ig7h",
+    "title": "Planetary Classifications",
+    "categoryId": "cat_1778221758985_cj4o",
+    "tags": [],
+    "summary": "",
+    "updated": 1778259074949,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778259149696_wrbi",
+    "title": "Hydia (Constellation)",
+    "categoryId": "cat_1778259099004_s8zg",
+    "tags": [],
+    "summary": "",
+    "updated": 1778259149696,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778259211557_t88r",
+    "title": "Faster-than-Light Propulsion",
+    "categoryId": "cat_1778228759493_aeyz",
+    "tags": [],
+    "summary": "",
+    "updated": 1778259211557,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778259525245_gjpr",
+    "title": "Cloudsdale-class Colony Ship",
+    "categoryId": "cat_1778259255537_8o2s",
+    "tags": [],
+    "summary": "",
+    "updated": 1778261810037,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778259989861_e1za",
+    "title": "Cloudsdale II-class Cruiser",
+    "categoryId": "cat_1778259255537_8o2s",
+    "tags": [],
+    "summary": "",
+    "updated": 1778261767555,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778260554805_rbh6",
+    "title": "Eclipse-Class Dreadnought",
+    "categoryId": "cat_1778259255537_8o2s",
+    "tags": [],
+    "summary": "",
+    "updated": 1778279702797,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778275982983_0tca",
+    "title": "Argos-class Escort",
+    "categoryId": "cat_1778259255537_8o2s",
+    "tags": [],
+    "summary": "",
+    "updated": 1778275982983,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778276184741_audy",
+    "title": "Manehattan-class Patrol Ship",
+    "categoryId": "cat_1778259255537_8o2s",
+    "tags": [],
+    "summary": "",
+    "updated": 1778277171302,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778278668260_rc60",
+    "title": "Wonderbolt Starfighter",
+    "categoryId": "cat_1778259255537_8o2s",
+    "tags": [],
+    "summary": "",
+    "updated": 1778279018802,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778279397572_6yp1",
+    "title": "ESS Eclipse (ESN-EX-01)",
+    "categoryId": "cat_1778228800769_7h4t",
+    "tags": [],
+    "summary": "",
+    "updated": 1778279676802,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778279921926_s78r",
+    "title": "Akkinnian Cloud",
+    "categoryId": "cat_1778228700918_na3c",
+    "tags": [],
+    "summary": "",
+    "updated": 1778279921926,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778280021776_g7x2",
+    "title": "DCRA (Galactic Republic)",
+    "categoryId": "cat_1778279966691_ns9i",
+    "tags": [],
+    "summary": "",
+    "updated": 1778280021776,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778280099170_arel",
+    "title": "Marauder War (2677 - 2689)",
+    "categoryId": "cat_1778280055999_qfxf",
+    "tags": [],
+    "summary": "",
+    "updated": 1778280099170,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778280201369_a3tv",
+    "title": "Occupation of Drakan",
+    "categoryId": "cat_1778280055999_qfxf",
+    "tags": [],
+    "summary": "",
+    "updated": 1778280597834,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778280652202_njsn",
+    "title": "Phodd Communications",
+    "categoryId": "cat_1778228899327_r0iw",
+    "tags": [],
+    "summary": "",
+    "updated": 1778280652202,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778280737568_zlyk",
+    "title": "The Sadri",
+    "categoryId": "cat_1778280702777_jyvv",
+    "tags": [],
+    "summary": "",
+    "updated": 1778280757939,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778297308360_1j3i",
+    "title": "Ichizhou",
+    "categoryId": "cat_1778228847910_r4ji",
+    "tags": [],
+    "summary": "",
+    "updated": 1778297856386,
+    "hasImage": true
+  },
+  {
+    "id": "art_1778298053293_382r",
+    "title": "G'tash",
+    "categoryId": "cat_1778228847910_r4ji",
+    "tags": [],
+    "summary": "",
+    "updated": 1778298262100,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778298170693_p4sq",
+    "title": "Panneri",
+    "categoryId": "cat_1778228847910_r4ji",
+    "tags": [],
+    "summary": "",
+    "updated": 1778298273794,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778298586797_o0oh",
+    "title": "Equestrian Races",
+    "categoryId": "cat_1778228847910_r4ji",
+    "tags": [],
+    "summary": "",
+    "updated": 1778298672613,
+    "hasImage": false
+  }
 ]

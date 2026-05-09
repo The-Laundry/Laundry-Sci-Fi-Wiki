@@ -228,56 +228,89 @@ const UI = {
     const currentArtId = new URLSearchParams(location.search).get('id');
     container.innerHTML = '';
 
-    const renderCat = (cid, depth) => {
-      const cat = DB.getCatById(cid);
-      if (!cat) return null;
-      // Stable alphabetical sort
-      const articles = DB.getArticlesInCat(cid).sort((a, b) => (a.title||'').localeCompare(b.title||''));
-      const children = DB.getChildCats(cid).sort((a, b) => a.name.localeCompare(b.name));
-      const hasKids = children.length + articles.length > 0;
-      // Collapse state from localStorage — default collapsed
-      const isOpen = !DB.getCatCollapsed(cid);
-
-      const wrap = document.createElement('div');
-      wrap.style.paddingLeft = depth * 12 + 'px';
-
-      const header = document.createElement('div');
-      header.className = 'sb-cat-row';
-      header.innerHTML = `
-        <span class="sb-toggle ${hasKids ? (isOpen ? 'open' : '') : 'leaf'}">▶</span>
-        <span style="font-size:12px;margin-right:2px;">📁</span>
-        <span class="sb-cat-name">${escHtml(cat.name)}</span>`;
-      if (hasKids) {
-        header.onclick = () => {
-          const nowOpen = DB.getCatCollapsed(cid); // currently collapsed → opening
-          DB.setCatCollapsed(cid, !nowOpen);        // toggle (no disk write)
-          const ch = wrap.querySelector('.sb-children');
-          const tog = header.querySelector('.sb-toggle');
-          ch.classList.toggle('open', nowOpen);
-          tog.classList.toggle('open', nowOpen);
-        };
-      }
-      wrap.appendChild(header);
-
-      const childWrap = document.createElement('div');
-      childWrap.className = 'sb-children' + (isOpen ? ' open' : '');
-      children.forEach(c => { const el = renderCat(c.id, depth + 1); if (el) childWrap.appendChild(el); });
+    // Renders article links into a container element
+    const renderArticles = (articles, depth, parentEl) => {
+      articles.sort((a, b) => (a.title||'').localeCompare(b.title||''));
       articles.forEach(a => {
         const el = document.createElement('a');
         el.className = 'sb-article' + (a.id === currentArtId ? ' active' : '');
         el.href = `article.html?id=${a.id}`;
         el.style.paddingLeft = (depth + 1) * 12 + 8 + 'px';
         el.textContent = a.title || 'Untitled';
-        childWrap.appendChild(el);
+        parentEl.appendChild(el);
       });
+    };
+
+    // Lazy category renderer — children not built until first expand
+    const renderCat = (cid, depth) => {
+      const cat = DB.getCatById(cid);
+      if (!cat) return null;
+
+      const articles = DB.getArticlesInCat(cid).sort((a, b) => (a.title||'').localeCompare(b.title||''));
+      const children = DB.getChildCats(cid).sort((a, b) => a.name.localeCompare(b.name));
+      const hasKids   = children.length + articles.length > 0;
+      const isOpen    = !DB.getCatCollapsed(cid);
+
+      const wrap = document.createElement('div');
+      wrap.style.paddingLeft = depth * 12 + 'px';
+
+      // Header row
+      const header = document.createElement('div');
+      header.className = 'sb-cat-row';
+      const countHint = hasKids
+        ? `<span class="sb-cat-count">${DB.countInSubtree(cid)}</span>`
+        : '';
+      header.innerHTML = `
+        <span class="sb-toggle ${hasKids ? (isOpen ? 'open' : '') : 'leaf'}">▶</span>
+        <span style="font-size:12px;margin-right:2px;">📁</span>
+        <span class="sb-cat-name">${escHtml(cat.name)}</span>
+        ${countHint}`;
+
+      // Children container — may be empty until first expand
+      const childWrap = document.createElement('div');
+      childWrap.className = 'sb-children' + (isOpen ? ' open' : '');
+      let childrenBuilt = false;
+
+      const buildChildren = () => {
+        if (childrenBuilt) return;
+        childrenBuilt = true;
+        children.forEach(c => {
+          const el = renderCat(c.id, depth + 1);
+          if (el) childWrap.appendChild(el);
+        });
+        renderArticles(articles, depth, childWrap);
+      };
+
+      // If open by default, build immediately
+      if (isOpen) buildChildren();
+
+      if (hasKids) {
+        header.onclick = () => {
+          const nowCollapsed = DB.getCatCollapsed(cid);
+          DB.setCatCollapsed(cid, !nowCollapsed);
+          const tog = header.querySelector('.sb-toggle');
+          if (nowCollapsed) {
+            // Opening — build children if not yet done
+            buildChildren();
+            childWrap.classList.add('open');
+            tog.classList.add('open');
+          } else {
+            childWrap.classList.remove('open');
+            tog.classList.remove('open');
+          }
+        };
+      }
+
+      wrap.appendChild(header);
       wrap.appendChild(childWrap);
       return wrap;
     };
 
-    if (!DB.categories.length && !DB.articles.length) {
+    if (!DB.categories.length && !DB.articleMeta.length) {
       container.innerHTML = '<div style="font-size:12.5px;color:var(--text-faint);padding:4px;">No articles yet.</div>';
       return;
     }
+
     DB.getRootCats().sort((a, b) => a.name.localeCompare(b.name))
       .forEach(c => { const el = renderCat(c.id, 0); if (el) container.appendChild(el); });
 
@@ -287,7 +320,7 @@ const UI = {
       const lbl = document.createElement('div');
       lbl.className = 'sidebar-label'; lbl.style.marginTop = '10px'; lbl.textContent = 'Uncategorized';
       wrap.appendChild(lbl);
-      uncat.forEach(a => {
+      uncat.sort((a, b) => (a.title||'').localeCompare(b.title||'')).forEach(a => {
         const el = document.createElement('a');
         el.className = 'sb-article' + (a.id === currentArtId ? ' active' : '');
         el.href = `article.html?id=${a.id}`;
@@ -455,10 +488,10 @@ const UI = {
       const q = input.value.trim().toLowerCase();
       const res = document.getElementById('search-results');
       if (!q) { res.classList.remove('open'); return; }
-      const matches = DB.articles.filter(a =>
+      // Header search uses metadata only (fast, no file reads) — title + tags
+      const matches = DB.articleMeta.filter(a =>
         (a.title || '').toLowerCase().includes(q) ||
-        (a.tags || []).some(t => t.toLowerCase().includes(q)) ||
-        (a.content || '').toLowerCase().includes(q)
+        (a.tags || []).some(t => t.toLowerCase().includes(q))
       ).slice(0, 6);
       const fullSearchLink = `<a class="search-result-item search-result-full" href="search.html?q=${encodeURIComponent(input.value.trim())}" style="border-top:1px solid var(--border-light);color:var(--accent);font-size:12.5px;padding:8px 14px;">
         <span>🔍 Full search for <strong>${escHtml(input.value.trim())}</strong></span>

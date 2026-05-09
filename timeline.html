@@ -10,7 +10,7 @@
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <style>
-/* ── TIMELINE PAGE: override #main, go full-page ── */
+/* --- TIMELINE PAGE: override #main, go full-page --- */
 :root {
   --tl-toolbar-h: 52px;
   --tl-nav-h:     48px;
@@ -37,7 +37,7 @@
 /* Track expands when panel hidden */
 #tl-track { position: relative; min-height: 600px; }
 
-/* ── FIXED: TOOLBAR ── */
+/* --- FIXED: TOOLBAR --- */
 #tl-toolbar {
   position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0;
   height: var(--tl-toolbar-h); z-index: 85;
@@ -52,7 +52,7 @@
 }
 .tl-toolbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
 
-/* ── FIXED: DETAIL PANEL ── */
+/* --- FIXED: DETAIL PANEL --- */
 #tl-detail-panel {
   position: fixed; top: var(--tl-top); left: var(--sidebar-w);
   width: var(--tl-detail-w); bottom: var(--tl-nav-h);
@@ -113,7 +113,7 @@
 #ev-desc-editor .ql-editor p { margin-bottom: 6px; }
 .tl-dp-footer { padding: 12px 16px; border-top: 1px solid var(--border-light); flex-shrink: 0; }
 
-/* ── FIXED: MINIMAP ── */
+/* --- FIXED: MINIMAP --- */
 #tl-minimap {
   position: fixed; top: var(--tl-top); right: 0; bottom: var(--tl-nav-h);
   width: var(--tl-mini-w); background: var(--bg-card); border-left: 1px solid var(--border);
@@ -125,7 +125,7 @@
 .tl-mm-snap:hover { filter: brightness(1.15); }
 .tl-mm-viewport { position: absolute; left: 0; right: 0; background: rgba(58,110,168,.15); border: 1px solid rgba(58,110,168,.4); pointer-events: none; }
 
-/* ── FIXED: NAV BAR ── */
+/* --- FIXED: NAV BAR --- */
 #tl-nav-bar {
   position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; height: var(--tl-nav-h);
   background: var(--bg-card); backdrop-filter: blur(8px);
@@ -147,7 +147,7 @@
   border-radius: var(--radius); padding: 6px 14px;
 }
 
-/* ── TRACK ELEMENTS ── */
+/* --- TRACK ELEMENTS --- */
 /* Spine */
 .tl-spine-base {
   position: absolute; left: 50%; transform: translateX(-50%);
@@ -224,7 +224,7 @@
 .tl-card-date-custom { font-size: 10.5px; font-weight: 600; }
 .tl-card-date-sec    { font-size: 9px; color: var(--text-faint); }
 
-/* ── COLOR PICKER ── */
+/* --- COLOR PICKER --- */
 #g-cp {
   display: none; position: fixed; background: var(--bg-card);
   border: 1px solid var(--border); border-radius: var(--radius);
@@ -242,7 +242,7 @@
 .cp-row input { flex: 1; padding: 4px 6px; border: 1px solid var(--border); border-radius: 3px; font-family: var(--font-mono); font-size: 12px; outline: none; }
 .cp-row input:focus { border-color: var(--accent); }
 
-/* ── NOT FOUND ── */
+/* --- NOT FOUND --- */
 #tl-not-found { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
 </style>
 </head>
@@ -507,7 +507,7 @@ function renderTL() {
     _bd = null; return;
   }
 
-  // ── Date range ──
+  // --- Date range ---
   const allD = [
     ...evs.flatMap(e => [dateToDays(e.year||0,e.month,e.day), ...(e.yearEnd!=null?[dateToDays(e.yearEnd,e.monthEnd,e.dayEnd)]:[] )]),
     ...eras.flatMap(e => [dateToDays(e.startYear,1,1), dateToDays(e.endYear,12,31)]),
@@ -524,13 +524,13 @@ function renderTL() {
   track.innerHTML = '';
   track.style.height = TRACK_H + 'px';
 
-  // ── Grey spine base ──
+  // --- Grey spine base ---
   const spineBase = document.createElement('div');
   spineBase.className = 'tl-spine-base';
   spineBase.style.height = TRACK_H + 'px';
   track.appendChild(spineBase);
 
-  // ── Era spine segments ──
+  // --- Era spine segments ---
   eras.forEach(era => {
     const y1 = toY(dateToDays(era.startYear,1,1)), y2 = toY(dateToDays(era.endYear,12,31));
     const seg = document.createElement('div');
@@ -539,7 +539,7 @@ function renderTL() {
     track.appendChild(seg);
   });
 
-  // ── Era background tints ──
+  // --- Era background tints ---
   eras.forEach(era => {
     const y1 = toY(dateToDays(era.startYear,1,1)), y2 = toY(dateToDays(era.endYear,12,31));
     const b = document.createElement('div');
@@ -548,7 +548,7 @@ function renderTL() {
     track.appendChild(b);
   });
 
-  // ── Era labels ──
+  // --- Era labels ---
   eras.forEach(era => {
     const y1 = toY(dateToDays(era.startYear,1,1));
     const getDisp = cy => {
@@ -565,7 +565,7 @@ function renderTL() {
     track.appendChild(lbl);
   });
 
-  // ── Year markers ──
+  // --- Year markers ---
   const ySpan = span / 365.25;
   const yStep = ySpan > 1000 ? 200 : ySpan > 500 ? 100 : ySpan > 100 ? 20 : ySpan > 20 ? 5 : 1;
   const sCE = Math.floor(minD/365.25), eCE = Math.ceil(maxD/365.25);
@@ -579,7 +579,7 @@ function renderTL() {
     track.appendChild(ym);
   }
 
-  // ── Duration lines (behind cards, in their column) ──
+  // --- Duration lines (behind cards, in their column) ---
   // Zone centers: col1=10%, col2=30%, col3=50%, col4=70%, col5=90%
   const colCenters = { 1:'10%', 2:'30%', 3:'50%', 4:'70%', 5:'90%' };
   evs.forEach(ev => {
@@ -605,7 +605,7 @@ function renderTL() {
     track.appendChild(endDot);
   });
 
-  // ── 5-column event placement ──
+  // --- 5-column event placement ---
   // Columns 1-2 = left side, 3 = center (on spine), 4-5 = right side
   // Column positions as fraction of half-track width from center:
   //   col 1 → leftmost,  col 2 → near-left
@@ -633,7 +633,7 @@ function renderTL() {
       }
     });
 
-    // ── Zone wrapper ──
+    // --- Zone wrapper ---
     // Each column owns a 20% zone. A wrapper div spans that zone absolutely,
     // and the card fills the wrapper — guaranteeing consistent width and no overlap.
     const zone = document.createElement('div');
