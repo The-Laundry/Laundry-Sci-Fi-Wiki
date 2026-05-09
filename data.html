@@ -24,6 +24,17 @@
       <div id="folder-info"></div>
     </div>
 
+    <!-- Editor settings -->
+    <div class="data-section ro-hide">
+      <h2>✏ Editor</h2>
+      <p>Configure article editor behaviour.</p>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;">
+        <input type="checkbox" id="autosave-toggle" style="width:16px;height:16px;cursor:pointer;">
+        Autosave every 30 seconds while editing
+      </label>
+      <p style="font-size:12px;color:var(--text-faint);margin-top:6px;">Silently saves the article in the background. Markdown shorthand is <em>not</em> converted during autosave — only on manual save. Disable if you experience performance issues on slower devices.</p>
+    </div>
+
     <!-- AI settings moved to their own page (ai.html). -->
     <div class="data-section">
       <h2>🤖 AI Settings</h2>
@@ -95,6 +106,17 @@
   sel.innerHTML = DB.articles.length
     ? DB.articles.map(a => `<option value="${a.id}">${escHtml(a.title || 'Untitled')}</option>`).join('')
     : '<option disabled>No articles yet</option>';
+
+  // Autosave toggle
+  const autosaveCb = document.getElementById('autosave-toggle');
+  if (autosaveCb) {
+    autosaveCb.checked = !!DB.settings.editorAutosave;
+    autosaveCb.onchange = async () => {
+      DB.settings.editorAutosave = autosaveCb.checked;
+      await DB.saveSettings();
+      UI.toast(autosaveCb.checked ? 'Autosave enabled.' : 'Autosave disabled.');
+    };
+  }
 
 })();
 
