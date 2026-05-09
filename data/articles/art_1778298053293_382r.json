@@ -1,0 +1,85 @@
+{
+  "id": "art_1778298053293_382r",
+  "title": "G'tash",
+  "content": "<p>Native to Mgdebdeb, the G'tash are a sapient species that can be found primarily in the galactic south, especially in the territory of the&nbsp;Tzenkian&nbsp;Empire. A physically imposing and long-lived species (upwards of 300 years), the G'tash evolved as the apex predator of their homeworld, although they are noted to have a much slower reproduction cycle than most species.</p><p>The G'tash were among the first species encountered by the Tzenki, although first contact was hardly on fair terms (as is often the case involving the Tzenki). The G'tash were roughly equivelent with Earth's Iron Age when the Tzeni first set foot on their planet, easily subjugating them and subsuming Mgdebdeb into the Tzenkian Empire. Their large stature and and physical prowess made them ideal servants to the Tzeni, quickly becoming the backbone of the empire's labor force. The G'tash were also employed as shock troops for the empire, helping the Tzeni conquer other species in much the same way they had been.</p><h1>Physiology and appearance</h1><p>lorem ipsum dolor sit amet</p><h1>History</h1><p>lorem ipsum dolor sit amet</p><h1>Science and culture</h1><p>lorem ipsum dolor sit amet</p><h1>Science and technology</h1><p>lorem ipsum dolor sit amet</p><h1>G'tash in the Galaxy</h1><p>lorem ipsum dolor sit amet</p>",
+  "categoryId": "cat_1778228847910_r4ji",
+  "tags": [],
+  "wikibox": {
+    "enabled": true,
+    "title": "G'tash",
+    "subtitle": "",
+    "image": null,
+    "imagePath": false,
+    "imgCaption": "",
+    "fields": [
+      {
+        "type": "section",
+        "key": "Biological classification",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Awareness level",
+        "val": "<p>Sapient</p>"
+      },
+      {
+        "type": "field",
+        "key": "Physiological category",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Physical details",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Average height",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Average weight",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Skin color",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Eye color",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Distinctions",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Average lifespan",
+        "val": "<p>270 standard years</p>"
+      },
+      {
+        "type": "section",
+        "key": "Astrological details",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Planet of origin",
+        "val": "<p>Mgdebdeb</p>"
+      },
+      {
+        "type": "field",
+        "key": "System of origin",
+        "val": "<p>Phrizel</p>"
+      }
+    ]
+  },
+  "created": 1778298053293,
+  "updated": 1778298262100,
+  "summary": ""
+}

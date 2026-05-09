@@ -1933,5 +1933,24 @@
     ],
     "tlColumn": 1,
     "customColor": null
+  },
+  {
+    "id": "ev_1778296387295_trdl",
+    "title": "Post-Nuclear Sorrow",
+    "year": 2041,
+    "month": null,
+    "day": null,
+    "yearEnd": 2054,
+    "monthEnd": 10,
+    "dayEnd": 11,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": "#5b7a25"
   }
 ]

@@ -150,5 +150,63 @@
         "key": "Succeeded by"
       }
     ]
+  },
+  {
+    "id": "wbt_1778297445620_znou",
+    "name": "Species",
+    "fields": [
+      {
+        "type": "section",
+        "key": "Biological classification"
+      },
+      {
+        "type": "field",
+        "key": "Awareness level"
+      },
+      {
+        "type": "field",
+        "key": "Physiological category"
+      },
+      {
+        "type": "section",
+        "key": "Physical details"
+      },
+      {
+        "type": "field",
+        "key": "Average height"
+      },
+      {
+        "type": "field",
+        "key": "Average weight"
+      },
+      {
+        "type": "field",
+        "key": "Skin color"
+      },
+      {
+        "type": "field",
+        "key": "Eye color"
+      },
+      {
+        "type": "field",
+        "key": "Distinctions"
+      },
+      {
+        "type": "field",
+        "key": "Average lifespan"
+      },
+      {
+        "type": "section",
+        "key": "Astrological details"
+      },
+      {
+        "type": "field",
+        "key": "Planet of origin"
+      },
+      {
+        "type": "field",
+        "key": "System of origin"
+      }
+    ]
   }
 ]

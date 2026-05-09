@@ -97,7 +97,10 @@
     ],
     "defaultTags": [
       "species"
-    ]
+    ],
+    "categoryId": "cat_1778228847910_r4ji",
+    "tags": [],
+    "content": "<p>Summary</p><h1>Physiology and appearance</h1><p>lorem ipsum dolor sit amet</p><h1>History</h1><p>lorem ipsum dolor sit amet</p><h1>Science and culture</h1><p>lorem ipsum dolor sit amet</p><h1>Science and technology</h1><p>lorem ipsum dolor sit amet</p><h1>[NAME] in the galaxy</h1><p>lorem ipsum dolor sit amet</p>"
   },
   {
     "id": "atpl_default_technology",
@@ -122,5 +125,12 @@
     "articlePrompt": "Write a well-organized in-universe encyclopedia article about the requested topic. Choose appropriate sections based on the subject matter.",
     "sectionOutline": [],
     "defaultTags": []
+  },
+  {
+    "id": "atpl_1778297012152_4ib9",
+    "name": "Ship Class",
+    "categoryId": "cat_1778228794993_62pj",
+    "tags": [],
+    "content": "<p>Summary</p><h1>Characteristics</h1><h2><u>Dimensions</u></h2><p>aaa</p><h2><u>Crew and cargo</u></h2><p>aaa</p><h2><u>Power and propulsion systems</u></h2><p>aaa</p><h2><u>Weapons and armament</u></h2><p>aaa</p><h2><u>Armor and defense</u></h2><p>aaa</p><h1><strong>History</strong></h1><p>aaa</p><h1><strong>Notable vessels</strong></h1><ul><li><strong><em>ABV Name</em></strong>: Launched DATE, SHIPYARD. </li></ul>"
   }
 ]

@@ -3,7 +3,7 @@
     "id": "cat_1778221758985_cj4o",
     "name": "Locations",
     "parentId": null,
-    "collapsed": true,
+    "collapsed": false,
     "_ddCollapsed": false
   },
   {
@@ -24,7 +24,7 @@
     "id": "cat_1778227723000_6fzg",
     "name": "Human",
     "parentId": "cat_1778227717518_y80p",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
@@ -143,7 +143,7 @@
     "id": "cat_1778228828633_emt7",
     "name": "Lifeforms",
     "parentId": null,
-    "collapsed": true,
+    "collapsed": false,
     "_ddCollapsed": true
   },
   {
