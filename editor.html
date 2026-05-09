@@ -10,19 +10,25 @@
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <style>
-/* Quill toolbar: highlight active format buttons */
-.ql-snow .ql-toolbar button.ql-active {
+/* Quill toolbar: highlight active format buttons.
+   Quill places .ql-snow and .ql-toolbar on the SAME element, so the
+   correct selector is a compound (.ql-snow.ql-toolbar), not a
+   descendant (.ql-snow .ql-toolbar). The descendant form never matched
+   and is why the earlier attempt had no visual effect. */
+.ql-snow.ql-toolbar button.ql-active {
   background: var(--accent-light) !important;
   border-radius: 3px;
 }
-.ql-snow .ql-toolbar button.ql-active .ql-fill {
+.ql-snow.ql-toolbar button.ql-active .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke.ql-fill {
   fill: var(--accent) !important;
 }
-.ql-snow .ql-toolbar button.ql-active .ql-stroke {
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke-miter {
   stroke: var(--accent) !important;
 }
-.ql-snow .ql-toolbar .ql-picker-label.ql-active,
-.ql-snow .ql-toolbar .ql-picker-item.ql-selected {
+.ql-snow.ql-toolbar .ql-picker-label.ql-active,
+.ql-snow.ql-toolbar .ql-picker-item.ql-selected {
   color: var(--accent) !important;
 }
 /* Autosave status indicator */
@@ -631,25 +637,37 @@ function initQuill() {
     this.quill.format('indent', '-1', 'user'); return false;
   });
 
-  // Prevent toolbar clicks and paste from jumping the page scroll position.
-  // Quill refocuses the editor after toolbar actions, which triggers the
-  // browser's scroll-to-focused behaviour. We capture the Y before and
-  // restore it in the next animation frame (after Quill's sync work is done
-  // but before the browser paints).
-  const qlToolbar = document.querySelector('.ql-toolbar');
-  if (qlToolbar) {
-    qlToolbar.addEventListener('mousedown', () => {
-      const y = window.scrollY;
-      requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'instant' }));
-    });
+  // Prevent toolbar interactions and paste from jumping the page scroll.
+  //
+  // Root cause: Quill's heading picker clears editor focus while open, then
+  // calls root.focus() (without preventScroll) when an item is picked.
+  // The browser scrolls to bring the editor element's top into view, which
+  // can jump back to near the page top on long articles.
+  //
+  // Fix: lock the scroll position for 300 ms after any toolbar mousedown or
+  // paste. A 'scroll' listener actively snaps back if the position drifts.
+  // Using a listener (rather than rAF/setTimeout) works regardless of whether
+  // Quill's focus call happens synchronously or in a deferred callback.
+  let _qlLockedY = 0;
+  let _qlScrollLocked = false;
+  let _qlLockTimer = null;
+
+  function _qlLockScroll() {
+    _qlLockedY = window.scrollY;
+    _qlScrollLocked = true;
+    clearTimeout(_qlLockTimer);
+    _qlLockTimer = setTimeout(() => { _qlScrollLocked = false; }, 300);
   }
-  quillEditor.root.addEventListener('paste', () => {
-    const y = window.scrollY;
-    // Paste processing in Quill is async; a short timeout lets it settle.
-    setTimeout(() => {
-      if (Math.abs(window.scrollY - y) > 5) window.scrollTo({ top: y, behavior: 'instant' });
-    }, 80);
-  }, true);
+
+  window.addEventListener('scroll', () => {
+    if (_qlScrollLocked && Math.abs(window.scrollY - _qlLockedY) > 2) {
+      window.scrollTo({ top: _qlLockedY, behavior: 'instant' });
+    }
+  }, { passive: true });
+
+  const qlToolbar = document.querySelector('.ql-toolbar');
+  if (qlToolbar) qlToolbar.addEventListener('mousedown', _qlLockScroll);
+  quillEditor.root.addEventListener('paste', _qlLockScroll, true);
 }
 
 // ── CUSTOM CATEGORY DROPDOWN ─────────────────────────────────────
