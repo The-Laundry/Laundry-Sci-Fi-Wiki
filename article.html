@@ -74,6 +74,7 @@
 <script src="js/calendar.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/conlang.js"></script>
 <script>
 (async () => {
   await DB.init();
@@ -128,7 +129,7 @@
       } else if (f.key || f.val) {
         const sectionClass = currentSectionId ? `wb-collapsible-row` : '';
         const sectionAttr  = currentSectionId ? `data-section="${currentSectionId}"` : '';
-        const valHtml = f.val ? processWikilinks(f.val) : '';
+        const valHtml = f.val ? Conlang.parseHtml(processWikilinks(f.val)) : '';
         tableRows += `<tr class="${sectionClass}" ${sectionAttr}>
           <td>${escHtml(f.key || '')}</td>
           <td>${valHtml}</td>
@@ -152,6 +153,10 @@
   // Content
   const contentEl = document.getElementById('view-content');
   contentEl.innerHTML = processWikilinks(art.content || '');
+  // Apply conlang {{Lang:word}} parser after wikilinks (it walks text nodes,
+  // so it never touches existing <a> wikilinks or HTML attributes).
+  Conlang.applyToElement(contentEl);
+  Conlang.applyToElement(document.getElementById('view-wikibox'));
   buildTOC(contentEl);
 
   // Backlinks

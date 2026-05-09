@@ -38,6 +38,8 @@ encyclopedia/
   timeline-manager.html   Timeline & event category manager
   timeline.html           Timeline viewer
   article-templates.html  Article-template manager (for AI generation)
+  languages.html          Conlang manager — languages, phonology, lexicons,
+                          grammar notes, sample texts
   data.html               Data management, backup, and AI settings
   help.html               Help & guide
 
@@ -49,6 +51,7 @@ encyclopedia/
     calendar.js           Calendar conversion (5 in-universe calendars)
     ui.js                 Shared header, sidebar, modal, toast
     ai.js                 OpenAI-compatible AI client (Infinite Wiki)
+    conlang.js            Conlang helpers (lookup, family-tree, parser, CSV)
 
   data/                   Created automatically on first use
     settings.json
@@ -59,8 +62,11 @@ encyclopedia/
     timeline-categories.json
     wikibox-templates.json
     article-templates.json
+    languages.json        Lightweight index of all languages
     articles/
       art_XXXXX.json      One file per article
+    languages/
+      lang_XXXXX.json     One file per language (lexicon, grammar, etc.)
 ```
 
 ---
@@ -158,3 +164,41 @@ The seed templates cover Character, Nation/Faction, Event, Timeline, Location, S
 - Broken-link clicks do **not** call the API — only the "Generate with AI" button does.
 - You can cancel a Re-index mid-run; articles already processed are saved.
 - If the endpoint rejects `response_format: json_object`, the client automatically retries without it.
+
+---
+
+## Languages — Constructed Languages
+
+The Languages page (sidebar → 🗣️ Languages) tracks fictional languages alongside your articles. Each language has six tabs:
+
+- **Overview** — name, native name, status (living / dead / extinct / proto / constructed), parent language for family trees, an associated wiki article, speaker articles, free-form description, and writing-system notes.
+- **Phonology** — editable consonant + vowel tables (IPA, romanization, notes) and a free-form phonotactics field.
+- **Lexicon** — sortable, filterable word list with inline-edit drawer. Supports tags, multi-line definitions, etymology, IPA, examples, and **CSV import/export** so you can edit big vocabularies in a spreadsheet.
+- **Grammar** — a Quill rich-text editor for word order, morphology, declensions, etc.
+- **Texts** — sample passages with original / translation / interlinear gloss for Babel-style comparisons.
+- **Used In** — articles that reference this language.
+
+### Inline word references
+
+Anywhere in an article (or wikibox value) you can write:
+
+```
+{{Tzenki:kalor}}             → kalor (with hover tooltip showing the definition)
+{{Tzenki:kalor|fire}}        → display "fire", tooltip still resolves to kalor
+```
+
+The parser runs *after* the `[[wikilink]]` parser and only touches plain text, so it never collides with article links. Misses (unknown language or undefined word) render with a red dotted underline so you spot typos immediately.
+
+### AI helpers
+
+If you've configured AI in **AI Settings**, the **AI Generator → Conlang** tab adds three tools:
+
+| Tool | What it does |
+|---|---|
+| Generate Vocabulary | Suggests N words for a semantic field, fitting the language's phonology. Accept rows individually or in bulk. |
+| Translate Sentence | English ↔ conlang translation with interlinear gloss, using the lexicon and grammar as context. |
+| Suggest Etymology | Proposes an etymology for an existing entry; can save or append to the word's `etymology` field. |
+
+### Storage
+
+Languages are saved as one JSON file per language under `data/languages/`, with a lightweight `data/languages.json` index for fast loading. CSV exports of a lexicon are produced on demand from the Lexicon tab.

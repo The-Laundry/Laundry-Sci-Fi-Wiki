@@ -863,6 +863,65 @@ a.tag.tag-active { background: var(--accent); border-color: var(--accent); color
   background: var(--accent-light); border-radius: 0 var(--radius) var(--radius) 0;
 }
 
+/* ── Conlang inline references ({{Lang:word}} tooltips) ─────────────── */
+.conlang-ref {
+  position: relative;
+  border-bottom: 1px dotted var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: help;
+  font-style: normal;
+  padding: 0 1px;
+}
+.conlang-ref:hover { background: var(--accent-light); border-radius: 2px; }
+.conlang-ref.conlang-miss {
+  color: var(--red, #b94a48);
+  border-bottom-color: var(--red, #b94a48);
+  border-bottom-style: dashed;
+}
+.conlang-ref.conlang-miss:hover { background: rgba(185, 74, 72, 0.08); }
+
+/* Custom tooltip rendered on hover via data-conlang-tip attribute */
+.conlang-ref[data-conlang-tip]:hover::after {
+  content: attr(data-conlang-tip);
+  position: absolute;
+  z-index: 100;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  white-space: pre-line;
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+  min-width: 180px;
+  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  pointer-events: none;
+}
+.conlang-ref[data-conlang-tip]:hover::before {
+  content: '';
+  position: absolute;
+  z-index: 101;
+  bottom: 100%;
+  left: 12px;
+  margin-bottom: 0;
+  border: 5px solid transparent;
+  border-top-color: var(--text);
+  pointer-events: none;
+}
+[data-theme="dark"] .conlang-ref[data-conlang-tip]:hover::after {
+  background: var(--bg-sidebar);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+[data-theme="dark"] .conlang-ref[data-conlang-tip]:hover::before {
+  border-top-color: var(--bg-sidebar);
+}
+
 /* ── Header global AI-busy indicator ── */
 .ai-busy-indicator {
   display: none; align-items: center; gap: 6px;

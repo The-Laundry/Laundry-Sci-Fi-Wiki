@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Languages — Encyclopedia of Many Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/main.css">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<style>
+  /* ── Layout ─────────────────────────────────────────────────────── */
+  .lang-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
+
+  /* ── List pane ──────────────────────────────────────────────────── */
+  .lang-list {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; position: sticky; top: 76px;
+  }
+  .lang-list-head {
+    padding: 10px 14px; background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;
+  }
+  .lang-list-search {
+    padding: 8px 10px; border-bottom: 1px solid var(--border-light);
+  }
+  .lang-list-search input {
+    width: 100%; padding: 5px 8px; border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 12.5px; background: var(--bg); color: var(--text);
+  }
+  .lang-row {
+    padding: 9px 14px; border-bottom: 1px solid var(--border-light);
+    cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+    transition: background .12s;
+  }
+  .lang-row:last-child { border-bottom: none; }
+  .lang-row:hover  { background: var(--bg-sidebar); }
+  .lang-row.active { background: var(--accent-light); border-left: 3px solid var(--accent); padding-left: 11px; }
+  .lang-row-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .lang-row-sub  { font-size: 11px; color: var(--text-faint); }
+  .lang-empty    { padding: 20px; text-align: center; color: var(--text-faint); font-size: 13px; }
+  .lang-status-pill {
+    display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px;
+    background: var(--bg-sidebar); color: var(--text-muted); margin-right: 4px;
+    text-transform: uppercase; letter-spacing: .05em; font-weight: 500;
+  }
+  .lang-status-living   { background: #d4edda; color: #155724; }
+  .lang-status-dead     { background: #e2e3e5; color: #383d41; }
+  .lang-status-extinct  { background: #f8d7da; color: #721c24; }
+  .lang-status-proto    { background: #fff3cd; color: #856404; }
+  .lang-status-constructed { background: #cce5ff; color: #004085; }
+  [data-theme="dark"] .lang-status-living   { background: #1e4d2b; color: #b6e0c2; }
+  [data-theme="dark"] .lang-status-dead     { background: #2a2d33; color: #c2c5ca; }
+  [data-theme="dark"] .lang-status-extinct  { background: #4d1e1e; color: #f5b6bb; }
+  [data-theme="dark"] .lang-status-proto    { background: #4d3f1e; color: #f5dca0; }
+  [data-theme="dark"] .lang-status-constructed { background: #1e3a4d; color: #b6d2f0; }
+
+  /* ── Editor pane ────────────────────────────────────────────────── */
+  .lang-editor {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .lang-editor-head {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .lang-editor-title {
+    font-family: var(--font-display, var(--font-body));
+    font-size: 22px; font-weight: 600; color: var(--text); margin: 0;
+  }
+  .lang-editor-title-input {
+    font-family: var(--font-display, var(--font-body));
+    font-size: 22px; font-weight: 600; color: var(--text);
+    background: transparent; border: none; outline: none;
+    width: 100%; padding: 2px 0;
+    border-bottom: 1px dashed transparent;
+  }
+  .lang-editor-title-input:focus { border-bottom-color: var(--accent); }
+  .lang-status-bar {
+    font-size: 11px; color: var(--text-faint); padding: 4px 20px;
+    background: var(--bg-sidebar); border-bottom: 1px solid var(--border-light);
+  }
+
+  /* ── Tabs ───────────────────────────────────────────────────────── */
+  .lang-tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+    background: var(--bg-sidebar);
+  }
+  .lang-tab {
+    padding: 10px 16px; border: none; background: transparent;
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color .12s, border-color .12s;
+  }
+  .lang-tab:hover  { color: var(--text); }
+  .lang-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--bg); }
+  .lang-tab-count {
+    display: inline-block; margin-left: 4px; padding: 0 6px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 10px; font-weight: 500; color: var(--text-muted);
+  }
+
+  /* ── Tab body ───────────────────────────────────────────────────── */
+  .lang-tab-body { padding: 20px 24px; min-height: 400px; }
+  .lang-tab-body.hidden { display: none; }
+
+  .lang-form-row { margin-bottom: 16px; }
+  .lang-form-row label {
+    display: block; font-size: 11.5px; font-weight: 600; color: var(--text-muted);
+    margin-bottom: 4px; text-transform: uppercase; letter-spacing: .06em;
+  }
+  .lang-form-row input[type=text],
+  .lang-form-row select,
+  .lang-form-row textarea {
+    width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: var(--radius); background: var(--bg);
+    font-family: var(--font-body); font-size: 13.5px; color: var(--text); outline: none;
+  }
+  .lang-form-row textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+  .lang-form-row input:focus, .lang-form-row select:focus, .lang-form-row textarea:focus {
+    border-color: var(--accent);
+  }
+  .lang-form-row input:disabled, .lang-form-row select:disabled, .lang-form-row textarea:disabled {
+    background: var(--bg-sidebar); color: var(--text-muted); cursor: not-allowed;
+  }
+  .lang-form-hint { font-size: 11.5px; color: var(--text-faint); margin-top: 4px; }
+  .lang-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .lang-card {
+    background: var(--bg-sidebar); border: 1px solid var(--border-light);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px;
+  }
+  .lang-card-title {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;
+  }
+
+  /* ── Phonology tables ───────────────────────────────────────────── */
+  .phn-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    background: var(--bg); border: 1px solid var(--border-light); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .phn-table th, .phn-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-light); text-align: left; }
+  .phn-table th { background: var(--bg-sidebar); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+  .phn-table td input { width: 100%; padding: 3px 6px; border: 1px solid transparent; border-radius: 3px; font-size: 13px; background: transparent; color: var(--text); font-family: var(--font-body); }
+  .phn-table td input:focus { border-color: var(--accent); background: var(--bg); outline: none; }
+  .phn-table td.phn-actions { width: 32px; text-align: center; }
+  .phn-table tr:last-child td { border-bottom: none; }
+
+  /* ── Lexicon table ──────────────────────────────────────────────── */
+  .lex-toolbar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .lex-search { flex: 1; min-width: 200px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: var(--bg); color: var(--text); }
+  .lex-stat { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .lex-tag-filter {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; align-items: center;
+  }
+  .lex-tag-chip {
+    font-size: 11px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--bg); color: var(--text-muted); cursor: pointer; user-select: none;
+  }
+  .lex-tag-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .lex-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    background: var(--bg); border: 1px solid var(--border-light); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .lex-table th, .lex-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: top; }
+  .lex-table th {
+    background: var(--bg-sidebar); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-muted); cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .lex-table th .sort-arrow { opacity: 0.4; margin-left: 2px; font-size: 10px; }
+  .lex-table th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+  .lex-table tr:last-child td { border-bottom: none; }
+  .lex-table tr.lex-row:hover { background: var(--bg-sidebar); }
+  .lex-table tr.lex-row.active { background: var(--accent-light); }
+  .lex-row-word { font-weight: 600; color: var(--text); }
+  .lex-row-ipa  { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text-muted); }
+  .lex-row-pos  { font-size: 11px; color: var(--text-faint); font-style: italic; }
+  .lex-row-defs { font-size: 12.5px; color: var(--text); }
+  .lex-row-tags { font-size: 10px; color: var(--text-faint); }
+  .lex-row-tags .lex-tag-chip { font-size: 10px; padding: 1px 6px; }
+  .lex-actions { width: 50px; text-align: right; white-space: nowrap; }
+
+  .lex-edit-drawer {
+    margin-top: 16px; padding: 16px; background: var(--bg-sidebar);
+    border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .lex-edit-drawer-title {
+    font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .lex-empty { padding: 32px; text-align: center; color: var(--text-faint); font-size: 13px; background: var(--bg-sidebar); border: 1px dashed var(--border); border-radius: var(--radius); }
+
+  /* ── Texts tab ──────────────────────────────────────────────────── */
+  .text-card { margin-bottom: 14px; padding: 14px; border: 1px solid var(--border-light); border-radius: var(--radius); background: var(--bg); }
+  .text-card-head {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .text-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .text-card-grid textarea { min-height: 80px; }
+
+  /* ── Backlinks tab ──────────────────────────────────────────────── */
+  .bl-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    border: 1px solid var(--border-light); border-radius: var(--radius);
+    margin-bottom: 6px; text-decoration: none; color: var(--text);
+    background: var(--bg); transition: background .12s;
+  }
+  .bl-item:hover { background: var(--bg-sidebar); }
+  .bl-title { flex: 1; font-size: 13.5px; font-weight: 500; }
+  .bl-meta  { font-size: 11px; color: var(--text-faint); }
+  .bl-badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 8px;
+    background: var(--accent-light); color: var(--accent); font-weight: 500;
+  }
+
+  /* ── Read-only banner ───────────────────────────────────────────── */
+  .ro-banner {
+    margin-bottom: 14px; padding: 8px 14px; background: var(--accent-light);
+    border: 1px solid var(--accent); border-radius: var(--radius);
+    font-size: 12.5px; color: var(--accent);
+  }
+
+  /* ── Quill containers ───────────────────────────────────────────── */
+  .lang-quill-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .lang-quill-wrap .ql-editor { min-height: 200px; }
+
+  /* ── Buttons override (small) ───────────────────────────────────── */
+  .btn-icon-only {
+    padding: 3px 6px; font-size: 13px; line-height: 1; background: transparent;
+    border: 1px solid transparent; color: var(--text-muted); cursor: pointer; border-radius: 4px;
+  }
+  .btn-icon-only:hover { color: var(--red); border-color: var(--border); background: var(--bg); }
+
+  /* ── Sample image preview ───────────────────────────────────────── */
+  .ws-img-preview { max-width: 200px; max-height: 120px; margin-top: 6px; border: 1px solid var(--border-light); border-radius: var(--radius); display: none; }
+  .ws-img-preview.shown { display: block; }
+</style>
+</head>
+<body>
+
+<header id="app-header"></header>
+
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <main id="main">
+
+    <h1 class="page-title" style="margin-bottom:6px;">🗣️ Languages</h1>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">
+      Track fictional languages alongside your articles. Each language has phonology, a lexicon,
+      grammar notes, sample texts, and family-tree relationships. Reference words inline using
+      <code style="background:var(--bg-sidebar);padding:1px 5px;border-radius:3px;font-size:12px;">{{LangName:word}}</code>
+      in any article.
+    </p>
+
+    <div id="ro-banner" class="ro-banner" style="display:none;">
+      🔒 Read-only view. To create or edit languages, run the wiki locally.
+    </div>
+
+    <div class="lang-layout">
+
+      <!-- ── LEFT: language list ───────────────────────────────── -->
+      <div class="lang-list">
+        <div class="lang-list-head">
+          Languages <span id="lang-count" style="opacity:.6;font-weight:400;text-transform:none;">(0)</span>
+          <button class="btn btn-primary btn-sm" id="btn-new-lang" onclick="newLanguage()">+ New</button>
+        </div>
+        <div class="lang-list-search">
+          <input type="text" id="lang-search" placeholder="Filter languages…" oninput="renderList()">
+        </div>
+        <div id="lang-list-body"></div>
+      </div>
+
+      <!-- ── RIGHT: editor ────────────────────────────────────── -->
+      <div id="lang-editor" class="lang-editor">
+        <div class="empty-state" style="padding:40px 20px;text-align:center;">
+          <p style="color:var(--text-faint);">Select a language on the left, or create a new one.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/calendar.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/conlang.js"></script>
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────────
+let selectedId   = null;
+let activeTab    = 'overview';
+let activeLexId  = null;
+let lexSort      = { col: 'word', dir: 'asc' };
+let lexSearch    = '';
+let lexTagFilter = '';
+let quillDesc    = null;
+let quillGrammar = null;
+let isReadOnly   = false;
+let saveTimer    = null;
+
+// ── Boot ───────────────────────────────────────────────────────────
+(async () => {
+  await DB.init();
+  UI.init({ activePage: '' });
+  isReadOnly = DB.isReadOnly;
+
+  if (isReadOnly) {
+    document.getElementById('ro-banner').style.display = 'block';
+    document.getElementById('btn-new-lang').style.display = 'none';
+  }
+
+  // Honor ?id=lang_xxx&word=lex_xxx in URL
+  const params = new URLSearchParams(location.search);
+  const wantId    = params.get('id');
+  const wantWord  = params.get('word');
+  if (wantId && DB.languages.find(l => l.id === wantId)) {
+    selectedId = wantId;
+    if (wantWord) activeLexId = wantWord;
+    if (wantWord) activeTab   = 'lexicon';
+  }
+
+  renderList();
+  if (selectedId) renderEditor();
+})();
+
+// ── List rendering ─────────────────────────────────────────────────
+function renderList() {
+  const body = document.getElementById('lang-list-body');
+  const q = (document.getElementById('lang-search')?.value || '').trim().toLowerCase();
+  const items = DB.languages
+    .slice()
+    .filter(l => !q || (l.name || '').toLowerCase().includes(q) || (l.nativeName || '').toLowerCase().includes(q))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  document.getElementById('lang-count').textContent = `(${DB.languages.length})`;
+  body.innerHTML = '';
+
+  if (!items.length) {
+    body.innerHTML = `<div class="lang-empty">${DB.languages.length ? 'No matches.' : (isReadOnly ? 'No languages defined.' : 'No languages yet. Click <strong>+ New</strong>.')}</div>`;
+    return;
+  }
+
+  items.forEach(l => {
+    const row = document.createElement('div');
+    row.className = 'lang-row' + (l.id === selectedId ? ' active' : '');
+    const status = l.status || 'constructed';
+    const wordCount = (l.lexicon || []).length;
+    row.innerHTML = `
+      <div class="lang-row-name">${escHtml(l.name || '(unnamed)')}</div>
+      <div class="lang-row-sub">
+        <span class="lang-status-pill lang-status-${escHtml(status)}">${escHtml(status)}</span>
+        ${wordCount} word${wordCount === 1 ? '' : 's'}
+        ${l.nativeName && l.nativeName !== l.name ? '· ' + escHtml(l.nativeName) : ''}
+      </div>`;
+    row.onclick = () => selectLanguage(l.id);
+    body.appendChild(row);
+  });
+}
+
+function selectLanguage(id) {
+  if (selectedId === id) return;
+  // Flush any pending save before switching
+  flushSave();
+  selectedId  = id;
+  activeLexId = null;
+  activeTab   = 'overview';
+  quillDesc = null;
+  quillGrammar = null;
+  renderList();
+  renderEditor();
+}
+
+// ── Editor shell ───────────────────────────────────────────────────
+function renderEditor() {
+  const host = document.getElementById('lang-editor');
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) {
+    host.innerHTML = `<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--text-faint);">Select a language on the left, or create a new one.</p></div>`;
+    return;
+  }
+
+  const tabs = [
+    { id: 'overview',  label: 'Overview' },
+    { id: 'phonology', label: 'Phonology' },
+    { id: 'lexicon',   label: 'Lexicon', count: (lang.lexicon || []).length },
+    { id: 'grammar',   label: 'Grammar' },
+    { id: 'texts',     label: 'Texts',   count: (lang.sampleTexts || []).length },
+    { id: 'backlinks', label: 'Used In' },
+  ];
+
+  const dis = isReadOnly ? 'disabled' : '';
+  const dateLine = lang.updated ? `Updated ${new Date(lang.updated).toLocaleString()}` : 'Unsaved';
+
+  host.innerHTML = `
+    <div class="lang-editor-head">
+      <input type="text" class="lang-editor-title-input" id="fld-name" value="${escHtml(lang.name || '')}" placeholder="Language name…" ${dis}>
+      ${isReadOnly ? '' : `<button class="btn btn-danger btn-sm" onclick="deleteSelected()">Delete</button>`}
+    </div>
+    <div class="lang-status-bar" id="save-status">${escHtml(dateLine)}</div>
+    <div class="lang-tabs" role="tablist">
+      ${tabs.map(t => `
+        <button class="lang-tab ${activeTab === t.id ? 'active' : ''}" data-tab="${t.id}" onclick="switchTab('${t.id}')">
+          ${escHtml(t.label)}${typeof t.count === 'number' ? `<span class="lang-tab-count">${t.count}</span>` : ''}
+        </button>`).join('')}
+    </div>
+    <div class="lang-tab-body" id="tab-body"></div>
+  `;
+
+  // Wire name edit
+  const nameInput = document.getElementById('fld-name');
+  if (nameInput && !isReadOnly) {
+    nameInput.addEventListener('blur', () => {
+      lang.name = nameInput.value.trim() || 'Untitled';
+      scheduleSave();
+      renderList();
+    });
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); } });
+  }
+
+  renderTab();
+}
+
+function switchTab(tabId) {
+  flushSave();
+  activeTab = tabId;
+  // Reset Quill instances when switching away (they will be recreated as needed)
+  if (tabId !== 'overview')  quillDesc = null;
+  if (tabId !== 'grammar')   quillGrammar = null;
+  renderEditor();
+}
+
+function renderTab() {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  const host = document.getElementById('tab-body');
+  switch (activeTab) {
+    case 'overview':  renderOverview(lang, host); break;
+    case 'phonology': renderPhonology(lang, host); break;
+    case 'lexicon':   renderLexicon(lang, host); break;
+    case 'grammar':   renderGrammar(lang, host); break;
+    case 'texts':     renderTexts(lang, host); break;
+    case 'backlinks': renderBacklinks(lang, host); break;
+  }
+}
+
+// ── Tab: OVERVIEW ──────────────────────────────────────────────────
+function renderOverview(lang, host) {
+  const dis = isReadOnly ? 'disabled' : '';
+  const articleOptions = ['<option value="">— None —</option>']
+    .concat(DB.articles.slice().sort((a,b) => (a.title||'').localeCompare(b.title||''))
+      .map(a => `<option value="${a.id}" ${a.id === lang.articleId ? 'selected' : ''}>${escHtml(a.title || 'Untitled')}</option>`))
+    .join('');
+
+  const parentOptions = ['<option value="">— None —</option>']
+    .concat(DB.languages.filter(l => l.id !== lang.id).sort((a,b) => (a.name||'').localeCompare(b.name||''))
+      .map(l => `<option value="${l.id}" ${l.id === lang.parentId ? 'selected' : ''}>${escHtml(l.name || '(unnamed)')}</option>`))
+    .join('');
+
+  const speakerArticles = (lang.speakerArticleIds || []).map(id => {
+    const a = DB.articles.find(x => x.id === id);
+    return a ? a : null;
+  }).filter(Boolean);
+
+  const descendants = Conlang.getDescendants(lang.id);
+  const ancestors   = Conlang.getAncestors(lang.id);
+
+  host.innerHTML = `
+    <div class="lang-grid-2">
+      <div class="lang-form-row">
+        <label>Native Name</label>
+        <input type="text" id="fld-nativeName" value="${escHtml(lang.nativeName || '')}" placeholder="e.g. Tzeñki" ${dis}>
+        <div class="lang-form-hint">In the language's own script if applicable.</div>
+      </div>
+      <div class="lang-form-row">
+        <label>Status</label>
+        <select id="fld-status" ${dis}>
+          ${['living','dead','extinct','proto','constructed'].map(s =>
+            `<option value="${s}" ${lang.status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
+          ).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="lang-grid-2">
+      <div class="lang-form-row">
+        <label>Parent Language <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(family tree)</span></label>
+        <select id="fld-parentId" ${dis}>${parentOptions}</select>
+        ${ancestors.length ? `<div class="lang-form-hint">Ancestors: ${ancestors.map(a => `<a href="languages.html?id=${escHtml(a.id)}">${escHtml(a.name)}</a>`).join(' → ')}</div>` : ''}
+      </div>
+      <div class="lang-form-row">
+        <label>Associated Article</label>
+        <select id="fld-articleId" ${dis}>${articleOptions}</select>
+        <div class="lang-form-hint">In-universe wiki article that describes this language.</div>
+      </div>
+    </div>
+
+    <div class="lang-form-row">
+      <label>Romanization Scheme</label>
+      <textarea id="fld-romanization" placeholder="How the native script maps to Latin characters…" ${dis}>${escHtml(lang.romanization || '')}</textarea>
+    </div>
+
+    <div class="lang-card">
+      <div class="lang-card-title">Writing System</div>
+      <div class="lang-grid-2">
+        <div class="lang-form-row" style="margin-bottom:8px;">
+          <label>System Name</label>
+          <input type="text" id="fld-ws-name" value="${escHtml(lang.writingSystem?.name || '')}" placeholder="e.g. Tzenki Script (abugida)" ${dis}>
+        </div>
+        <div class="lang-form-row" style="margin-bottom:8px;">
+          <label>Sample Image (URL or data path)</label>
+          <input type="text" id="fld-ws-image" value="${escHtml(lang.writingSystem?.sampleImage || '')}" placeholder="data/images/scripts/tzenki.png" ${dis} oninput="updateWsPreview()">
+          <img id="ws-img-preview" class="ws-img-preview${lang.writingSystem?.sampleImage ? ' shown' : ''}" src="${escHtml(lang.writingSystem?.sampleImage || '')}" alt="Writing system sample">
+        </div>
+      </div>
+      <div class="lang-form-row" style="margin-bottom:0;">
+        <label>Notes</label>
+        <textarea id="fld-ws-notes" placeholder="Direction, evolution, scribal practices…" ${dis}>${escHtml(lang.writingSystem?.notes || '')}</textarea>
+      </div>
+    </div>
+
+    <div class="lang-form-row">
+      <label>Speakers</label>
+      <div id="speakers-container" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;"></div>
+      ${isReadOnly ? '' : `
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <select id="fld-add-speaker" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text);">
+            <option value="">— Add a speaker article —</option>
+            ${DB.articles.slice().sort((a,b)=>(a.title||'').localeCompare(b.title||''))
+              .filter(a => !(lang.speakerArticleIds || []).includes(a.id))
+              .map(a => `<option value="${a.id}">${escHtml(a.title||'Untitled')}</option>`).join('')}
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="addSpeaker()">+ Add</button>
+        </div>
+      `}
+      <div class="lang-form-hint">Species, nations, characters, or other articles whose speakers use this language.</div>
+    </div>
+
+    <div class="lang-form-row">
+      <label>Description</label>
+      <div class="lang-quill-wrap"><div id="quill-desc"></div></div>
+      <div class="lang-form-hint">Free-form summary: history, dialects, sociolinguistic notes…</div>
+    </div>
+
+    ${descendants.length ? `
+      <div class="lang-card">
+        <div class="lang-card-title">Descendants</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${descendants.map(d => `<a href="languages.html?id=${escHtml(d.id)}" class="lex-tag-chip">${escHtml(d.name)}</a>`).join('')}
+        </div>
+      </div>` : ''}
+  `;
+
+  // Wire inputs
+  if (!isReadOnly) {
+    bindBlur('fld-nativeName', v => { lang.nativeName = v.trim(); renderList(); });
+    bindBlur('fld-status',     v => { lang.status     = v.trim(); renderList(); }, 'change');
+    bindBlur('fld-parentId',   v => { lang.parentId   = v || null; }, 'change');
+    bindBlur('fld-articleId',  v => { lang.articleId  = v || null; }, 'change');
+    bindBlur('fld-romanization', v => { lang.romanization = v; });
+    bindBlur('fld-ws-name',    v => { ensureWS(lang); lang.writingSystem.name  = v.trim(); });
+    bindBlur('fld-ws-image',   v => { ensureWS(lang); lang.writingSystem.sampleImage = v.trim(); });
+    bindBlur('fld-ws-notes',   v => { ensureWS(lang); lang.writingSystem.notes = v; });
+  }
+
+  renderSpeakers(lang);
+  // Description Quill (lazy-init)
+  if (typeof Quill !== 'undefined') {
+    quillDesc = new Quill('#quill-desc', {
+      theme: 'snow',
+      readOnly: isReadOnly,
+      modules: { toolbar: isReadOnly ? false : [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['blockquote', 'link'],
+        ['clean'],
+      ]},
+    });
+    quillDesc.root.innerHTML = lang.description || '';
+    if (!isReadOnly) {
+      quillDesc.on('text-change', () => {
+        lang.description = quillDesc.root.innerHTML;
+        scheduleSave();
+      });
+    }
+  }
+}
+
+function renderSpeakers(lang) {
+  const cont = document.getElementById('speakers-container');
+  if (!cont) return;
+  const ids = lang.speakerArticleIds || [];
+  if (!ids.length) {
+    cont.innerHTML = `<span style="color:var(--text-faint);font-size:13px;">No speakers linked.</span>`;
+    return;
+  }
+  cont.innerHTML = ids.map(id => {
+    const a = DB.articles.find(x => x.id === id);
+    if (!a) return '';
+    const removeBtn = isReadOnly ? '' : `<button class="btn-icon-only" onclick="removeSpeaker('${escHtml(id)}')" title="Remove" style="margin-left:4px;">×</button>`;
+    return `<span class="lex-tag-chip" style="background:var(--accent-light);color:var(--accent);border-color:var(--accent);">
+      <a href="article.html?id=${escHtml(id)}" style="color:inherit;text-decoration:none;">${escHtml(a.title || 'Untitled')}</a>
+      ${removeBtn}
+    </span>`;
+  }).join('');
+}
+
+function addSpeaker() {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  const sel = document.getElementById('fld-add-speaker');
+  const id = sel?.value;
+  if (!id) return;
+  if (!lang.speakerArticleIds) lang.speakerArticleIds = [];
+  if (lang.speakerArticleIds.includes(id)) return;
+  lang.speakerArticleIds.push(id);
+  scheduleSave();
+  renderTab();
+}
+
+function removeSpeaker(id) {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  lang.speakerArticleIds = (lang.speakerArticleIds || []).filter(x => x !== id);
+  scheduleSave();
+  renderTab();
+}
+
+function updateWsPreview() {
+  const url = document.getElementById('fld-ws-image')?.value.trim();
+  const img = document.getElementById('ws-img-preview');
+  if (!img) return;
+  if (url) { img.src = url; img.classList.add('shown'); }
+  else { img.classList.remove('shown'); }
+}
+
+function ensureWS(lang) {
+  if (!lang.writingSystem) lang.writingSystem = { name: '', notes: '', sampleImage: '' };
+}
+
+// ── Tab: PHONOLOGY ─────────────────────────────────────────────────
+function renderPhonology(lang, host) {
+  if (!lang.phonology) lang.phonology = { consonants: [], vowels: [], notes: '' };
+  const dis = isReadOnly ? 'disabled' : '';
+
+  const tableHtml = (rows, kind) => `
+    <table class="phn-table">
+      <thead>
+        <tr>
+          <th style="width:25%;">IPA</th>
+          <th style="width:25%;">Romanization</th>
+          <th>Notes</th>
+          ${isReadOnly ? '' : '<th style="width:32px;"></th>'}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.length ? rows.map((r, i) => `
+          <tr data-${kind}-idx="${i}">
+            <td><input type="text" class="phn-ipa"  value="${escHtml(r.ipa || '')}" ${dis}></td>
+            <td><input type="text" class="phn-rom"  value="${escHtml(r.romanization || '')}" ${dis}></td>
+            <td><input type="text" class="phn-note" value="${escHtml(r.notes || '')}" ${dis}></td>
+            ${isReadOnly ? '' : `<td class="phn-actions"><button class="btn-icon-only" onclick="removePhonRow('${kind}', ${i})" title="Remove">×</button></td>`}
+          </tr>`).join('') : `<tr><td colspan="${isReadOnly ? 3 : 4}" style="color:var(--text-faint);font-size:12px;text-align:center;padding:14px;">No ${kind === 'consonants' ? 'consonants' : 'vowels'} defined yet.</td></tr>`}
+      </tbody>
+    </table>
+    ${isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" style="margin-top:8px;" onclick="addPhonRow('${kind}')">+ Add ${kind === 'consonants' ? 'consonant' : 'vowel'}</button>`}
+  `;
+
+  host.innerHTML = `
+    <div class="lang-grid-2" style="grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+      <div>
+        <div class="lang-card-title">Consonants <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">(${lang.phonology.consonants.length})</span></div>
+        ${tableHtml(lang.phonology.consonants, 'consonants')}
+      </div>
+      <div>
+        <div class="lang-card-title">Vowels <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">(${lang.phonology.vowels.length})</span></div>
+        ${tableHtml(lang.phonology.vowels, 'vowels')}
+      </div>
+    </div>
+
+    <div class="lang-form-row" style="margin-top:20px;">
+      <label>Phonotactics & Notes</label>
+      <textarea id="fld-phono-notes" placeholder="Syllable structure, allophones, stress patterns…" style="min-height:120px;" ${dis}>${escHtml(lang.phonology.notes || '')}</textarea>
+    </div>
+  `;
+
+  if (!isReadOnly) {
+    // Bind input changes for each row
+    document.querySelectorAll('.phn-table tr[data-consonants-idx]').forEach(tr => {
+      const i = +tr.getAttribute('data-consonants-idx');
+      bindPhonRow(tr, lang.phonology.consonants[i]);
+    });
+    document.querySelectorAll('.phn-table tr[data-vowels-idx]').forEach(tr => {
+      const i = +tr.getAttribute('data-vowels-idx');
+      bindPhonRow(tr, lang.phonology.vowels[i]);
+    });
+    bindBlur('fld-phono-notes', v => { lang.phonology.notes = v; });
+  }
+}
+
+function bindPhonRow(tr, obj) {
+  if (!obj) return;
+  const ipa  = tr.querySelector('.phn-ipa');
+  const rom  = tr.querySelector('.phn-rom');
+  const note = tr.querySelector('.phn-note');
+  if (ipa)  ipa.addEventListener('blur',  () => { obj.ipa = ipa.value.trim(); scheduleSave(); });
+  if (rom)  rom.addEventListener('blur',  () => { obj.romanization = rom.value.trim(); scheduleSave(); });
+  if (note) note.addEventListener('blur', () => { obj.notes = note.value; scheduleSave(); });
+}
+
+function addPhonRow(kind) {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  if (!lang.phonology) lang.phonology = { consonants: [], vowels: [], notes: '' };
+  lang.phonology[kind] = lang.phonology[kind] || [];
+  lang.phonology[kind].push({ ipa: '', romanization: '', notes: '' });
+  scheduleSave();
+  renderTab();
+}
+
+function removePhonRow(kind, idx) {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  lang.phonology[kind].splice(idx, 1);
+  scheduleSave();
+  renderTab();
+}
+
+// ── Tab: LEXICON ───────────────────────────────────────────────────
+function renderLexicon(lang, host) {
+  if (!lang.lexicon) lang.lexicon = [];
+  const lex = lang.lexicon;
+  const allTags = [...new Set(lex.flatMap(e => e.tags || []))].sort();
+
+  // Filter
+  const q = lexSearch.trim().toLowerCase();
+  const filtered = lex.filter(e => {
+    if (q) {
+      const hay = [e.word, e.romanization, e.ipa, e.partOfSpeech, e.etymology, e.notes,
+                   ...(e.definitions || []), ...(e.tags || [])].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (lexTagFilter && !(e.tags || []).includes(lexTagFilter)) return false;
+    return true;
+  });
+
+  // Sort
+  const dir = lexSort.dir === 'asc' ? 1 : -1;
+  filtered.sort((a, b) => {
+    let av = a[lexSort.col]; let bv = b[lexSort.col];
+    if (lexSort.col === 'definitions') { av = (a.definitions||[]).join(', '); bv = (b.definitions||[]).join(', '); }
+    av = (av || '').toString().toLowerCase();
+    bv = (bv || '').toString().toLowerCase();
+    return av < bv ? -dir : (av > bv ? dir : 0);
+  });
+
+  const sortArrow = (col) => `<span class="sort-arrow">${lexSort.col === col ? (lexSort.dir === 'asc' ? '▲' : '▼') : '▲▼'}</span>`;
+  const sortClass = (col) => lexSort.col === col ? 'sorted' : '';
+
+  host.innerHTML = `
+    <div class="lex-toolbar">
+      <input type="text" class="lex-search" id="lex-search" value="${escHtml(lexSearch)}" placeholder="Search words, definitions, tags…" oninput="onLexSearch(this.value)">
+      ${isReadOnly ? '' : `
+        <button class="btn btn-primary btn-sm" onclick="newLexEntry()">+ New Word</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('lex-csv-input').click()">⇪ Import CSV</button>
+        <input type="file" id="lex-csv-input" accept=".csv" style="display:none" onchange="importLexCsv(event)">
+      `}
+      <button class="btn btn-secondary btn-sm" onclick="exportLexCsv()" ${lex.length ? '' : 'disabled'}>⇩ Export CSV</button>
+      <span class="lex-stat">${filtered.length} of ${lex.length} word${lex.length === 1 ? '' : 's'}</span>
+    </div>
+
+    ${allTags.length ? `<div class="lex-tag-filter">
+      <span style="font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Tag:</span>
+      <span class="lex-tag-chip ${!lexTagFilter ? 'active' : ''}" onclick="setLexTagFilter('')">all</span>
+      ${allTags.map(t => `<span class="lex-tag-chip ${lexTagFilter === t ? 'active' : ''}" onclick="setLexTagFilter('${escHtml(t)}')">${escHtml(t)}</span>`).join('')}
+    </div>` : ''}
+
+    ${filtered.length ? `
+      <table class="lex-table">
+        <thead>
+          <tr>
+            <th class="${sortClass('word')}" onclick="setLexSort('word')">Word ${sortArrow('word')}</th>
+            <th class="${sortClass('ipa')}" onclick="setLexSort('ipa')">IPA ${sortArrow('ipa')}</th>
+            <th class="${sortClass('partOfSpeech')}" onclick="setLexSort('partOfSpeech')">POS ${sortArrow('partOfSpeech')}</th>
+            <th class="${sortClass('definitions')}" onclick="setLexSort('definitions')">Definitions ${sortArrow('definitions')}</th>
+            <th>Tags</th>
+            ${isReadOnly ? '' : '<th class="lex-actions"></th>'}
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.map(e => `
+            <tr class="lex-row ${e.id === activeLexId ? 'active' : ''}" onclick="selectLexEntry('${escHtml(e.id)}')">
+              <td>
+                <div class="lex-row-word">${escHtml(e.word || '')}</div>
+                ${e.romanization && e.romanization !== e.word ? `<div class="lex-row-ipa">${escHtml(e.romanization)}</div>` : ''}
+              </td>
+              <td><span class="lex-row-ipa">${e.ipa ? '/' + escHtml(e.ipa) + '/' : ''}</span></td>
+              <td><span class="lex-row-pos">${escHtml(e.partOfSpeech || '')}</span></td>
+              <td><div class="lex-row-defs">${escHtml((e.definitions || []).join('; '))}</div></td>
+              <td><div class="lex-row-tags">${(e.tags || []).map(t => `<span class="lex-tag-chip">${escHtml(t)}</span>`).join(' ')}</div></td>
+              ${isReadOnly ? '' : `<td class="lex-actions"><button class="btn-icon-only" onclick="event.stopPropagation();deleteLexEntry('${escHtml(e.id)}')" title="Delete word">×</button></td>`}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : `<div class="lex-empty">${lex.length ? 'No matches.' : (isReadOnly ? 'No words yet.' : 'No words yet. Click <strong>+ New Word</strong> or import a CSV.')}</div>`}
+
+    <div id="lex-edit-host"></div>
+  `;
+
+  if (activeLexId) {
+    const entry = lex.find(e => e.id === activeLexId);
+    if (entry) renderLexEditor(entry);
+  }
+}
+
+function onLexSearch(v) { lexSearch = v; renderTab(); }
+function setLexTagFilter(t) { lexTagFilter = t; renderTab(); }
+function setLexSort(col) {
+  if (lexSort.col === col) lexSort.dir = lexSort.dir === 'asc' ? 'desc' : 'asc';
+  else { lexSort.col = col; lexSort.dir = 'asc'; }
+  renderTab();
+}
+
+function newLexEntry() {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  if (!lang.lexicon) lang.lexicon = [];
+  const entry = {
+    id: mkId('lex'),
+    word: '',
+    romanization: '',
+    ipa: '',
+    partOfSpeech: '',
+    definitions: [],
+    etymology: '',
+    notes: '',
+    tags: [],
+    examples: [],
+  };
+  lang.lexicon.unshift(entry);
+  activeLexId = entry.id;
+  scheduleSave();
+  renderEditor();
+}
+
+function selectLexEntry(id) {
+  activeLexId = (activeLexId === id) ? null : id;
+  renderTab();
+  if (activeLexId) {
+    setTimeout(() => {
+      const drawer = document.getElementById('lex-edit-host');
+      if (drawer) drawer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 30);
+  }
+}
+
+function deleteLexEntry(id) {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  if (!confirm('Delete this word? This cannot be undone.')) return;
+  lang.lexicon = (lang.lexicon || []).filter(e => e.id !== id);
+  if (activeLexId === id) activeLexId = null;
+  scheduleSave();
+  renderEditor();
+}
+
+function renderLexEditor(entry) {
+  const host = document.getElementById('lex-edit-host');
+  if (!host) return;
+  const dis = isReadOnly ? 'disabled' : '';
+  host.innerHTML = `
+    <div class="lex-edit-drawer">
+      <div class="lex-edit-drawer-title">
+        Editing: ${escHtml(entry.word || '(new word)')}
+        <button class="btn btn-ghost btn-sm" onclick="activeLexId=null;renderTab();">Close</button>
+      </div>
+      <div class="lang-grid-2">
+        <div class="lang-form-row" style="margin-bottom:10px;">
+          <label>Word *</label>
+          <input type="text" id="lex-word" value="${escHtml(entry.word || '')}" placeholder="Native word" ${dis}>
+        </div>
+        <div class="lang-form-row" style="margin-bottom:10px;">
+          <label>Romanization</label>
+          <input type="text" id="lex-rom" value="${escHtml(entry.romanization || '')}" placeholder="Latinized form" ${dis}>
+        </div>
+      </div>
+      <div class="lang-grid-2">
+        <div class="lang-form-row" style="margin-bottom:10px;">
+          <label>IPA</label>
+          <input type="text" id="lex-ipa" value="${escHtml(entry.ipa || '')}" placeholder="ka.lor" ${dis}>
+        </div>
+        <div class="lang-form-row" style="margin-bottom:10px;">
+          <label>Part of Speech</label>
+          <input type="text" id="lex-pos" value="${escHtml(entry.partOfSpeech || '')}" placeholder="noun, verb, adj…" ${dis}>
+        </div>
+      </div>
+      <div class="lang-form-row" style="margin-bottom:10px;">
+        <label>Definitions <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(one per line)</span></label>
+        <textarea id="lex-defs" placeholder="fire&#10;passion" style="min-height:60px;" ${dis}>${escHtml((entry.definitions || []).join('\n'))}</textarea>
+      </div>
+      <div class="lang-form-row" style="margin-bottom:10px;">
+        <label>Etymology</label>
+        <textarea id="lex-etym" placeholder="From proto-Tzenki *kalo-…" style="min-height:50px;" ${dis}>${escHtml(entry.etymology || '')}</textarea>
+      </div>
+      <div class="lang-grid-2">
+        <div class="lang-form-row" style="margin-bottom:10px;">
+          <label>Tags <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(comma-separated)</span></label>
+          <input type="text" id="lex-tags" value="${escHtml((entry.tags || []).join(', '))}" placeholder="element, common" ${dis}>
+        </div>
+        <div class="lang-form-row" style="margin-bottom:10px;">
+          <label>Notes</label>
+          <input type="text" id="lex-notes" value="${escHtml(entry.notes || '')}" placeholder="Usage notes…" ${dis}>
+        </div>
+      </div>
+      <div class="lang-form-row" style="margin-bottom:0;">
+        <label>Examples <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(one per line)</span></label>
+        <textarea id="lex-examples" placeholder="Kalor narana. — The fire is burning." style="min-height:60px;" ${dis}>${escHtml((entry.examples || []).join('\n'))}</textarea>
+      </div>
+    </div>
+  `;
+
+  if (!isReadOnly) {
+    bindBlur('lex-word', v => { entry.word = v.trim(); scheduleSave(); /* refresh table */ });
+    bindBlur('lex-rom',  v => { entry.romanization = v.trim(); });
+    bindBlur('lex-ipa',  v => { entry.ipa = v.trim(); });
+    bindBlur('lex-pos',  v => { entry.partOfSpeech = v.trim(); });
+    bindBlur('lex-defs', v => { entry.definitions = v.split('\n').map(s => s.trim()).filter(Boolean); });
+    bindBlur('lex-etym', v => { entry.etymology = v; });
+    bindBlur('lex-tags', v => { entry.tags = v.split(',').map(s => s.trim()).filter(Boolean); });
+    bindBlur('lex-notes', v => { entry.notes = v.trim(); });
+    bindBlur('lex-examples', v => { entry.examples = v.split('\n').map(s => s.trim()).filter(Boolean); });
+  }
+}
+
+function importLexCsv(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const newEntries = Conlang.csvToLexicon(ev.target.result);
+      if (!newEntries.length) { UI.toast('No valid entries found in CSV.'); return; }
+      if (!confirm(`Import ${newEntries.length} word${newEntries.length === 1 ? '' : 's'} into "${lang.name}"?`)) return;
+      if (!lang.lexicon) lang.lexicon = [];
+      newEntries.forEach(en => {
+        en.id = mkId('lex');
+        lang.lexicon.push(en);
+      });
+      scheduleSave();
+      UI.toast(`Imported ${newEntries.length} word${newEntries.length === 1 ? '' : 's'}.`);
+      renderEditor();
+    } catch (err) {
+      console.error(err);
+      UI.toast('CSV import failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportLexCsv() {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  const csv = Conlang.lexiconToCsv(lang.lexicon || []);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = (lang.name || 'language').replace(/[^a-z0-9]/gi, '-').toLowerCase() + '-lexicon.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  UI.toast('Lexicon exported.');
+}
+
+// ── Tab: GRAMMAR ───────────────────────────────────────────────────
+function renderGrammar(lang, host) {
+  host.innerHTML = `
+    <div class="lang-form-row" style="margin-bottom:8px;">
+      <label>Grammar Notes</label>
+      <div class="lang-form-hint" style="margin-bottom:8px;">Free-form rich text: word order, morphology, declensions, verb conjugation tables, etc. Sections (H1/H2) are encouraged.</div>
+    </div>
+    <div class="lang-quill-wrap"><div id="quill-grammar"></div></div>
+  `;
+
+  if (typeof Quill !== 'undefined') {
+    quillGrammar = new Quill('#quill-grammar', {
+      theme: 'snow',
+      readOnly: isReadOnly,
+      modules: { toolbar: isReadOnly ? false : [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['blockquote', 'code-block', 'link'],
+        ['clean'],
+      ]},
+    });
+    quillGrammar.root.innerHTML = lang.grammar || '';
+    if (!isReadOnly) {
+      quillGrammar.on('text-change', () => {
+        lang.grammar = quillGrammar.root.innerHTML;
+        scheduleSave();
+      });
+    }
+  }
+}
+
+// ── Tab: TEXTS ─────────────────────────────────────────────────────
+function renderTexts(lang, host) {
+  if (!lang.sampleTexts) lang.sampleTexts = [];
+  const dis = isReadOnly ? 'disabled' : '';
+
+  host.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <div class="lang-form-hint">Sample texts (Babel-style passages, songs, prayers, common greetings) for showcasing the language in use.</div>
+    </div>
+    ${lang.sampleTexts.map((t, i) => `
+      <div class="text-card" data-text-idx="${i}">
+        <div class="text-card-head">
+          <input type="text" class="lang-form-row" style="flex:1;width:auto;font-size:14px;font-weight:600;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);"
+                 value="${escHtml(t.title || '')}" placeholder="Title" data-fld="title" ${dis}>
+          ${isReadOnly ? '' : `<button class="btn btn-ghost btn-sm" onclick="removeText(${i})">Remove</button>`}
+        </div>
+        <div class="text-card-grid">
+          <div class="lang-form-row" style="margin-bottom:0;">
+            <label>Original</label>
+            <textarea data-fld="text" placeholder="Text in the conlang…" ${dis}>${escHtml(t.text || '')}</textarea>
+          </div>
+          <div class="lang-form-row" style="margin-bottom:0;">
+            <label>Translation</label>
+            <textarea data-fld="translation" placeholder="English translation…" ${dis}>${escHtml(t.translation || '')}</textarea>
+          </div>
+        </div>
+        <div class="lang-form-row" style="margin-top:10px;margin-bottom:0;">
+          <label>Interlinear Gloss <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);font-size:11px;">(optional)</span></label>
+          <textarea data-fld="gloss" placeholder="fire-NOM all earth-ACC be-PAST one language…" style="font-family:var(--font-mono, monospace);font-size:12px;" ${dis}>${escHtml(t.gloss || '')}</textarea>
+        </div>
+      </div>
+    `).join('')}
+    ${isReadOnly ? '' : `<button class="btn btn-secondary btn-sm" onclick="addText()">+ Add Sample Text</button>`}
+    ${!lang.sampleTexts.length ? `<div class="lex-empty" style="margin-top:10px;">${isReadOnly ? 'No sample texts yet.' : 'No sample texts yet. Click <strong>+ Add Sample Text</strong>.'}</div>` : ''}
+  `;
+
+  if (!isReadOnly) {
+    document.querySelectorAll('.text-card').forEach(card => {
+      const i = +card.getAttribute('data-text-idx');
+      const t = lang.sampleTexts[i];
+      if (!t) return;
+      card.querySelectorAll('[data-fld]').forEach(inp => {
+        const f = inp.getAttribute('data-fld');
+        inp.addEventListener('blur', () => { t[f] = inp.value; scheduleSave(); });
+      });
+    });
+  }
+}
+
+function addText() {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  if (!lang.sampleTexts) lang.sampleTexts = [];
+  lang.sampleTexts.push({ id: mkId('txt'), title: 'New Text', text: '', translation: '', gloss: '' });
+  scheduleSave();
+  renderEditor();
+}
+
+function removeText(idx) {
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  if (!confirm('Remove this sample text?')) return;
+  lang.sampleTexts.splice(idx, 1);
+  scheduleSave();
+  renderEditor();
+}
+
+// ── Tab: BACKLINKS ─────────────────────────────────────────────────
+function renderBacklinks(lang, host) {
+  const links = Conlang.findBacklinks(lang);
+  if (!links.length) {
+    host.innerHTML = `<div class="lex-empty">No articles reference this language yet. Add <code>{{${escHtml(lang.name || 'Lang')}:word}}</code> to any article to create a reference.</div>`;
+    return;
+  }
+  host.innerHTML = `
+    <div style="margin-bottom:10px;font-size:12.5px;color:var(--text-muted);">
+      ${links.length} article${links.length === 1 ? '' : 's'} reference${links.length === 1 ? 's' : ''} this language.
+    </div>
+    ${links.map(b => `
+      <a class="bl-item" href="article.html?id=${escHtml(b.article.id)}">
+        <span class="bl-title">${escHtml(b.article.title || 'Untitled')}</span>
+        ${b.pinned   ? '<span class="bl-badge">pinned</span>' : ''}
+        ${b.speaker  ? '<span class="bl-badge">speakers</span>' : ''}
+        ${b.occurrences ? `<span class="bl-meta">${b.occurrences} mention${b.occurrences === 1 ? '' : 's'}</span>` : ''}
+      </a>`).join('')}
+  `;
+}
+
+// ── Save plumbing ──────────────────────────────────────────────────
+function scheduleSave() {
+  if (isReadOnly) return;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSave, 500);
+  setStatus('Saving…');
+}
+
+async function flushSave() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  if (isReadOnly || !selectedId) return;
+  try {
+    await DB.saveLanguage(selectedId);
+    setStatus('Saved · ' + new Date().toLocaleTimeString());
+  } catch (e) {
+    console.error(e);
+    setStatus('Save failed: ' + e.message);
+  }
+}
+
+function setStatus(msg) {
+  const el = document.getElementById('save-status');
+  if (el) el.textContent = msg;
+}
+
+// Bind a value-change handler to a form control
+function bindBlur(id, handler, evt = 'blur') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener(evt, () => { handler(el.value); scheduleSave(); });
+}
+
+// ── Top-level actions ──────────────────────────────────────────────
+async function newLanguage() {
+  if (isReadOnly) return;
+  const lang = Conlang.newLanguageRecord('New Language');
+  DB.languages.push(lang);
+  selectedId = lang.id;
+  activeTab = 'overview';
+  activeLexId = null;
+  await DB.saveLanguage(lang.id);
+  renderList();
+  renderEditor();
+  setTimeout(() => {
+    const inp = document.getElementById('fld-name');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 30);
+}
+
+async function deleteSelected() {
+  if (isReadOnly) return;
+  const lang = DB.languages.find(l => l.id === selectedId);
+  if (!lang) return;
+  if (!confirm(`Delete language "${lang.name}"? This cannot be undone.`)) return;
+  await DB.deleteLanguageFile(lang.id);
+  selectedId = null;
+  activeLexId = null;
+  UI.toast('Language deleted.');
+  renderList();
+  renderEditor();
+}
+
+// Save on page hide as a safety net
+window.addEventListener('beforeunload', () => {
+  if (saveTimer) flushSave();
+});
+</script>
+</body>
+</html>
