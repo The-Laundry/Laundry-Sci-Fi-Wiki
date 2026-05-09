@@ -24,6 +24,13 @@
       <div id="folder-info"></div>
     </div>
 
+    <!-- AI settings moved to their own page (ai.html). -->
+    <div class="data-section">
+      <h2>🤖 AI Settings</h2>
+      <p>AI configuration, prompt editing, connection testing, and article re-indexing have moved to their own page.</p>
+      <a class="btn btn-secondary" href="ai.html">Open AI Settings →</a>
+    </div>
+
     <div class="data-section">
       <h2>Export All Data</h2>
       <p>Download a JSON file containing all articles, categories, timelines, events, and settings. Works as a universal backup regardless of storage mode.</p>
@@ -88,6 +95,7 @@
   sel.innerHTML = DB.articles.length
     ? DB.articles.map(a => `<option value="${a.id}">${escHtml(a.title || 'Untitled')}</option>`).join('')
     : '<option disabled>No articles yet</option>';
+
 })();
 
 function doExport() { DB.exportAll(); UI.toast('Export downloaded.'); }

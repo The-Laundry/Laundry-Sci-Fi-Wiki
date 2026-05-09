@@ -73,6 +73,7 @@
 <script src="js/db.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
 <script>
 (async () => {
   await DB.init();
@@ -164,11 +165,76 @@ function processWikilinks(html) {
     const name    = pipeIdx >= 0 ? inner.slice(0, pipeIdx).trim() : inner.trim();
     const display = pipeIdx >= 0 ? inner.slice(pipeIdx + 1).trim() : name;
     const t = DB.articles.find(a => a.title && a.title.toLowerCase() === name.toLowerCase());
-    return t
-      ? `<a href="article.html?id=${t.id}">${escHtml(display)}</a>`
-      : `<a href="editor.html?id=new&title=${encodeURIComponent(name)}" class="broken-link" title="Click to create: ${escHtml(name)}">${escHtml(display)}</a>`;
+    if (t) {
+      return `<a href="article.html?id=${t.id}">${escHtml(display)}</a>`;
+    }
+    // Broken link: intercept clicks so the user can pick manual-create vs AI-generate.
+    return `<a href="#" class="broken-link" data-broken-name="${escHtml(name)}" title="Click to create: ${escHtml(name)}">${escHtml(display)}</a>`;
   });
 }
+
+// Delegate clicks on any .broken-link in the article view / wikibox into the choice modal.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a.broken-link');
+  if (!a) return;
+  const name = a.getAttribute('data-broken-name');
+  if (!name) return;
+  e.preventDefault();
+  openBrokenLinkChoice(name);
+});
+
+// ── BROKEN LINK CHOICE MODAL ──────────────────────────────────────
+function openBrokenLinkChoice(name) {
+  const aiReady = (typeof AI !== 'undefined') && AI.isConfigured();
+  const body = `
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">
+      The article <strong>${escHtml(name)}</strong> doesn't exist yet. How would you like to create it?
+    </p>
+    <div class="choice-grid">
+      <button class="choice-card" id="choice-manual">
+        <div class="choice-icon">✎</div>
+        <div class="choice-title">Create Manually</div>
+        <div class="choice-desc">Open a blank editor with this title pre-filled.</div>
+      </button>
+      <button class="choice-card" id="choice-ai" ${aiReady ? '' : 'disabled title="AI is not configured. Enable it in AI Settings."'}>
+        <div class="choice-icon">✨</div>
+        <div class="choice-title">Generate with AI</div>
+        <div class="choice-desc">${aiReady ? 'Draft an article using context from your existing wiki.' : 'Configure AI Settings to enable this option.'}</div>
+      </button>
+    </div>`;
+  UI.showModal('Create "' + name + '"', body, [
+    { label: 'Cancel', cls: 'btn-secondary', action: () => UI.closeModal() },
+  ]);
+  document.getElementById('choice-manual').onclick = () => {
+    UI.closeModal();
+    location.href = 'editor.html?id=new&title=' + encodeURIComponent(name);
+  };
+  const aiBtn = document.getElementById('choice-ai');
+  if (aiBtn && !aiBtn.disabled) aiBtn.onclick = () => { UI.closeModal(); openAIGenerateModal(name); };
+}
+
+// ── AI GENERATION (delegates to the dedicated ai-generate.html page) ────
+// The old in-page modal has been replaced by a full-screen generator that
+// supports Single / Batch / Timeline modes. We keep this entry point as a
+// thin navigation shim so any legacy callers still work.
+function openAIGenerateModal(prefillTitle, prefillSpec) {
+  if (!AI.isConfigured()) {
+    UI.toast('AI is not configured. See AI Settings.');
+    return;
+  }
+  const title = (prefillSpec && prefillSpec.title) || prefillTitle || '';
+  const params = new URLSearchParams();
+  params.set('mode', 'single');
+  if (title) params.set('title', title);
+  try {
+    const artId = new URLSearchParams(location.search).get('id');
+    if (artId) params.set('returnTo', 'article.html?id=' + encodeURIComponent(artId));
+  } catch (_e) {}
+  location.href = 'ai-generate.html?' + params.toString();
+}
+
+// Expose globally for back-compat with any other page that may call into it.
+window.openAIGenerateModal = openAIGenerateModal;
 
 function toggleWbSection(sid) {
   const tog  = document.getElementById(sid + '_tog');
