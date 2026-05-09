@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(Get-Content \"C:\\\\Users\\\\flynn\\\\Desktop\\\\Artsy Fartsy\\\\Ships\\\\Webtools\\\\Wiki Site\\\\encyclopedia\\\\editor.html\")",
-      "Bash(Select-Object -First 200)"
+      "Bash(Select-Object -First 200)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\flynn\\\\Desktop\\\\Artsy Fartsy\\\\Ships\\\\Webtools\\\\Wiki Site\\\\encyclopedia\" -Recurse -Depth 2)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-Table FullName)",
+      "Bash(cd \"/c/Users/flynn/Desktop/Artsy Fartsy/Ships/Webtools/Wiki Site/encyclopedia\" && find . -name \"*.json\" -type f | head -20)",
+      "Bash(xargs -I {} sh -c 'grep -o \"\\\\\"image\\\\\": \\\\\"[^\\\\\"]*\\\\\"\" {} | head -1')",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
