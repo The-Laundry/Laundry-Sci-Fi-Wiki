@@ -877,21 +877,22 @@
   },
   {
     "id": "ev_1778247703182_phdn",
-    "title": "Equestrian first contact with Humans and Sardens",
+    "title": "First Contact Between Equus and Humanity",
     "year": 2418,
     "month": 3,
     "day": 16,
     "yearEnd": null,
     "monthEnd": null,
     "dayEnd": null,
-    "eventCategoryId": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
     "importance": "minor",
     "description": "",
     "articleId": null,
     "timelineIds": [
-      "tl_1778245395199_9qgu"
+      "tl_1778245395199_9qgu",
+      "tl_1778293836456_7rbz"
     ],
-    "tlColumn": 4,
+    "tlColumn": 2,
     "customColor": null
   },
   {
@@ -1475,6 +1476,462 @@
       "tl_1778245395199_9qgu"
     ],
     "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778293921374_irlj",
+    "title": "1st Crewed Landing on Mars",
+    "year": 2034,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294757083_nphn",
+    "importance": "trivial",
+    "description": "<p>Humankind takes its first steps on an alien planet in the Ares II mission.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778293949041_6xvw",
+    "title": "World War 3",
+    "year": 2039,
+    "month": null,
+    "day": null,
+    "yearEnd": 2041,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "notable",
+    "description": "<p>The final of Earth's three world wars, it was charactarized by a brief period of conventional warfare, and ending in a nuclear exchange that wiped out nearly a quarter of all human life.</p>",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294010594_bad8",
+    "title": "Lagos Accords",
+    "year": 2054,
+    "month": 10,
+    "day": 11,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "trivial",
+    "description": "<p>Nation-states of Earth agree to complete nuclear disarmarment and the establishment of a second United Nations.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294069480_s09u",
+    "title": "Colonization of the Sol System",
+    "year": 2060,
+    "month": null,
+    "day": null,
+    "yearEnd": 2090,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294757083_nphn",
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294114471_40ul",
+    "title": "Human discovery of Exousite",
+    "year": 2079,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "minor",
+    "description": "<p>Discovered deep within the moon Io, Exousite would quickly become the most valuable substance known to humanity up to this point. It was first used as a highly effective way of energy storage, but was soon discovered to have non-relativistic properties.</p>",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294168611_gtxe",
+    "title": "Human Invention of FTL Travel",
+    "year": 2096,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "milestone",
+    "description": "<p>Humanity's first working version of a spool drive sent an unmanned probe five million kilometers in 16 seconds, at 0.01% faster than the speed of light. Following this triumph, a manned craft was created: the <em>Relativity</em>. The&nbsp;<em>Relativity</em>&nbsp;took four crew members from Earth to the Jupiter in just under 35 minutes, and a new age dawned for Humanity.</p>",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294209462_j4sk",
+    "title": "Formation of the United Earth Government",
+    "year": 2108,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "notable",
+    "description": "<p>The second United Nations, having been gradually reformed into a more centralized entitiy over the course of the second half of the 21st century, was officially reorganized into the sole world government on Earth. It would prove to be the framework that future iterations of human civilization would build off of.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294231475_zhi8",
+    "title": "Colonization of Alpha Centauri",
+    "year": 2119,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294261883_f5ln",
+    "title": "Early Human Interstellar Expansion",
+    "year": 2118,
+    "month": null,
+    "day": null,
+    "yearEnd": 2148,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294757083_nphn",
+    "importance": "insignificant",
+    "description": "<p>During this period, most of the major systems of Humanity were settled: Epsilon Indi, Tau Ceti, Ran, Procyon, and Keid. Other, smaller outposts sprung up across the stars, such as in Sirius and Wolf 359.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294296932_vsnw",
+    "title": "First Contact Between Humans and Saventi",
+    "year": 2139,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "trivial",
+    "description": "",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294323723_vv5e",
+    "title": "First Contact Between Apleen and Humans",
+    "year": 2212,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "minor",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294352438_yxjg",
+    "title": "Ran Belter Riots",
+    "year": 2238,
+    "month": null,
+    "day": null,
+    "yearEnd": 2239,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "trivial",
+    "description": "<p>Disgruntled by predatory trade practices by the core-worlds and an underpreforming economy in the periphery, riots errupted across the Ran asteroid belt, hightening tension between periphery systems such as Ran, Procyon, and Keid, and the inner worlds of humanity.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294399090_szix",
+    "title": "Insurgency in the Periphery",
+    "year": 2239,
+    "month": null,
+    "day": null,
+    "yearEnd": 2251,
+    "monthEnd": 4,
+    "dayEnd": 13,
+    "eventCategoryId": "ec_1778268856866_7010",
+    "importance": "minor",
+    "description": "<p>In response to the harsh reaction to the Ran Belt Riots, many citizens of the Human periphery took up arms against Earth and the other core worlds. The insurgency primarily targeted trade lanes, especially ships and traders affiliated with the core worlds; with a few, more brazen, attacks on military targets.</p><p>Little tangible success was achieved by the insurgents, but as the central government stepped up military action and authority in the periphery to combat them, more and more regular people in the periphery were pushed towards sympathy for the insurgents and their cause.&nbsp;Due to the widespread nature of the insurgency, the governments of the periphery systems were allowed to arm themselves in order to more effectively combat the insurgents.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294459099_fngx",
+    "title": "Dalton City Massacre",
+    "year": 2251,
+    "month": 4,
+    "day": 9,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268831069_urqg",
+    "importance": "trivial",
+    "description": "<p>The central government of the United Systems launches a raid on a suspected insurgent base in Dalton City, Coriter (the primate planet of the Procyon System), against the advice of the planetary government, who had doubts as to the actual presence of insurgents. The actions of the military during the raid enraged the local population, who formed a crowd around the soldiers. It is unknown if a soldier or a member of the crowd shot first, but when the smoke settled 27 citizens of the periphery lay dead in the streets, and the finger was pointed at the core worlds.</p>",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 2,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294562627_jrw6",
+    "title": "United Systems Civil War",
+    "year": 2251,
+    "month": 4,
+    "day": 15,
+    "yearEnd": 2265,
+    "monthEnd": 8,
+    "dayEnd": 2,
+    "eventCategoryId": "ec_1778268785696_u9hl",
+    "importance": "notable",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294629576_wsms",
+    "title": "Destruction of Earth",
+    "year": 2261,
+    "month": 4,
+    "day": 30,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": null,
+    "importance": "milestone",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": "#000000"
+  },
+  {
+    "id": "ev_1778294690814_nbj6",
+    "title": "The Fomalhaut Declaration",
+    "year": 2265,
+    "month": 8,
+    "day": 2,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "trivial",
+    "description": "<p>A joint resolution by the remaining members of the governments of the periphery and the core world. The Fomalhaut Declaration formally ended the United Systems Civil War that had brought humanity to the brink of extinction.</p>",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778294995263_of1k",
+    "title": "Colonization of Epsilon Indi",
+    "year": 2126,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778295071677_y2zm",
+    "title": "Colonization of Tau Ceti",
+    "year": 2130,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778295107635_3exz",
+    "title": "Colonization of Ran",
+    "year": 2133,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "insignificant",
+    "description": "",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778295138747_bknl",
+    "title": "Colonization of Procyon",
+    "year": 2137,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "trivial",
+    "description": "",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778295161812_yvap",
+    "title": "Colonization of Kied",
+    "year": 2139,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "insignificant",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 4,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778295725625_kwai",
+    "title": "Colonization of Terra Astra",
+    "year": 2293,
+    "month": null,
+    "day": null,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778294739539_p1b4",
+    "importance": "milestone",
+    "description": "",
+    "articleId": null,
+    "timelineIds": [
+      "tl_1778293836456_7rbz"
+    ],
+    "tlColumn": 3,
+    "customColor": null
+  },
+  {
+    "id": "ev_1778296016477_yiqb",
+    "title": "First Contact Between Equus and the Sarden",
+    "year": 2418,
+    "month": 3,
+    "day": 16,
+    "yearEnd": null,
+    "monthEnd": null,
+    "dayEnd": null,
+    "eventCategoryId": "ec_1778268873273_clvr",
+    "importance": "minor",
+    "description": "",
+    "articleId": "undefined",
+    "timelineIds": [
+      "tl_1778245395199_9qgu"
+    ],
+    "tlColumn": 1,
     "customColor": null
   }
 ]
