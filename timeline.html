@@ -407,7 +407,7 @@ function togglePanel() {
 // ══════════════════════════════
 function onCalChange() {
   DB.settings.activeCalendar = document.getElementById('tl-cal-sel').value;
-  DB.save();
+  DB.saveSettings();
   renderTL();
 }
 
@@ -975,12 +975,13 @@ function openEventModal(id) {
     </div>`,
     [
       ...(ev?[{label:'Delete',cls:'btn-danger',action:async()=>{
-        DB.events=DB.events.filter(e=>e.id!==id);await DB.save();UI.closeModal();
+        DB.events=DB.events.filter(e=>e.id!==id);await DB.saveEvents();UI.closeModal();
         selectedEvId=null;document.getElementById('tl-dp-body').innerHTML='<div class="tl-dp-placeholder">Click any event to view details.</div>';document.getElementById('tl-dp-footer').style.display='none';
         renderTL();UI.toast('Event deleted.');
       }}]:[]),
       {label:'Cancel',cls:'btn-secondary',action:()=>UI.closeModal()},
-      {label:ev?'Save Changes':'Add Event',cls:'btn-primary',action:async()=>{
+      {label:ev?'Save Changes':'Add Event',cls:'btn-primary',action:async(e)=>{
+        const btn=e?.target;if(btn&&btn._saving)return;if(btn)btn._saving=true;
         const title=document.getElementById('ev-title').value.trim();
         const yRaw=document.getElementById('ev-y').value.trim();
         if(!title||!yRaw){UI.toast('Title and year are required.');return;}
@@ -1004,7 +1005,7 @@ function openEventModal(id) {
           customColor:document.getElementById('ev-color-val').value||null,
         };
         if(ev)Object.assign(ev,data);else DB.events.push({id:mkId('ev'),...data});
-        await DB.save();UI.closeModal();renderTL();UI.toast(ev?'Event updated.':'Event added.');
+        await DB.saveEvents();UI.closeModal();renderTL();UI.toast(ev?'Event updated.':'Event added.');
       }},
     ]
   );
@@ -1075,9 +1076,10 @@ function openEraModal(id) {
       </div>
     </div>`,
     [
-      ...(era?[{label:'Delete Era',cls:'btn-danger',action:async()=>{DB.eras=DB.eras.filter(e=>e.id!==id);await DB.save();UI.closeModal();renderTL();UI.toast('Era deleted.');}}]:[]),
+      ...(era?[{label:'Delete Era',cls:'btn-danger',action:async()=>{DB.eras=DB.eras.filter(e=>e.id!==id);await DB.saveEras();UI.closeModal();renderTL();UI.toast('Era deleted.');}}]:[]),
       {label:'Cancel',cls:'btn-secondary',action:()=>UI.closeModal()},
-      {label:era?'Save Changes':'Add Era',cls:'btn-primary',action:async()=>{
+      {label:era?'Save Changes':'Add Era',cls:'btn-primary',action:async(e)=>{
+        const btn=e?.target;if(btn&&btn._saving)return;if(btn)btn._saving=true;
         const name=document.getElementById('era-name').value.trim();
         const syR=document.getElementById('era-sy').value.trim();
         const eyR=document.getElementById('era-ey').value.trim();
@@ -1092,7 +1094,7 @@ function openEraModal(id) {
         const countsBackward=document.getElementById('era-bwd').checked;
         const data={name,startYear,endYear,color,customCalAbbrev,customCalOffset,hasYearZero,countsBackward};
         if(era)Object.assign(era,data);else DB.eras.push({id:mkId('era'),timelineId:currentTlId,...data});
-        await DB.save();UI.closeModal();renderTL();UI.toast(era?'Era updated.':'Era added.');
+        await DB.saveEras();UI.closeModal();renderTL();UI.toast(era?'Era updated.':'Era added.');
       }},
     ]
   );

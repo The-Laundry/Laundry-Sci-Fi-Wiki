@@ -34,5 +34,17 @@
     "name": "Magical Event",
     "color": "#7d529f",
     "defaultColor": "#7d529f"
+  },
+  {
+    "id": "ec_1778294739539_p1b4",
+    "name": "Settlement",
+    "color": "#50a0e0",
+    "defaultColor": "#50a0e0"
+  },
+  {
+    "id": "ec_1778294757083_nphn",
+    "name": "Exploration",
+    "color": "#6ea84e",
+    "defaultColor": "#6ea84e"
   }
 ]

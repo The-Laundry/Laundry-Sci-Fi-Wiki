@@ -108,5 +108,65 @@
     "color": "#fcc400",
     "customCalAbbrev": null,
     "customCalOffset": null
+  },
+  {
+    "id": "era_1778295393869_eijr",
+    "timelineId": "tl_1778293836456_7rbz",
+    "name": "Pre-Unification",
+    "startYear": 2033,
+    "endYear": 2107,
+    "color": "#78909c",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": true,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778295476768_yakx",
+    "timelineId": "tl_1778293836456_7rbz",
+    "name": "United Earth",
+    "startYear": 2108,
+    "endYear": 2159,
+    "color": "#6aa87a",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": true,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778295533098_qhfm",
+    "timelineId": "tl_1778293836456_7rbz",
+    "name": "United Systems",
+    "startYear": 2160,
+    "endYear": 2250,
+    "color": "#3a6ea8",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": true,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778295590799_i3wy",
+    "timelineId": "tl_1778293836456_7rbz",
+    "name": "Civil War",
+    "startYear": 2251,
+    "endYear": 2265,
+    "color": "#646464",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": true,
+    "countsBackward": false
+  },
+  {
+    "id": "era_1778295866348_fj1q",
+    "timelineId": "tl_1778293836456_7rbz",
+    "name": "United Systems Confederacy",
+    "startYear": 2266,
+    "endYear": 2450,
+    "color": "#c96b61",
+    "customCalAbbrev": null,
+    "customCalOffset": null,
+    "hasYearZero": true,
+    "countsBackward": false
   }
 ]

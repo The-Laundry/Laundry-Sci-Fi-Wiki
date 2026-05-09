@@ -151,7 +151,7 @@ function renderManager() {
     const tog = document.createElement('div');
     tog.className = 'tree-toggle' + (hasKids ? (isOpen ? ' open' : '') : '  leaf');
     tog.textContent = hasKids ? '▶' : '';
-    if (hasKids) { tog.onclick = e => { e.stopPropagation(); cat.collapsed = !cat.collapsed; DB.save(); renderManager(); }; }
+    if (hasKids) { tog.onclick = e => { e.stopPropagation(); DB.setCatCollapsed(cat.id, !DB.getCatCollapsed(cat.id)); renderManager(); }; }
     header.appendChild(tog);
 
     const fi = document.createElement('span'); fi.textContent = '📁'; fi.style.cssText = 'font-size:14px;margin-right:4px;flex-shrink:0;'; header.appendChild(fi);
@@ -224,7 +224,7 @@ function startRename(cid) {
   labelEl.replaceWith(inp); inp.focus(); inp.select();
   const commit = async () => {
     const v = inp.value.trim();
-    if (v && v !== cat.name) { cat.name = v; await DB.save(); UI.renderSidebar(); }
+    if (v && v !== cat.name) { cat.name = v; await DB.saveCategories(); UI.renderSidebar(); }
     renderManager();
   };
   inp.onblur = commit;
@@ -243,7 +243,7 @@ function openNewCatModal(parentId) {
         const name = document.getElementById('new-cat-name').value.trim();
         if (!name) { UI.toast('Enter a name.'); return; }
         DB.categories.push({ id: mkId('cat'), name, parentId: parentId || null, collapsed: false });
-        await DB.save(); UI.closeModal(); UI.renderSidebar(); renderManager(); UI.toast('Category created.');
+        await DB.saveCategories(); UI.closeModal(); UI.renderSidebar(); renderManager(); UI.toast('Category created.');
      }}]
   );
   setTimeout(() => document.getElementById('new-cat-name')?.focus(), 50);
@@ -260,7 +260,7 @@ async function deleteCategoryById(cid) {
   DB.articles.forEach(a => { if (a.categoryId === cid) a.categoryId = null; });
   DB.getChildCats(cid).forEach(c => { c.parentId = cat.parentId || null; });
   DB.categories = DB.categories.filter(c => c.id !== cid);
-  await DB.save(); UI.renderSidebar(); renderManager(); UI.toast('Category deleted.');
+  await DB.saveCategories(); UI.renderSidebar(); renderManager(); UI.toast('Category deleted.');
 }
 
 async function deleteArticleById(id) {
@@ -268,7 +268,7 @@ async function deleteArticleById(id) {
   if (!confirm(`Delete "${art?.title || 'this article'}"? This cannot be undone.`)) return;
   await DB.deleteArticleFile(id);
   DB.articles = DB.articles.filter(a => a.id !== id);
-  await DB.save(); UI.renderSidebar(); renderManager(); UI.toast('Article deleted.');
+  await DB.saveCategories(); UI.renderSidebar(); renderManager(); UI.toast('Article deleted.');
 }
 
 // ── ARTICLE TEMPLATE MANAGER ─────────────────────────────────────
@@ -313,7 +313,7 @@ function renderArticleTemplateList() {
     db2.onclick = async () => {
       if (!confirm(`Delete template "${t.name}"?`)) return;
       DB.articleTemplates = DB.articleTemplates.filter(x => x.id !== t.id);
-      await DB.save(); renderArticleTemplateList(); UI.toast('Template deleted.');
+      await DB.saveArticleTemplates(); renderArticleTemplateList(); UI.toast('Template deleted.');
     };
     acts.appendChild(db2);
 
@@ -363,7 +363,7 @@ function openArticleTemplateModal(id) {
         } else {
           DB.articleTemplates.push({ id: mkId('atpl'), name, categoryId: catId, tags, content });
         }
-        await DB.save(); UI.closeModal(); renderArticleTemplateList();
+        await DB.saveArticleTemplates(); UI.closeModal(); renderArticleTemplateList();
         UI.toast(existing ? 'Template updated.' : 'Template created.');
       }},
     ]
@@ -413,7 +413,7 @@ function renderWbTemplateList() {
     db2.onclick = async () => {
       if (!confirm(`Delete template "${t.name}"?`)) return;
       DB.wikiboxTemplates = DB.wikiboxTemplates.filter(x => x.id !== t.id);
-      await DB.save(); renderWbTemplateList(); UI.toast('Template deleted.');
+      await DB.saveWikiboxTemplates(); renderWbTemplateList(); UI.toast('Template deleted.');
     };
     acts.appendChild(db2);
     row.appendChild(name); row.appendChild(fc); row.appendChild(acts); list.appendChild(row);
@@ -428,7 +428,7 @@ function openWbTemplateModal(id) {
     : [{ type: 'field', key: '' }];
 
   // ── render field list inside the modal ──
-  let _tmplDragIdx = null;
+  window._tmplDragIdx = null;
   function fHTML() {
     return tmpFields.map((f, i) => {
       const isSection = f.type === 'section';
@@ -507,7 +507,7 @@ function openWbTemplateModal(id) {
         }));
         if (existing) { existing.name = name; existing.fields = fields; }
         else DB.wikiboxTemplates.push({ id: mkId('wbt'), name, fields });
-        await DB.save();
+        await DB.saveWikiboxTemplates();
         UI.closeModal();
         renderWbTemplateList();
         UI.toast(existing ? 'Template updated.' : 'Template created.');

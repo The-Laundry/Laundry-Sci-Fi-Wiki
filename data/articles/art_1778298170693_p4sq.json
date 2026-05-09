@@ -1,0 +1,85 @@
+{
+  "id": "art_1778298170693_p4sq",
+  "title": "Panneri",
+  "content": "<p>A nomadic, space-faring species, the <strong>Panneri </strong>are among the oldest known space-faring species in the galaxy. Their written history dates back over two thousand years, and oral history many more beyond that. So long have they wandered the stars, their original homeworld has since been lost to time, though some scholars believe it to be located within the Moorpoint system. Also located in Moorpoint is&nbsp;[[The Sadri]], the largest of the Panneri moorings, which gave the system it's name.</p><p>Despite their long history in space and nomadic tendencies, the Panneri have remained relatively contained in their corner of the galaxy, thanks to deeply ingrained spiritual beliefs. Often considered strange to the other, more settled species in the galaxy, the Panneri nonetheless are reliable merchants and bringers of information, bridging the divide between disparate polities who would otherwise have no contact with eachother.</p><h1>Physiology and appearance</h1><p>lorem ipsum dolor sit amet</p><h1>History</h1><p>lorem ipsum dolor sit amet</p><h1>Science and culture</h1><p>lorem ipsum dolor sit amet</p><h1>Science and technology</h1><p>lorem ipsum dolor sit amet</p><h1>Panneri in the Galaxy</h1><p>lorem ipsum dolor sit amet</p>",
+  "categoryId": "cat_1778228847910_r4ji",
+  "tags": [],
+  "wikibox": {
+    "enabled": true,
+    "title": "",
+    "subtitle": "",
+    "image": null,
+    "imagePath": false,
+    "imgCaption": "",
+    "fields": [
+      {
+        "type": "section",
+        "key": "Biological classification",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Awareness level",
+        "val": "<p>Sapient</p>"
+      },
+      {
+        "type": "field",
+        "key": "Physiological category",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Physical details",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Average height",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Average weight",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Skin color",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Eye color",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Distinctions",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Average lifespan",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Astrological details",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Planet of origin",
+        "val": "<p>Unknown</p>"
+      },
+      {
+        "type": "field",
+        "key": "System of origin",
+        "val": "<p>poss. Moorpoint</p>"
+      }
+    ]
+  },
+  "created": 1778298170693,
+  "updated": 1778298273794,
+  "summary": ""
+}

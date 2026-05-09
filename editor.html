@@ -231,11 +231,13 @@ let isAiDraft            = false;
       document.getElementById('wb-subtitle').value = wb.subtitle || '';
       document.getElementById('wb-img-caption').value = wb.imgCaption || '';
       wbFields = wb.fields ? JSON.parse(JSON.stringify(wb.fields)) : [];
-      // Migrate old plain-string fields to new schema
-      wbFields = wbFields.map(f => {
-        if (!f.type) f.type = 'field';
-        return f;
-      });
+      // Assign stable runtime IDs; migrate old plain objects
+      wbFields = wbFields.map(f => ({
+        _id: _wbMkId(),
+        type: f.type || 'field',
+        key: f.key || '',
+        val: f.val || '',
+      }));
       wbImageData   = wb.image   || null;
       wbImageIsPath = wb.imagePath || false;
       if (wbImageData) {
@@ -273,6 +275,7 @@ let isAiDraft            = false;
           document.getElementById('wb-subtitle').value = wb.subtitle || '';
           document.getElementById('wb-img-caption').value = wb.imgCaption || '';
           wbFields = (wb.fields || []).map(f => ({
+            _id: _wbMkId(),
             type: f.type === 'section' ? 'section' : 'field',
             key: f.key || '',
             val: f.val || '',
@@ -498,6 +501,7 @@ if (_legacyEditorModal) {
           document.getElementById('wb-subtitle').value = wb.subtitle || '';
           document.getElementById('wb-img-caption').value = wb.imgCaption || '';
           wbFields = (wb.fields || []).map(f => ({
+            _id: _wbMkId(),
             type: f.type === 'section' ? 'section' : 'field',
             key: f.key || '',
             val: f.val || '',
@@ -717,7 +721,203 @@ document.addEventListener('click', e => {
   }
 });
 
-// ── WIKIBOX TEMPLATE SELECT ──────────────────────────────────────
+// ── WIKIBOX FIELDS — clean rewrite ───────────────────────────────
+// Each field has a stable runtime _id. No numeric indices in the DOM.
+// A single shared Quill (bubble theme) "possesses" one field at a time.
+
+let wbActiveId = null;  // _id of focused field
+let _wbDragId  = null;  // _id being dragged
+
+function _wbMkId() { return 'wb_' + Math.random().toString(36).slice(2, 8); }
+
+function _ensureIds() {
+  wbFields = wbFields.map(f => f._id ? f : { ...f, _id: _wbMkId() });
+}
+
+function addWikiboxField()   { wbFields.push({ _id: _wbMkId(), type: 'field',   key: '', val: '' }); renderWbFields(); }
+function addWikiboxSection() { wbFields.push({ _id: _wbMkId(), type: 'section', key: 'Section' });   renderWbFields(); }
+function removeWbField(id) {
+  wbFields = wbFields.filter(f => f._id !== id);
+  renderWbFields();
+}
+
+// ── Mini-toolbar (appears on text selection) ──────────────────────
+function initMiniToolbar() {
+  const tb = document.getElementById('wb-mini-toolbar');
+  tb.querySelectorAll('.wb-mini-btn').forEach(btn => {
+    btn.onmousedown = e => {
+      e.preventDefault(); // keep focus in the contenteditable
+      const cmd = btn.dataset.cmd;
+      if (cmd === 'br') {
+        document.execCommand('insertHTML', false, '<br>');
+      } else {
+        document.execCommand(cmd);
+      }
+      // Sync back by _id
+      if (wbActiveId) {
+        const el = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+        const f  = wbFields.find(f => f._id === wbActiveId);
+        if (el && f) f.val = el.innerHTML;
+      }
+    };
+  });
+
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (!wbActiveId || !sel || sel.isCollapsed) { hideMiniToolbar(); return; }
+    const activeEl = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+    if (!activeEl || !activeEl.contains(sel.anchorNode)) { hideMiniToolbar(); return; }
+    const range = sel.getRangeAt(0);
+    const rect  = range.getBoundingClientRect();
+    if (!rect.width) { hideMiniToolbar(); return; }
+    tb.style.left = Math.max(0, rect.left + window.scrollX - 4) + 'px';
+    tb.style.top  = (rect.top + window.scrollY - 38) + 'px';
+    tb.classList.add('visible');
+  });
+}
+
+function hideMiniToolbar() {
+  document.getElementById('wb-mini-toolbar')?.classList.remove('visible');
+}
+
+// Strip runtime _id before saving
+function collectWbFields() {
+  // Flush any active editor
+  if (wbActiveId) {
+    const el = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+    const f  = wbFields.find(f => f._id === wbActiveId);
+    if (el && f) f.val = el.innerHTML;
+  }
+  return wbFields
+    .filter(f => f.type === 'section' || f.key || f.val)
+    .map(({ _id, ...rest }) => rest);
+}
+
+// ── Render ─────────────────────────────────────────────────────────
+function renderWbFields() {
+  _ensureIds();
+  const list = document.getElementById('wikibox-fields-list');
+  list.innerHTML = '';
+
+  wbFields.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'wb-field-wrap';
+    wrap.dataset.wbid = f._id;
+    wrap.draggable = true;
+
+    // Drag handle
+    const handle = document.createElement('span');
+    handle.className = 'wb-drag-handle';
+    handle.textContent = '⠿';
+    handle.title = 'Drag to reorder';
+    wrap.appendChild(handle);
+
+    if (f.type === 'section') {
+      const inner = document.createElement('div');
+      inner.className = 'wb-section-row';
+      inner.style.flex = '1';
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.value = f.key || ''; inp.placeholder = 'Section name';
+      inp.oninput = () => { const fi = wbFields.find(x => x._id === f._id); if (fi) fi.key = inp.value; };
+      const del = document.createElement('button');
+      del.className = 'wb-del-btn'; del.textContent = '✕'; del.title = 'Remove';
+      del.onclick = () => removeWbField(f._id);
+      inner.appendChild(inp); inner.appendChild(del);
+      wrap.appendChild(inner);
+    } else {
+      const inner = document.createElement('div');
+      inner.className = 'wb-field-row';
+      inner.style.flex = '1';
+
+      const keyInp = document.createElement('input');
+      keyInp.type = 'text'; keyInp.className = 'field-input';
+      keyInp.placeholder = 'Label'; keyInp.value = f.key || '';
+      keyInp.style.cssText = 'font-size:12px;padding:4px 7px;';
+      keyInp.oninput = () => { const fi = wbFields.find(x => x._id === f._id); if (fi) fi.key = keyInp.value; };
+
+      // Contenteditable value editor — identified by data-wbid, never by index
+      const valEditor = document.createElement('div');
+      valEditor.className = 'wb-value-editor';
+      valEditor.contentEditable = 'true';
+      valEditor.dataset.wbid = f._id;
+      valEditor.dataset.placeholder = 'Value…';
+      valEditor.innerHTML = f.val || '';
+      valEditor.onfocus = () => { wbActiveId = f._id; };
+      valEditor.onblur  = () => {
+        const fi = wbFields.find(x => x._id === f._id);
+        if (fi) fi.val = valEditor.innerHTML;
+        // Only clear active if focus didn't move to mini-toolbar
+        setTimeout(() => {
+          if (!document.getElementById('wb-mini-toolbar')?.matches(':hover')) {
+            if (wbActiveId === f._id) wbActiveId = null;
+          }
+        }, 100);
+      };
+      valEditor.onkeydown = e => {
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '<br>');
+          const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML;
+        }
+        if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+        if (e.key === 'b' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('bold');      const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML; }
+        if (e.key === 'i' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('italic');    const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML; }
+        if (e.key === 'u' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('underline'); const fi = wbFields.find(x => x._id === f._id); if (fi) fi.val = valEditor.innerHTML; }
+      };
+
+      const inner2 = document.createElement('div');
+      inner2.className = 'wb-field-row-inner';
+      inner2.appendChild(keyInp);
+      inner2.appendChild(valEditor);
+
+      const del = document.createElement('button');
+      del.className = 'wb-del-btn'; del.textContent = '✕'; del.title = 'Remove field';
+      del.onclick = () => removeWbField(f._id);
+
+      inner.appendChild(inner2);
+      inner.appendChild(del);
+      wrap.appendChild(inner);
+    }
+
+    // Drag events — all by _id, no numeric positions
+    wrap.ondragstart = e => {
+      // Flush active value editor before drag
+      if (wbActiveId) {
+        const el = document.querySelector(`.wb-value-editor[data-wbid="${wbActiveId}"]`);
+        const fi = wbFields.find(x => x._id === wbActiveId);
+        if (el && fi) fi.val = el.innerHTML;
+      }
+      _wbDragId = f._id;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => wrap.classList.add('wb-dragging'), 0);
+    };
+    wrap.ondragend = () => { wrap.classList.remove('wb-dragging'); _wbDragId = null; };
+    wrap.ondragover = e => { e.preventDefault(); wrap.classList.add('wb-drag-over'); };
+    wrap.ondragleave = () => wrap.classList.remove('wb-drag-over');
+    wrap.ondrop = e => {
+      e.preventDefault();
+      wrap.classList.remove('wb-drag-over');
+      if (!_wbDragId || _wbDragId === f._id) return;
+      const fromIdx = wbFields.findIndex(x => x._id === _wbDragId);
+      const toIdx   = wbFields.findIndex(x => x._id === f._id);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = wbFields.splice(fromIdx, 1);
+      wbFields.splice(toIdx, 0, moved);
+      renderWbFields();
+    };
+
+    list.appendChild(wrap);
+  });
+}
+
+// Strip runtime _id before saving
+function collectWbFields() {
+  wbActiveId = null;
+  return wbFields
+    .filter(f => f.type === 'section' || f.key || f.val)
+    .map(({ _id, ...rest }) => rest);  // eslint-disable-line no-unused-vars
+}
+
 function populateWbTemplateSelect() {
   const sel = document.getElementById('editor-wikibox-template');
   [...sel.options].filter(o => o.dataset.custom).forEach(o => o.remove());
@@ -734,168 +934,15 @@ function populateWbTemplateSelect() {
 function loadWikiboxTemplate() {
   const val = document.getElementById('editor-wikibox-template').value;
   if (!val) return;
+  wbActiveId = null; hideMiniToolbar();
   if (val.startsWith('custom_')) {
     const t = DB.wikiboxTemplates.find(t => t.id === val.slice(7));
-    if (t) wbFields = t.fields.map(f => ({ type: f.type || 'field', key: f.key, val: '' }));
+    if (t) wbFields = t.fields.map(f => ({ _id: _wbMkId(), type: f.type || 'field', key: f.key, val: '' }));
   } else if (WB_TEMPLATES[val]) {
-    wbFields = WB_TEMPLATES[val].map(([k, v]) => ({ type: 'field', key: k, val: v }));
+    wbFields = WB_TEMPLATES[val].map(([k]) => ({ _id: _wbMkId(), type: 'field', key: k, val: '' }));
   }
   document.getElementById('wikibox-enabled').checked = true;
   renderWbFields();
-}
-
-// ── WIKIBOX FIELDS ───────────────────────────────────────────────
-function addWikiboxField()   { wbFields.push({ type: 'field',   key: '', val: '' }); renderWbFields(); }
-function addWikiboxSection() { wbFields.push({ type: 'section', key: 'Section', collapsed: false }); renderWbFields(); }
-function removeWbField(i)    { wbFields.splice(i, 1); renderWbFields(); }
-
-let _wbDragIdx = null;
-
-function renderWbFields() {
-  const list = document.getElementById('wikibox-fields-list');
-  // Sync open value editors using data-idx (not forEach position — they may be reordered)
-  list.querySelectorAll('.wb-value-editor').forEach((el) => {
-    const idx = parseInt(el.dataset.idx);
-    if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
-  });
-  list.innerHTML = '';
-
-  wbFields.forEach((f, i) => {
-    const wrapper = document.createElement('div');
-    wrapper.draggable = true;
-    wrapper.dataset.idx = i;
-    wrapper.style.cssText = 'display:flex;align-items:flex-start;gap:4px;margin-bottom:4px;';
-    // Drag handle
-    const handle = document.createElement('div');
-    handle.textContent = '⠿';
-    handle.title = 'Drag to reorder';
-    handle.style.cssText = 'cursor:grab;color:var(--text-faint);font-size:14px;padding:6px 2px;flex-shrink:0;user-select:none;';
-    wrapper.appendChild(handle);
-
-    wrapper.ondragstart = e => {
-      // Flush any active contenteditable immediately before drag begins
-      if (_activeValueEl && _activeValueIdx >= 0) {
-        wbFields[_activeValueIdx].val = _activeValueEl.innerHTML;
-        _activeValueEl = null; _activeValueIdx = -1;
-      }
-      // Also sync all visible value editors synchronously
-      document.querySelectorAll('.wb-value-editor').forEach(el => {
-        const idx = parseInt(el.dataset.idx);
-        if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
-      });
-      _wbDragIdx = i; e.dataTransfer.effectAllowed = 'move'; wrapper.style.opacity = '.4';
-    };
-    wrapper.ondragend   = () => { wrapper.style.opacity = '1'; _wbDragIdx = null; };
-    wrapper.ondragover  = e => { e.preventDefault(); wrapper.style.background = 'var(--accent-light)'; };
-    wrapper.ondragleave = () => { wrapper.style.background = ''; };
-    wrapper.ondrop      = e => {
-      e.preventDefault(); wrapper.style.background = '';
-      if (_wbDragIdx === null || _wbDragIdx === i) return;
-      const moved = wbFields.splice(_wbDragIdx, 1)[0];
-      wbFields.splice(i, 0, moved);
-      renderWbFields();
-    };
-
-    if (f.type === 'section') {
-      const row = document.createElement('div');
-      row.className = 'wb-section-row';
-      row.style.flex = '1';
-      row.innerHTML = `
-        <input type="text" value="${escHtml(f.key || 'Section')}" placeholder="Section name"
-          oninput="wbFields[${i}].key=this.value">
-        <button class="wb-del-btn" onclick="removeWbField(${i})" title="Remove section">✕</button>`;
-      wrapper.appendChild(row);
-    } else {
-      const row = document.createElement('div');
-      row.className = 'wb-field-row';
-      row.style.flex = '1';
-      row.innerHTML = `
-        <div class="wb-field-row-inner">
-          <input type="text" class="field-input" placeholder="Label" style="font-size:12px;padding:4px 7px;"
-            value="${escHtml(f.key || '')}" oninput="wbFields[${i}].key=this.value">
-          <div class="wb-value-editor" contenteditable="true"
-            data-placeholder="Value…" data-idx="${i}"
-            onfocus="onValueFocus(this,${i})"
-            onblur="onValueBlur(this,${i})"
-            onkeydown="onValueKeydown(event,this,${i})"
-          >${f.val || ''}</div>
-        </div>
-        <button class="wb-del-btn" onclick="removeWbField(${i})" title="Remove field">✕</button>`;
-      wrapper.appendChild(row);
-    }
-    list.appendChild(wrapper);
-  });
-}
-
-// ── WIKIBOX VALUE RICH-TEXT ──────────────────────────────────────
-let _activeValueEl = null;
-let _activeValueIdx = -1;
-let _savedSelection = null;
-
-function onValueFocus(el, idx) {
-  _activeValueEl  = el;
-  _activeValueIdx = idx;
-}
-function onValueBlur(el, idx) {
-  // If a drag is in progress, the ondragstart already flushed values — skip the delayed save
-  setTimeout(() => {
-    if (_wbDragIdx !== null) return;
-    if (!document.getElementById('wb-mini-toolbar').matches(':hover')) {
-      wbFields[idx].val = el.innerHTML;
-      _activeValueEl = null;
-    }
-  }, 100);
-}
-function onValueKeydown(e, el, idx) {
-  if (e.key === 'b' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('bold');      wbFields[idx].val = el.innerHTML; }
-  if (e.key === 'i' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('italic');    wbFields[idx].val = el.innerHTML; }
-  if (e.key === 'u' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.execCommand('underline'); wbFields[idx].val = el.innerHTML; }
-  if (e.key === 'Enter' && e.shiftKey) {
-    e.preventDefault();
-    document.execCommand('insertHTML', false, '<br>');
-    wbFields[idx].val = el.innerHTML;
-  }
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault(); // Don't create new paragraphs inside field value
-  }
-}
-
-function initMiniToolbar() {
-  const tb = document.getElementById('wb-mini-toolbar');
-  tb.querySelectorAll('.wb-mini-btn').forEach(btn => {
-    btn.onmousedown = e => {
-      e.preventDefault(); // Don't steal focus from contenteditable
-      const cmd = btn.dataset.cmd;
-      if (_activeValueEl) {
-        _activeValueEl.focus();
-        if (cmd === 'br') {
-          document.execCommand('insertHTML', false, '<br>');
-        } else {
-          document.execCommand(cmd);
-        }
-        if (_activeValueIdx >= 0) wbFields[_activeValueIdx].val = _activeValueEl.innerHTML;
-      }
-    };
-  });
-
-  // Show toolbar near focused value editor
-  document.addEventListener('selectionchange', () => {
-    if (!_activeValueEl) { hideMiniToolbar(); return; }
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !_activeValueEl.contains(sel.anchorNode)) {
-      hideMiniToolbar(); return;
-    }
-    const range = sel.getRangeAt(0);
-    const rect  = range.getBoundingClientRect();
-    if (!rect.width) { hideMiniToolbar(); return; }
-    tb.style.left = Math.max(0, rect.left + window.scrollX - 4) + 'px';
-    tb.style.top  = rect.top + window.scrollY - 38 + 'px';
-    tb.classList.add('visible');
-  });
-}
-
-function hideMiniToolbar() {
-  document.getElementById('wb-mini-toolbar').classList.remove('visible');
 }
 
 // ── IMAGE HANDLING ───────────────────────────────────────────────
@@ -980,15 +1027,14 @@ function applyArticleTemplate(tmpl) {
 }
 
 // ── SAVE ─────────────────────────────────────────────────────────
+let _articleSaving = false;
 async function saveArticle() {
+  if (_articleSaving) return;
+  _articleSaving = true;
+  const saveBtn = document.querySelector('button[onclick="saveArticle()"]');
+  if (saveBtn) saveBtn.disabled = true;
   const title = document.getElementById('editor-title').value.trim();
   if (!title) { UI.toast('Please enter a title.'); return; }
-
-  // Sync any open value editors
-  document.querySelectorAll('.wb-value-editor').forEach(el => {
-    const idx = parseInt(el.dataset.idx);
-    if (!isNaN(idx) && wbFields[idx]) wbFields[idx].val = el.innerHTML;
-  });
 
   const content    = quillEditor.root.innerHTML;
   const categoryId = selectedCategoryId || null;
@@ -1000,7 +1046,7 @@ async function saveArticle() {
     image:      wbImageData,
     imagePath:  wbImageIsPath,
     imgCaption: document.getElementById('wb-img-caption').value.trim(),
-    fields:     wbFields.filter(f => f.type === 'section' || f.key || f.val),
+    fields:     collectWbFields(),  // flushes Quill, strips _id
   };
   const summary = document.getElementById('editor-summary').value.trim();
   const now = Date.now();
@@ -1023,6 +1069,7 @@ async function saveArticle() {
     await DB.save(savedId);
   }
   UI.toast(editingId ? 'Article saved.' : 'Article created.');
+  _articleSaving = false;
 
   // Optional AI auto-refresh of summary + embedding.
   const cfg = (typeof AI !== 'undefined') ? AI.getConfig() : null;

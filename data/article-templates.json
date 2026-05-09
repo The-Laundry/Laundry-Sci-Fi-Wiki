@@ -4,56 +4,119 @@
     "name": "Character",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe biographical article about a character. Cover early life/origin, notable achievements, personality, relationships, and legacy. Stay consistent with any facts present in the context.",
-    "sectionOutline": ["Biography", "Early Life", "Career", "Personal Life", "Legacy"],
-    "defaultTags": ["character"]
+    "sectionOutline": [
+      "Biography",
+      "Early Life",
+      "Career",
+      "Personal Life",
+      "Legacy"
+    ],
+    "defaultTags": [
+      "character"
+    ]
   },
   {
     "id": "atpl_default_nation",
     "name": "Nation / Faction",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe encyclopedia article about a nation, civilization, or faction. Cover government, demographics, territory, history, culture, economy, and military. Stay consistent with existing lore.",
-    "sectionOutline": ["Overview", "History", "Government", "Culture", "Economy", "Military"],
-    "defaultTags": ["nation", "faction"]
+    "sectionOutline": [
+      "Overview",
+      "History",
+      "Government",
+      "Culture",
+      "Economy",
+      "Military"
+    ],
+    "defaultTags": [
+      "nation",
+      "faction"
+    ]
   },
   {
     "id": "atpl_default_event",
     "name": "Historical Event",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe encyclopedia article about a historical event. Cover background/causes, course of events (chronological), key figures, outcome, and long-term impact.",
-    "sectionOutline": ["Background", "Prelude", "Course of Events", "Aftermath", "Legacy"],
-    "defaultTags": ["event", "history"]
+    "sectionOutline": [
+      "Background",
+      "Prelude",
+      "Course of Events",
+      "Aftermath",
+      "Legacy"
+    ],
+    "defaultTags": [
+      "event",
+      "history"
+    ]
   },
   {
     "id": "atpl_default_timeline",
     "name": "Timeline / Era",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe article describing an era or period of history as a narrative timeline. Use chronological subsections with approximate dates. Summarize the beginning and end of the period.",
-    "sectionOutline": ["Overview", "Beginning of the Era", "Key Events", "End of the Era", "Legacy"],
-    "defaultTags": ["timeline", "era"]
+    "sectionOutline": [
+      "Overview",
+      "Beginning of the Era",
+      "Key Events",
+      "End of the Era",
+      "Legacy"
+    ],
+    "defaultTags": [
+      "timeline",
+      "era"
+    ]
   },
   {
     "id": "atpl_default_location",
     "name": "Location / Planet",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe encyclopedia article about a location (planet, city, region, or site). Cover geography, climate, population/demographics, government, economy, history, and notable features.",
-    "sectionOutline": ["Overview", "Geography", "History", "Society", "Notable Features"],
-    "defaultTags": ["location"]
+    "sectionOutline": [
+      "Overview",
+      "Geography",
+      "History",
+      "Society",
+      "Notable Features"
+    ],
+    "defaultTags": [
+      "location"
+    ]
   },
   {
     "id": "atpl_default_species",
     "name": "Species",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe encyclopedia article about a species or sapient race. Cover biology, physiology, society, culture, history, and relations with other species.",
-    "sectionOutline": ["Biology", "Society", "Culture", "History", "External Relations"],
-    "defaultTags": ["species"]
+    "sectionOutline": [
+      "Biology",
+      "Society",
+      "Culture",
+      "History",
+      "External Relations"
+    ],
+    "defaultTags": [
+      "species"
+    ],
+    "categoryId": "cat_1778228847910_r4ji",
+    "tags": [],
+    "content": "<p>Summary</p><h1>Physiology and appearance</h1><p>lorem ipsum dolor sit amet</p><h1>History</h1><p>lorem ipsum dolor sit amet</p><h1>Science and culture</h1><p>lorem ipsum dolor sit amet</p><h1>Science and technology</h1><p>lorem ipsum dolor sit amet</p><h1>[NAME] in the galaxy</h1><p>lorem ipsum dolor sit amet</p>"
   },
   {
     "id": "atpl_default_technology",
     "name": "Technology / Object",
     "wikiboxTemplateId": "",
     "articlePrompt": "Write an in-universe encyclopedia article about a technology, artifact, or piece of equipment. Cover design, function, history of development, notable uses, and cultural significance.",
-    "sectionOutline": ["Overview", "Design", "Function", "History", "Notable Uses"],
-    "defaultTags": ["technology"]
+    "sectionOutline": [
+      "Overview",
+      "Design",
+      "Function",
+      "History",
+      "Notable Uses"
+    ],
+    "defaultTags": [
+      "technology"
+    ]
   },
   {
     "id": "atpl_default_generic",
@@ -62,5 +125,12 @@
     "articlePrompt": "Write a well-organized in-universe encyclopedia article about the requested topic. Choose appropriate sections based on the subject matter.",
     "sectionOutline": [],
     "defaultTags": []
+  },
+  {
+    "id": "atpl_1778297012152_4ib9",
+    "name": "Ship Class",
+    "categoryId": "cat_1778228794993_62pj",
+    "tags": [],
+    "content": "<p>Summary</p><h1>Characteristics</h1><h2><u>Dimensions</u></h2><p>aaa</p><h2><u>Crew and cargo</u></h2><p>aaa</p><h2><u>Power and propulsion systems</u></h2><p>aaa</p><h2><u>Weapons and armament</u></h2><p>aaa</p><h2><u>Armor and defense</u></h2><p>aaa</p><h1><strong>History</strong></h1><p>aaa</p><h1><strong>Notable vessels</strong></h1><ul><li><strong><em>ABV Name</em></strong>: Launched DATE, SHIPYARD. </li></ul>"
   }
 ]

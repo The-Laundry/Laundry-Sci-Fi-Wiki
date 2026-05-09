@@ -365,21 +365,21 @@ body {
 .wb-section-row input:focus { outline-color: var(--accent); background: var(--bg-surface); }
 .wb-section-row .wb-del-btn { border: none; background: none; color: var(--accent); opacity: .5; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px; }
 .wb-section-row .wb-del-btn:hover { opacity: 1; color: var(--red); }
-/* Rich text value editor */
+/* Wikibox value editor — inline contenteditable, identified by data-wbid */
 .wb-value-editor {
   min-height: 28px; padding: 4px 7px; border: 1px solid var(--border);
   border-radius: 3px; background: var(--bg-surface); font-family: var(--font-body);
   font-size: 12.5px; line-height: 1.5; color: var(--text);
-  outline: none; cursor: text; word-break: break-word;
+  outline: none; cursor: text; word-break: break-word; transition: border-color .15s;
 }
 .wb-value-editor:focus { border-color: var(--accent); }
 .wb-value-editor:empty::before { content: attr(data-placeholder); color: var(--text-faint); pointer-events: none; }
-/* Mini formatting toolbar for wb value */
+/* Floating mini-toolbar — appears on text selection */
 .wb-mini-toolbar {
   display: none; position: absolute; z-index: 60;
-  background: var(--text); border-radius: var(--radius);
+  background: #1a1a1e; border-radius: var(--radius);
   padding: 3px 5px; gap: 2px; align-items: center;
-  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  box-shadow: 0 2px 10px rgba(0,0,0,.35);
 }
 .wb-mini-toolbar.visible { display: flex; }
 .wb-mini-btn {
@@ -388,6 +388,12 @@ body {
   line-height: 1; transition: background .1s;
 }
 .wb-mini-btn:hover { background: rgba(255,255,255,.2); }
+/* Wikibox field wrapper for drag-reorder */
+.wb-field-wrap { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 4px; }
+.wb-field-wrap.wb-drag-over { outline: 2px dashed var(--accent); outline-offset: 1px; background: var(--accent-light); border-radius: var(--radius); }
+.wb-field-wrap.wb-dragging  { opacity: .35; }
+.wb-drag-handle { cursor: grab; color: var(--text-faint); font-size: 14px; padding: 6px 2px; flex-shrink: 0; user-select: none; line-height: 1; }
+.wb-drag-handle:hover { color: var(--text); }
 /* Collapsed section indicator */
 .wb-section-collapsed-hint { font-size: 11px; color: var(--text-faint); font-style: italic; padding: 2px 8px 6px; }
 /* Upload area */
@@ -855,6 +861,65 @@ a.tag.tag-active { background: var(--accent); border-color: var(--accent); color
   font-size: 12.5px; color: var(--text-muted); font-style: italic;
   padding: 6px 10px; border-left: 2px solid var(--accent);
   background: var(--accent-light); border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* ── Conlang inline references ({{Lang:word}} tooltips) ─────────────── */
+.conlang-ref {
+  position: relative;
+  border-bottom: 1px dotted var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: help;
+  font-style: normal;
+  padding: 0 1px;
+}
+.conlang-ref:hover { background: var(--accent-light); border-radius: 2px; }
+.conlang-ref.conlang-miss {
+  color: var(--red, #b94a48);
+  border-bottom-color: var(--red, #b94a48);
+  border-bottom-style: dashed;
+}
+.conlang-ref.conlang-miss:hover { background: rgba(185, 74, 72, 0.08); }
+
+/* Custom tooltip rendered on hover via data-conlang-tip attribute */
+.conlang-ref[data-conlang-tip]:hover::after {
+  content: attr(data-conlang-tip);
+  position: absolute;
+  z-index: 100;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  white-space: pre-line;
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+  min-width: 180px;
+  max-width: 320px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  pointer-events: none;
+}
+.conlang-ref[data-conlang-tip]:hover::before {
+  content: '';
+  position: absolute;
+  z-index: 101;
+  bottom: 100%;
+  left: 12px;
+  margin-bottom: 0;
+  border: 5px solid transparent;
+  border-top-color: var(--text);
+  pointer-events: none;
+}
+[data-theme="dark"] .conlang-ref[data-conlang-tip]:hover::after {
+  background: var(--bg-sidebar);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+[data-theme="dark"] .conlang-ref[data-conlang-tip]:hover::before {
+  border-top-color: var(--bg-sidebar);
 }
 
 /* ── Header global AI-busy indicator ── */

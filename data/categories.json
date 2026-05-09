@@ -17,14 +17,14 @@
     "id": "cat_1778227717518_y80p",
     "name": "Civilizations",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
     "id": "cat_1778227723000_6fzg",
     "name": "Human",
     "parentId": "cat_1778227717518_y80p",
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
@@ -143,7 +143,7 @@
     "id": "cat_1778228828633_emt7",
     "name": "Lifeforms",
     "parentId": null,
-    "collapsed": true,
+    "collapsed": false,
     "_ddCollapsed": true
   },
   {
@@ -171,7 +171,7 @@
     "id": "cat_1778228892394_h75m",
     "name": "Organizations",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": false
   },
   {
@@ -185,7 +185,7 @@
     "id": "cat_1778228914079_yvvg",
     "name": "Events",
     "parentId": null,
-    "collapsed": false,
+    "collapsed": true,
     "_ddCollapsed": true
   },
   {
