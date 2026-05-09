@@ -1,18 +1,185 @@
 {
   "id": "art_1778259525245_gjpr",
   "title": "Cloudsdale-class Colony Ship",
-  "content": "<p>The first Equestrian ship longer than 200 meters, the <strong>Cloudsdale-class</strong> (later referred to as the Cloudsdale I-class) colony ship was designed to act as a great ark for creatures from Equus looking to start a colony amongst the stars. The interior of it's iconic dome is filled terrain transplanted from Equus, with enough land to host a small village inside the ship. Standard equipment for the ship included two cloud generators, one on each side of the ship, intended to be used by Pegasi to create a cloud city centered around the ship. In addition to the amenities offered, the ship was also designed to carry up to 1,000 colonists, in order to deliver them to a proper ground based colony.</p><p>Production of the Cloudsdale-Class was immediately halted following the outbreak of the Great War, and the five ships of this class being constructed at the time were retooled into the combat oriented <strong>Cloudsdale II-class</strong>&nbsp;cruiser. Production would be resumed following the Battle of Caren Prime and the demilitarization of the Equestrian economy, but the class would quickly be rendered obsolete by the larger and more advanced Las Pegasus line of colony ships.</p><h1><strong>Characteristics</strong></h1><h2><u>Dimensions</u></h2><p>aaa</p><h2><u>Crew and cargo</u></h2><p>aaa</p><h2><u>Power and propulsion systems</u></h2><p>aaa</p><h2><u>Weapons and armament</u></h2><p>aaa</p><h2><u>Armor and defense</u></h2><p>aaa</p><h1><strong>History</strong></h1><p>aaa</p><h1><strong>Notable vessels</strong></h1><ul><li><strong><em>ESAV Cloudsdale</em></strong>: Launched 2424, Equus Orbital Yards. First ship of the class. Destroyed with all hands in 2429 during the 1st Battle of Yildun Rest.</li><li><strong><em>ESAV Stratusburg</em></strong>: Launched in 2425, Equus Orbital Yards. Destroyed with all hands in 2429 during the 1st Battle of Yildun Rest.</li><li><strong><em>ESAV/ESS Las Pegasus</em></strong>: Launched in 2425, Equus Orbital Yards. Converted to Cloudsdale-II class in 2430. Designated as museum ship in 2444.</li></ul>",
+  "content": "<p>The first Equestrian ship longer than 200 meters, the <strong>Cloudsdale-class</strong> (later referred to as the Cloudsdale I-class) colony ship was designed to act as a great ark for creatures from Equus looking to start a colony amongst the stars. The interior of it's iconic dome is filled terrain transplanted from Equus, with enough land to host a small village inside the ship. Standard equipment for the ship included two cloud generators, one on each side of the ship, intended to be used by Pegasi to create a cloud city centered around the ship. In addition to the amenities offered, the ship was also designed to carry up to 1,000 colonists, in order to deliver them to a proper ground based colony.</p><p>Production of the Cloudsdale-Class was immediately halted following the outbreak of the Great War, and the five ships of this class being constructed at the time were retooled into the combat oriented <strong>Cloudsdale II-class</strong>&nbsp;cruiser. Production would be resumed following the Battle of Caren Prime and the demilitarization of the Equestrian economy, but the class would quickly be rendered obsolete by the larger and more advanced Las Pegasus line of colony ships.</p><h1><strong>Characteristics</strong></h1><h2><u>Dimensions</u></h2><p>aaa</p><h2><u>Crew and cargo</u></h2><p>aaa</p><h2><u>Power and propulsion systems</u></h2><p>aaa</p><h2><u>Weapons and armament</u></h2><p>aaa</p><h2><u>Armor and defense</u></h2><p>aaa</p><h1><strong>History</strong></h1><p>aaa</p><h1><strong>Notable vessels</strong></h1><ul><li><strong><em>ESAV Cloudsdale</em></strong>: Launched 2424, Baltimare Astroyard. First ship of the class. Destroyed with all hands in 2429 during the 1st Battle of Yildun Rest.</li><li><strong><em>ESAV Stratusburg</em></strong>: Launched in 2425, Equus Orbital Yards. Destroyed with all hands in 2429 during the 1st Battle of Yildun Rest.</li><li><strong><em>ESAV/ESS Las Pegasus</em></strong>: Launched in 2425, Equus Orbital Yards. Converted to Cloudsdale-II class in 2430. Designated as museum ship in 2444.</li></ul>",
   "categoryId": "cat_1778259255537_8o2s",
   "tags": [],
   "wikibox": {
-    "enabled": false,
-    "title": "",
+    "enabled": true,
+    "title": "Cloudsdale-class Colony Ship",
     "subtitle": "",
     "image": null,
     "imagePath": false,
     "imgCaption": "",
-    "fields": []
+    "fields": [
+      {
+        "type": "section",
+        "key": "Production information",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Designer",
+        "val": "Equestrian Space Agency"
+      },
+      {
+        "type": "field",
+        "key": "Manufacturer",
+        "val": "• Baltimare Astroyard <i>(First vessel)</i><br>•&nbsp;Equus Orbital Yards"
+      },
+      {
+        "type": "field",
+        "key": "Line",
+        "val": "Cloudsdale series"
+      },
+      {
+        "type": "field",
+        "key": "Model",
+        "val": "Cloudsdale-class Colony Ship"
+      },
+      {
+        "type": "field",
+        "key": "Type",
+        "val": "Light colony vessel"
+      },
+      {
+        "type": "field",
+        "key": "Year introduced",
+        "val": "2424 CE"
+      },
+      {
+        "type": "field",
+        "key": "Production end",
+        "val": "2440 CE"
+      },
+      {
+        "type": "section",
+        "key": "Physical specifications",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Length",
+        "val": "285 meters"
+      },
+      {
+        "type": "field",
+        "key": "Beam",
+        "val": "110 meters"
+      },
+      {
+        "type": "field",
+        "key": "Height",
+        "val": "87 meters"
+      },
+      {
+        "type": "field",
+        "key": "Mass",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Decks",
+        "val": "9<i> (including dome floor)</i>"
+      },
+      {
+        "type": "field",
+        "key": "Crew complement",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Passenger capacity",
+        "val": "Up to 1000"
+      },
+      {
+        "type": "field",
+        "key": "Cargo capacity",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Consumables",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Technical systems",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Superluminal drive",
+        "val": "Type-23 Teleportation Device"
+      },
+      {
+        "type": "field",
+        "key": "FTL method",
+        "val": "Instantaneous"
+      },
+      {
+        "type": "field",
+        "key": "Navigational system",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Sublight engine(s)",
+        "val": "ESA-MD03 Harmony"
+      },
+      {
+        "type": "field",
+        "key": "Hull",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Shielding",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Sensor range",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Armament",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Power system",
+        "val": ""
+      },
+      {
+        "type": "section",
+        "key": "Usage",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Role(s)",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Affliation",
+        "val": "United Equus"
+      },
+      {
+        "type": "field",
+        "key": "Standard registry",
+        "val": "• ESAV-COL <i>(Pre-unification)</i><br>• ESS-COL <i>(After unification)&nbsp;</i>"
+      },
+      {
+        "type": "field",
+        "key": "Active",
+        "val": "2420s - 2460s"
+      }
+    ]
   },
   "created": 1778259525245,
-  "updated": 1778261810037
+  "updated": 1778344982219,
+  "summary": ""
 }

@@ -4,7 +4,7 @@
     "name": "Locations",
     "parentId": null,
     "collapsed": false,
-    "_ddCollapsed": false
+    "_ddCollapsed": true
   },
   {
     "id": "cat_1778221765054_tsjq",
@@ -186,7 +186,7 @@
     "name": "Events",
     "parentId": null,
     "collapsed": true,
-    "_ddCollapsed": true
+    "_ddCollapsed": false
   },
   {
     "id": "cat_1778228925910_qife",
@@ -347,6 +347,12 @@
     "name": "Stations and Habitats",
     "parentId": "cat_1778221758985_cj4o",
     "collapsed": false,
+    "_ddCollapsed": false
+  },
+  {
+    "id": "cat_1778345194387_5hls",
+    "name": "Battles",
+    "parentId": "cat_1778228932180_byzt",
     "_ddCollapsed": false
   }
 ]

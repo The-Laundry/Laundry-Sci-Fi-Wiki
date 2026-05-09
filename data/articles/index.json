@@ -161,7 +161,7 @@
     "categoryId": "cat_1778259255537_8o2s",
     "tags": [],
     "summary": "",
-    "updated": 1778261810037,
+    "updated": 1778344982219,
     "hasImage": false
   },
   {
@@ -306,6 +306,42 @@
     "tags": [],
     "summary": "",
     "updated": 1778298672613,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778345289136_sy5v",
+    "title": "Battle of Beta Celestine",
+    "categoryId": "cat_1778345194387_5hls",
+    "tags": [],
+    "summary": "",
+    "updated": 1778345304780,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778345362802_91gf",
+    "title": "1st Battle of Yildun Rest",
+    "categoryId": "cat_1778345194387_5hls",
+    "tags": [],
+    "summary": "",
+    "updated": 1778345369782,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778345422052_bx37",
+    "title": "Battle of Furud VII",
+    "categoryId": "cat_1778345194387_5hls",
+    "tags": [],
+    "summary": "",
+    "updated": 1778345422052,
+    "hasImage": false
+  },
+  {
+    "id": "art_1778345580112_2lgq",
+    "title": "The Great War",
+    "categoryId": "cat_1778228932180_byzt",
+    "tags": [],
+    "summary": "",
+    "updated": 1778345580112,
     "hasImage": false
   }
 ]

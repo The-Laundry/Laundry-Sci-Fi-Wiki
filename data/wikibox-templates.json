@@ -208,5 +208,143 @@
         "key": "System of origin"
       }
     ]
+  },
+  {
+    "id": "wbt_1778343645597_77ky",
+    "name": "Ship Class",
+    "fields": [
+      {
+        "type": "section",
+        "key": "Production information"
+      },
+      {
+        "type": "field",
+        "key": "Designer"
+      },
+      {
+        "type": "field",
+        "key": "Manufacturer"
+      },
+      {
+        "type": "field",
+        "key": "Line"
+      },
+      {
+        "type": "field",
+        "key": "Model"
+      },
+      {
+        "type": "field",
+        "key": "Type"
+      },
+      {
+        "type": "field",
+        "key": "Year introduced"
+      },
+      {
+        "type": "field",
+        "key": "Production end"
+      },
+      {
+        "type": "section",
+        "key": "Physical specifications"
+      },
+      {
+        "type": "field",
+        "key": "Length"
+      },
+      {
+        "type": "field",
+        "key": "Beam"
+      },
+      {
+        "type": "field",
+        "key": "Height"
+      },
+      {
+        "type": "field",
+        "key": "Mass"
+      },
+      {
+        "type": "field",
+        "key": "Decks"
+      },
+      {
+        "type": "field",
+        "key": "Crew complement"
+      },
+      {
+        "type": "field",
+        "key": "Passenger capacity"
+      },
+      {
+        "type": "field",
+        "key": "Cargo capacity"
+      },
+      {
+        "type": "field",
+        "key": "Consumables"
+      },
+      {
+        "type": "section",
+        "key": "Technical systems"
+      },
+      {
+        "type": "field",
+        "key": "Superluminal drive"
+      },
+      {
+        "type": "field",
+        "key": "FTL method"
+      },
+      {
+        "type": "field",
+        "key": "Navigational system"
+      },
+      {
+        "type": "field",
+        "key": "Sublight engine(s)"
+      },
+      {
+        "type": "field",
+        "key": "Hull"
+      },
+      {
+        "type": "field",
+        "key": "Shielding"
+      },
+      {
+        "type": "field",
+        "key": "Sensor range"
+      },
+      {
+        "type": "field",
+        "key": "Armament"
+      },
+      {
+        "type": "field",
+        "key": "Power system"
+      },
+      {
+        "type": "section",
+        "key": "Usage"
+      },
+      {
+        "type": "field",
+        "key": "Role(s)"
+      },
+      {
+        "type": "field",
+        "key": "Affliation"
+      },
+      {
+        "type": "field",
+        "key": "Standard registry"
+      },
+      {
+        "type": "field",
+        "key": "Active"
+      }
+    ]
   }
 ]
