@@ -788,6 +788,8 @@ a.tag.tag-active { background: var(--accent); border-color: var(--accent); color
 #modal-overlay.open .modal:has(.ai-gen-form) { max-width: 640px; }
 /* When streaming is active we also show a live preview pane, so make it wider. */
 #modal-overlay.open .modal:has(.ai-gen-form.ai-streaming) { max-width: 760px; }
+/* Table editor needs extra width for multi-column grids */
+#modal-overlay.open .modal:has(#tbl-modal-body) { max-width: 880px; width: 95%; }
 
 /* ── AI spinner (circular ring) ── */
 .ai-spinner {
@@ -1002,4 +1004,78 @@ a.tag.tag-active { background: var(--accent); border-color: var(--accent); color
 [data-theme="dark"] .chip { border-color: rgba(107,163,221,.35); }
 [data-theme="dark"] .ai-ctx-chip.semantic { color: var(--accent); }
 [data-theme="dark"] .ai-draft-banner { border-color: rgba(107,163,221,.35); }
+
+/* ── WIKI TABLES ── */
+.wiki-table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: auto;
+  max-width: 100%;
+  font-size: 0.9em;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+}
+.wiki-table caption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 0 0 6px 0;
+  color: var(--text);
+}
+.wiki-table th,
+.wiki-table td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+.wiki-table thead th {
+  background: var(--bg);
+  font-weight: 600;
+  font-size: 0.88em;
+  white-space: nowrap;
+  color: var(--text);
+  border-bottom: 2px solid var(--border);
+}
+/* Alternating colors (wikibox-matched) */
+.wiki-table.alt-colors tbody tr:nth-child(odd)  { background: var(--bg-surface); }
+.wiki-table.alt-colors tbody tr:nth-child(even) { background: var(--bg-sidebar); }
+.wiki-table tbody tr:hover { background: var(--accent-light); }
+/* Row number column — shares header's darker background */
+.wiki-table .row-num-col {
+  background: var(--bg) !important;
+  text-align: center;
+  width: 32px;
+  min-width: 32px;
+  color: var(--text-faint);
+  font-size: 0.82em;
+  user-select: none;
+  padding: 4px 6px;
+}
+/* Width variants */
+.wiki-table.full-width { width: calc(100% - 2em); margin-left: 1em; margin-right: 1em; }
+/* Alignment */
+.wiki-table.align-center { margin-left: auto !important; margin-right: auto !important; }
+.wiki-table.align-right  { margin-left: auto !important; margin-right: 0; }
+/* Sortable */
+.wiki-table.sortable thead th:not(.row-num-col) {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 22px;
+}
+.wiki-table.sortable thead th:not(.row-num-col)::after {
+  content: ' ↕';
+  position: absolute;
+  right: 6px;
+  opacity: 0.35;
+  font-size: 0.85em;
+}
+.wiki-table.sortable thead th.sort-asc::after  { content: ' ↑'; opacity: 1; color: var(--accent); }
+.wiki-table.sortable thead th.sort-desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
+.wiki-table.sortable thead th:not(.row-num-col):hover { background: var(--accent-light); }
+[data-theme="dark"] .wiki-table { background: var(--bg-surface); }
+[data-theme="dark"] .wiki-table thead th { background: var(--bg); }
+[data-theme="dark"] .wiki-table .row-num-col { background: var(--bg) !important; }
 [data-theme="dark"] .btn-danger { border-color: rgba(224,100,100,.45); }

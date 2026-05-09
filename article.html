@@ -168,6 +168,7 @@
   Conlang.applyToElement(contentEl);
   Conlang.applyToElement(document.getElementById('view-wikibox'));
   buildTOC(contentEl);
+  initSortableTables(contentEl);
 
   // Backlinks
   buildBacklinks(art);
@@ -357,6 +358,54 @@ async function deleteArticle() {
   await DB.deleteArticleFile(artId);
   UI.toast('Article deleted.');
   location.href = 'index.html';
+}
+
+function initSortableTables(contentEl) {
+  contentEl.querySelectorAll('table.wiki-table.sortable').forEach(table => {
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    if (!thead || !tbody) return;
+
+    const hasRowNums = table.classList.contains('show-row-nums');
+    let sortState = { col: -1, dir: 1 };
+
+    thead.querySelectorAll('th').forEach((th, thIdx) => {
+      if (th.dataset.nosort || th.classList.contains('row-num-col')) return;
+
+      th.addEventListener('click', () => {
+        // Cycle asc → desc → asc
+        if (sortState.col === thIdx) {
+          sortState.dir = sortState.dir === 1 ? -1 : 1;
+        } else {
+          sortState.col = thIdx;
+          sortState.dir = 1;
+        }
+
+        thead.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+        th.classList.add(sortState.dir === 1 ? 'sort-asc' : 'sort-desc');
+
+        // The cell index in <tr> equals thIdx (row-num col is th[0], data cols follow)
+        const rows = [...tbody.querySelectorAll('tr')];
+        rows.sort((a, b) => {
+          const aText = a.cells[thIdx]?.textContent.trim() || '';
+          const bText = b.cells[thIdx]?.textContent.trim() || '';
+          const aNum  = parseFloat(aText.replace(/[^-\d.]/g, ''));
+          const bNum  = parseFloat(bText.replace(/[^-\d.]/g, ''));
+          if (!isNaN(aNum) && !isNaN(bNum)) return sortState.dir * (aNum - bNum);
+          return sortState.dir * aText.localeCompare(bText);
+        });
+
+        // Re-append sorted rows and refresh row-num labels if present
+        rows.forEach((row, i) => {
+          tbody.appendChild(row);
+          if (hasRowNums) {
+            const rnCell = row.querySelector('td.row-num-col');
+            if (rnCell) rnCell.textContent = i + 1;
+          }
+        });
+      });
+    });
+  });
 }
 </script>
 </body>

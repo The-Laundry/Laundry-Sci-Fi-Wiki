@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Content \"C:\\\\Users\\\\flynn\\\\Desktop\\\\Artsy Fartsy\\\\Ships\\\\Webtools\\\\Wiki Site\\\\encyclopedia\\\\editor.html\")",
+      "Bash(Select-Object -First 200)"
+    ]
+  }
+}
