@@ -3,12 +3,21 @@
 //   1. File System Access API  — reads/writes real .json files in a chosen folder
 //   2. localStorage fallback   — used when no folder is connected
 //   3. Static fetch (read-only) — used on GitHub Pages; loads data/ files via fetch()
+//
+// Phase 2: lazy article loading
+//   DB.articleMeta[]  — lightweight metadata, always loaded at init
+//   DB.articleCache{} — full articles keyed by id, loaded on demand
+//   DB.articles       — getter returning articleMeta (backward compat for metadata reads)
+//   DB.loadArticle(id)— async, returns full article from cache or file
 
 'use strict';
 
 const DB = {
-  // In-memory store (always authoritative during a session)
-  articles: [],
+  // Lightweight metadata — always loaded at init
+  articleMeta: [],
+  // Full article cache — populated on demand by loadArticle()
+  articleCache: {},
+
   categories: [],
   timelines: [],
   events: [],
@@ -18,10 +27,14 @@ const DB = {
   articleTemplates: [],
   settings: { homeDesc: '', activeCalendar: 'hcc', importanceColors: {}, ai: null },
 
-  // File system handles (null when using localStorage or static)
+  // DB.articles is a backward-compat getter — returns articleMeta
+  // All code reading title/categoryId/tags/summary still works unchanged
+  get articles() { return this.articleMeta; },
+  set articles(v) { this.articleMeta = v; }, // needed for _migrate and localStorage load
+
   _dirHandle: null,
   _articlesHandle: null,
-  _mode: 'localStorage', // 'filesystem' | 'localStorage' | 'static'
+  _mode: 'localStorage',
 
   // ── READ-ONLY DETECTION ──────────────────────────────────────────────
 
@@ -83,21 +96,31 @@ const DB = {
     this.wikiboxTemplates   = await fetchJson(base + 'data/wikibox-templates.json',   []);
     this.articleTemplates   = await fetchJson(base + 'data/article-templates.json',   []);
 
-    // Load article index then individual article files
-    // First try a manifest, then fall back to the bulk export format
+    // Load article metadata index — full articles fetched on demand
     const artIndex = await fetchJson(base + 'data/articles/index.json', null);
     if (artIndex && Array.isArray(artIndex)) {
-      // index.json lists all article IDs
-      const arts = await Promise.all(
-        artIndex.map(id => fetchJson(base + `data/articles/${id}.json`, null))
-      );
-      this.articles = arts.filter(Boolean);
+      if (artIndex.length && typeof artIndex[0] === 'object') {
+        // New format: metadata objects
+        this.articleMeta = artIndex;
+      } else if (artIndex.length && typeof artIndex[0] === 'string') {
+        // Old format: IDs only — load all articles (static = read-only, acceptable once)
+        const arts = await Promise.all(
+          artIndex.map(id => fetchJson(base + `data/articles/${id}.json`, null))
+        );
+        this.articleMeta = arts.filter(Boolean).map(a => this._extractMeta(a));
+        // Cache them too since we loaded them
+        arts.filter(Boolean).forEach(a => { this.articleCache[a.id] = a; });
+      } else {
+        this.articleMeta = [];
+      }
     } else {
-      // No index — try to load articles from the bulk backup if present
       const bulk = await fetchJson(base + 'data/articles.json', null);
-      this.articles = bulk || [];
+      this.articleMeta = (bulk || []).map(a => this._extractMeta(a));
+      (bulk || []).forEach(a => { this.articleCache[a.id] = a; });
     }
+    this.articleCache = this.articleCache || {};
 
+    this.articleCache = this.articleCache || {};
     this._migrate();
   },
 
@@ -212,18 +235,35 @@ const DB = {
     this.wikiboxTemplates  = await this._readJson(dir, 'wikibox-templates.json',   []);
     this.articleTemplates  = await this._readJson(dir, 'article-templates.json',   []);
 
-    // Load individual article files
-    this.articles = [];
-    try {
-      for await (const entry of this._articlesHandle.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
-          const data = await this._readJson(this._articlesHandle, entry.name);
-          if (data) this.articles.push(data);
-        }
-      }
-    } catch (e) {}
-
+    // Load article metadata index only — full articles loaded on demand
+    const index = await this._readJson(this._articlesHandle, 'index.json', []);
+    if (index.length && typeof index[0] === 'object') {
+      // New format: [{id, title, categoryId, tags, summary, updated, hasImage}]
+      this.articleMeta = index;
+    } else if (index.length && typeof index[0] === 'string') {
+      // Old format: [id, id, ...] — load all files to build metadata (one-time migration)
+      this.articleMeta = await this._buildMetaFromFiles(index);
+      // Immediately write new format so next load is fast
+      await this._writeJson(this._articlesHandle, 'index.json', this.articleMeta);
+    } else {
+      this.articleMeta = [];
+    }
+    this.articleCache = {};
     this._migrate();
+  },
+
+  async _buildMetaFromFiles(ids) {
+    const metas = [];
+    for (const id of ids) {
+      if (!id || id === 'undefined') continue;
+      const art = await this._readJson(this._articlesHandle, `${id}.json`, null);
+      if (art) {
+        metas.push(this._extractMeta(art));
+        // Also cache the full article since we just loaded it
+        this.articleCache[id] = art;
+      }
+    }
+    return metas;
   },
 
   _loadFromLocalStorage() {
@@ -232,8 +272,16 @@ const DB = {
       if (raw) {
         const parsed = JSON.parse(raw);
         Object.assign(this, parsed);
+        // In localStorage mode all articles are in the blob
+        // Populate both layers from the loaded articles array
+        if (Array.isArray(parsed.articles)) {
+          this.articleMeta  = parsed.articles.map(a => this._extractMeta(a));
+          this.articleCache = {};
+          parsed.articles.forEach(a => { this.articleCache[a.id] = a; });
+        }
       }
     } catch (e) {}
+    this.articleCache = this.articleCache || {};
     this._ensureDefaults();
     this._migrate();
   },
@@ -297,6 +345,46 @@ const DB = {
     });
     // AI-related article fields — optional, leave undefined unless present
     // (summary?: string, embedding?: number[], embeddingModel?: string)
+  },
+
+  // ── ARTICLE METADATA ─────────────────────────────────────────────────
+
+  // Extract lightweight metadata from a full article object
+  _extractMeta(art) {
+    return {
+      id:         art.id,
+      title:      art.title || '',
+      categoryId: art.categoryId || null,
+      tags:       art.tags || [],
+      summary:    art.summary || '',
+      updated:    art.updated || 0,
+      hasImage:   !!(art.wikibox?.image),
+    };
+  },
+
+  // Load a full article — checks cache first, then reads from file
+  async loadArticle(id) {
+    if (!id) return null;
+    if (this.articleCache[id]) return this.articleCache[id];
+    if (this._mode === 'filesystem') {
+      const art = await this._readJson(this._articlesHandle, `${id}.json`, null);
+      if (art) this.articleCache[id] = art;
+      return art;
+    }
+    if (this._mode === 'static') {
+      const base = window.location.pathname.replace(/\/[^/]*$/, '') + '/';
+      try {
+        const res = await fetch(base + `data/articles/${id}.json`);
+        if (res.ok) {
+          const art = await res.json();
+          this.articleCache[id] = art;
+          return art;
+        }
+      } catch (e) {}
+      return null;
+    }
+    // localStorage mode — full articles already in cache from init
+    return this.articleCache[id] || null;
   },
 
   // ── SAVE ─────────────────────────────────────────────────────────────
@@ -368,18 +456,30 @@ const DB = {
       this._writeJson(dir, 'article-templates.json',    this.articleTemplates),
     ]);
 
-    // Write article file(s)
+    // Write article file(s) and keep cache + meta in sync
     if (changedArticleId) {
-      const art = this.articles.find(a => a.id === changedArticleId);
-      if (art) await this._writeJson(this._articlesHandle, `${art.id}.json`, art);
+      const art = this.articleCache[changedArticleId];
+      if (art) {
+        await this._writeJson(this._articlesHandle, `${art.id}.json`, art);
+        // Update metadata entry
+        const idx = this.articleMeta.findIndex(m => m.id === changedArticleId);
+        const meta = this._extractMeta(art);
+        if (idx >= 0) this.articleMeta[idx] = meta;
+        else this.articleMeta.push(meta);
+      }
     } else {
-      await Promise.all(this.articles.map(a =>
-        this._writeJson(this._articlesHandle, `${a.id}.json`, a)
-      ));
+      // Bulk save — write all cached articles
+      await Promise.all(
+        Object.values(this.articleCache).map(a =>
+          this._writeJson(this._articlesHandle, `${a.id}.json`, a)
+        )
+      );
+      // Rebuild meta from cache
+      this.articleMeta = Object.values(this.articleCache).map(a => this._extractMeta(a));
     }
 
-    // Always keep index.json current
-    await this._writeJson(this._articlesHandle, 'index.json', this.articles.map(a => a.id));
+    // Write expanded metadata index (not just IDs)
+    await this._writeJson(this._articlesHandle, 'index.json', this.articleMeta);
   },
 
   // ── CATEGORY COLLAPSE STATE (localStorage only — never written to disk) ──
@@ -403,15 +503,22 @@ const DB = {
   },
 
   async deleteArticleFile(id) {
+    // Remove from cache and meta immediately
+    delete this.articleCache[id];
+    this.articleMeta = this.articleMeta.filter(m => m.id !== id);
     if (this._mode === 'filesystem') {
       await this._deleteFile(this._articlesHandle, `${id}.json`);
+      // Update index.json to reflect deletion
+      await this._writeJson(this._articlesHandle, 'index.json', this.articleMeta);
     }
   },
 
   _saveToLocalStorage() {
     try {
       const snapshot = {
-        articles: this.articles, categories: this.categories,
+        // Store full articles from cache for localStorage mode
+        articles: Object.values(this.articleCache),
+        categories: this.categories,
         timelines: this.timelines, events: this.events, eras: this.eras,
         timelineCategories: this.timelineCategories,
         wikiboxTemplates: this.wikiboxTemplates,
@@ -427,11 +534,12 @@ const DB = {
   // ── EXPORT / IMPORT ──────────────────────────────────────────────────
 
   exportAll() {
-    // Scrub apiKey from settings.ai before export (defensive; it shouldn't be there).
     const safeSettings = JSON.parse(JSON.stringify(this.settings || {}));
     if (safeSettings.ai && 'apiKey' in safeSettings.ai) delete safeSettings.ai.apiKey;
     const data = {
-      articles: this.articles, categories: this.categories,
+      // Export full articles from cache
+      articles: Object.values(this.articleCache),
+      categories: this.categories,
       timelines: this.timelines, events: this.events, eras: this.eras,
       timelineCategories: this.timelineCategories,
       wikiboxTemplates: this.wikiboxTemplates,
@@ -450,20 +558,27 @@ const DB = {
   async importAll(jsonText) {
     const data = JSON.parse(jsonText);
     if (!data.articles || !Array.isArray(data.articles)) throw new Error('Invalid format');
-    Object.assign(this, data);
+    // Populate both layers from imported articles
+    this.articleMeta  = data.articles.map(a => this._extractMeta(a));
+    this.articleCache = {};
+    data.articles.forEach(a => { this.articleCache[a.id] = a; });
+    // Import everything else
+    const { articles, ...rest } = data;
+    Object.assign(this, rest);
     this._ensureDefaults();
     await this.save();
   },
 
   async clearAll() {
-    this.articles = []; this.categories = []; this.timelines = [];
+    this.articleMeta  = [];
+    this.articleCache = {};
+    this.categories = []; this.timelines = [];
     this.events = []; this.eras = []; this.timelineCategories = [];
     this.wikiboxTemplates = [];
     this.articleTemplates = [];
     this.settings = { homeDesc: '', activeCalendar: 'hcc' };
     this._ensureDefaults();
     if (this._mode === 'filesystem') {
-      // Delete all article files
       try {
         for await (const entry of this._articlesHandle.values()) {
           if (entry.kind === 'file') await this._articlesHandle.removeEntry(entry.name);

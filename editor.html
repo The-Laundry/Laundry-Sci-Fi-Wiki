@@ -216,7 +216,8 @@ let isAiDraft            = false;
   const draftKey = params.get('draftKey');
 
   if (editingId && editingId !== 'new') {
-    const art = DB.articles.find(a => a.id === editingId);
+    // Load full article from file/cache — metadata alone is not enough for the editor
+    const art = await DB.loadArticle(editingId);
     if (art) {
       document.title = `Editing: ${art.title || 'Untitled'} — Encyclopedia of Many Things`;
       document.getElementById('editor-mode-label').textContent = `Editing: ${art.title || 'Untitled'}`;
@@ -1053,11 +1054,13 @@ async function saveArticle() {
 
   let savedId;
   if (editingId) {
-    const art = DB.articles.find(a => a.id === editingId);
+    // Update in cache
+    const art = DB.articleCache[editingId] || { id: editingId };
     Object.assign(art, { title, content, categoryId, tags, wikibox, updated: now });
     art.summary = summary;
     if (aiSourceSpec) art.aiSourceSpec = aiSourceSpec;
     if (currentEmbedding) { art.embedding = currentEmbedding; art.embeddingModel = currentEmbeddingModel; }
+    DB.articleCache[editingId] = art;
     await DB.save(editingId);
     savedId = editingId;
   } else {
@@ -1065,7 +1068,9 @@ async function saveArticle() {
     const payload = { id: savedId, title, content, categoryId, tags, wikibox, created: now, updated: now };
     if (summary)      payload.summary = summary;
     if (aiSourceSpec) payload.aiSourceSpec = aiSourceSpec;
-    DB.articles.push(payload);
+    // Add to cache and meta
+    DB.articleCache[savedId] = payload;
+    DB.articleMeta.push(DB._extractMeta(payload));
     await DB.save(savedId);
   }
   UI.toast(editingId ? 'Article saved.' : 'Article created.');
@@ -1084,7 +1089,7 @@ async function saveArticle() {
 }
 
 async function _backgroundRefreshAI(articleId) {
-  const art = DB.articles.find(a => a.id === articleId);
+  const art = DB.articleCache[articleId];
   if (!art) return;
   const busyId = UI.aiBusyBegin('Refreshing summary + embedding…');
   try {

@@ -80,9 +80,19 @@
   UI.init({ activePage: '' });
 
   const params = new URLSearchParams(location.search);
-  const artId = params.get('id');
-  const art = DB.articles.find(a => a.id === artId);
+  const artId  = params.get('id');
 
+  // Check metadata first (fast) — if not found, 404
+  const meta = DB.articleMeta.find(m => m.id === artId);
+  if (!meta) {
+    document.getElementById('article-view').style.display = 'none';
+    document.getElementById('not-found').style.display = 'block';
+    document.title = 'Not Found — Encyclopedia of Many Things';
+    return;
+  }
+
+  // Load full article for content rendering
+  const art = await DB.loadArticle(artId);
   if (!art) {
     document.getElementById('article-view').style.display = 'none';
     document.getElementById('not-found').style.display = 'block';
@@ -160,15 +170,14 @@
 
 function processWikilinks(html) {
   return html.replace(/\[\[([^\]]+)\]\]/g, (m, inner) => {
-    // Support [[Article Name|Display Text]] syntax
     const pipeIdx = inner.indexOf('|');
     const name    = pipeIdx >= 0 ? inner.slice(0, pipeIdx).trim() : inner.trim();
     const display = pipeIdx >= 0 ? inner.slice(pipeIdx + 1).trim() : name;
-    const t = DB.articles.find(a => a.title && a.title.toLowerCase() === name.toLowerCase());
+    // articleMeta has titles — no full load needed for wikilink resolution
+    const t = DB.articleMeta.find(a => a.title && a.title.toLowerCase() === name.toLowerCase());
     if (t) {
       return `<a href="article.html?id=${t.id}">${escHtml(display)}</a>`;
     }
-    // Broken link: intercept clicks so the user can pick manual-create vs AI-generate.
     return `<a href="#" class="broken-link" data-broken-name="${escHtml(name)}" title="Click to create: ${escHtml(name)}">${escHtml(display)}</a>`;
   });
 }
@@ -265,25 +274,31 @@ function buildTOC(contentEl) {
 }
 
 function buildBacklinks(art) {
-  // Find all articles that contain [[art.title]] or [[art.title|anything]]
+  // Scan articleMeta titles for wikilink references (fast, no file reads needed)
+  // Full content scanning deferred to Phase 4 search index
   const titleLower = (art.title || '').toLowerCase();
   const wikiRe = /\[\[([^\]]+)\]\]/g;
 
-  const mentioningArts = DB.articles.filter(a => {
-    if (a.id === art.id) return false;
-    const html = (a.content || '') + (a.wikibox?.fields?.map(f => f.val || '').join(' ') || '');
+  // Only scan articles that are already in cache (opened this session)
+  // For uncached articles, we can only check if their cached content mentions this title
+  const mentioningArts = [];
+  for (const meta of DB.articleMeta) {
+    if (meta.id === art.id) continue;
+    const cached = DB.articleCache[meta.id];
+    if (!cached) continue; // skip uncached — avoids loading all articles
+    const html = (cached.content || '') + (cached.wikibox?.fields?.map(f => f.val || '').join(' ') || '');
+    wikiRe.lastIndex = 0;
     let m;
+    let found = false;
     while ((m = wikiRe.exec(html)) !== null) {
       const inner = m[1];
       const name  = inner.includes('|') ? inner.slice(0, inner.indexOf('|')).trim() : inner.trim();
-      if (name.toLowerCase() === titleLower) return true;
+      if (name.toLowerCase() === titleLower) { found = true; break; }
     }
-    // Reset lastIndex after while loop exits without match
-    wikiRe.lastIndex = 0;
-    return false;
-  });
+    if (found) mentioningArts.push(meta);
+  }
 
-  // Timeline events linked to this article
+  // Timeline events linked to this article (always fast — events always loaded)
   const linkedEvents = DB.events.filter(ev => ev.articleId === art.id);
 
   const total = mentioningArts.length + linkedEvents.length;
@@ -330,13 +345,11 @@ function toggleBacklinks() {
 
 async function deleteArticle() {
   const params = new URLSearchParams(location.search);
-  const artId = params.get('id');
-  const art = DB.articles.find(a => a.id === artId);
-  if (!confirm(`Delete "${art?.title || 'this article'}"? This cannot be undone.`)) return;
+  const artId  = params.get('id');
+  const meta   = DB.articleMeta.find(m => m.id === artId);
+  if (!confirm(`Delete "${meta?.title || 'this article'}"? This cannot be undone.`)) return;
+  // deleteArticleFile now removes from meta, cache, and updates index.json
   await DB.deleteArticleFile(artId);
-  DB.articles = DB.articles.filter(a => a.id !== artId);
-  // Full save needed here to update index.json — acceptable since delete is infrequent
-  await DB.save();
   UI.toast('Article deleted.');
   location.href = 'index.html';
 }

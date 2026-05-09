@@ -458,13 +458,16 @@ function openReindexDialog() {
 
         const busyId = UI.aiBusyBegin('Re-indexing articles…');
         try {
-          const total = DB.articles.length;
+          const total = DB.articleMeta.length;
           let done = 0, errors = 0;
-          for (const art of DB.articles) {
+          for (const meta of DB.articleMeta) {
             if (stop) break;
-            status.textContent = `Summarizing ${art.title || 'Untitled'}…`;
-            UI.aiBusyUpdate(busyId, `Re-indexing ${done + 1}/${total}: ${art.title || 'Untitled'}`);
+            status.textContent = `Loading ${meta.title || 'Untitled'}…`;
+            UI.aiBusyUpdate(busyId, `Re-indexing ${done + 1}/${total}: ${meta.title || 'Untitled'}`);
             try {
+              const art = await DB.loadArticle(meta.id);
+              if (!art) { done++; continue; }
+              status.textContent = `Summarizing ${art.title || 'Untitled'}…`;
               art.summary = await AI.generateSummary(art);
               if (stop) break;
               status.textContent = `Embedding ${art.title || 'Untitled'}…`;
@@ -476,7 +479,7 @@ function openReindexDialog() {
               logLine(`✓ ${art.title || 'Untitled'}`, 'var(--green)');
             } catch (e) {
               errors++;
-              logLine(`✕ ${art.title || 'Untitled'} — ${String(e.message || e).slice(0, 140)}`, 'var(--red)');
+              logLine(`✕ ${meta.title || 'Untitled'} — ${String(e.message || e).slice(0, 140)}`, 'var(--red)');
             }
             done++;
             bar.style.width = ((done / total) * 100).toFixed(1) + '%';

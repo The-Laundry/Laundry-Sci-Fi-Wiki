@@ -424,11 +424,13 @@ const AI = {
   // step: 'summary' | 'embedding' | 'saved' | 'skipped' | 'complete'
   async reindexAll(progressCb) {
     const cb = typeof progressCb === 'function' ? progressCb : () => {};
-    const total = DB.articles.length;
+    const total = DB.articleMeta.length;
     let done = 0;
-    for (const art of DB.articles) {
+    for (const meta of DB.articleMeta) {
       try {
-        cb({ done, total, step: 'summary', articleTitle: art.title });
+        cb({ done, total, step: 'summary', articleTitle: meta.title });
+        const art = await DB.loadArticle(meta.id);
+        if (!art) { done++; continue; }
         art.summary = await this.generateSummary(art);
         cb({ done, total, step: 'embedding', articleTitle: art.title });
         const { vector, model } = await this.generateEmbedding(art);
@@ -440,7 +442,7 @@ const AI = {
         cb({ done, total, step: 'saved', articleTitle: art.title });
       } catch (e) {
         done++;
-        cb({ done, total, step: 'skipped', articleTitle: art.title, error: String(e.message || e) });
+        cb({ done, total, step: 'skipped', articleTitle: meta.title, error: String(e.message || e) });
       }
     }
     cb({ done, total, step: 'complete' });
@@ -460,32 +462,37 @@ const AI = {
     const explicitIds = new Set((spec.relatedIds || []).filter(Boolean));
     const explicit = [];
     for (const id of explicitIds) {
-      const art = DB.articles.find(a => a.id === id);
+      // Load full article for context (may need content/summary)
+      const art = await DB.loadArticle(id);
       if (!art) continue;
       explicit.push(_toContextItem(art));
     }
 
     let semantic = [];
-    const remaining = DB.articles.filter(a => !explicitIds.has(a.id));
+    // For embedding search, use only cached articles (have full data including embeddings)
+    // Uncached articles fall through to lexical matching
+    const remaining = DB.articleMeta.filter(m => !explicitIds.has(m.id));
+    const cachedRemaining = remaining.map(m => DB.articleCache[m.id]).filter(Boolean);
+    const uncachedMeta    = remaining.filter(m => !DB.articleCache[m.id]);
+
     if (topK > 0 && query && this.isEmbeddingConfigured()) {
       try {
         const [qvec] = await this.embed([query]);
-        const hasVec = remaining.filter(a => Array.isArray(a.embedding) && a.embedding.length === qvec.length);
+        const hasVec = cachedRemaining.filter(a => Array.isArray(a.embedding) && a.embedding.length === qvec.length);
         const scored = hasVec.map(a => ({ a, score: this.cosine(qvec, a.embedding) }));
         scored.sort((x, y) => y.score - x.score);
         semantic = scored.slice(0, topK).filter(s => s.score > 0).map(s => _toContextItem(s.a, s.score));
-        // Fill remaining slots with lexical matches on articles missing embeddings
         if (semantic.length < topK) {
-          const fillers = _lexicalMatches(query, remaining.filter(a => !hasVec.includes(a)), topK - semantic.length);
+          const noVec = cachedRemaining.filter(a => !hasVec.includes(a)).concat(uncachedMeta);
+          const fillers = _lexicalMatches(query, noVec, topK - semantic.length);
           semantic = semantic.concat(fillers.map(a => _toContextItem(a)));
         }
       } catch (e) {
         console.warn('Embedding search failed, falling back to lexical:', e);
-        semantic = _lexicalMatches(query, remaining, topK).map(a => _toContextItem(a));
+        semantic = _lexicalMatches(query, [...cachedRemaining, ...uncachedMeta], topK).map(a => _toContextItem(a));
       }
     } else if (topK > 0 && query) {
-      // Embedding endpoint not configured — use lexical match only.
-      semantic = _lexicalMatches(query, remaining, topK).map(a => _toContextItem(a));
+      semantic = _lexicalMatches(query, [...cachedRemaining, ...uncachedMeta], topK).map(a => _toContextItem(a));
     }
 
     return { explicit, semantic, query };

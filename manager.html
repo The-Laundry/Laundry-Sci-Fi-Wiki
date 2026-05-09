@@ -203,14 +203,17 @@ function cleanDragOver() { document.querySelectorAll('.drag-over').forEach(el =>
 async function dropOnCat(targetCatId) {
   if (!dragState) return;
   if (dragState.type === 'article') {
-    const art = DB.articles.find(a => a.id === dragState.id);
-    if (art) {
-      art.categoryId = targetCatId || null;
-      await DB.save(art.id);
-      UI.renderSidebar();
-      renderManager();
-      UI.toast('Article moved.');
-    }
+    const id = dragState.id;
+    // Update meta (always present)
+    const meta = DB.articleMeta.find(m => m.id === id);
+    if (meta) meta.categoryId = targetCatId || null;
+    // Update cache if loaded
+    const cached = DB.articleCache[id];
+    if (cached) cached.categoryId = targetCatId || null;
+    await DB.save(id);
+    UI.renderSidebar();
+    renderManager();
+    UI.toast('Article moved.');
   }
   dragState = null;
 }
@@ -257,18 +260,20 @@ async function deleteCategoryById(cid) {
   if (artCount)   msg += `\n\n${artCount} article(s) will become uncategorized.`;
   if (childCount) msg += `\n${childCount} subcategory(ies) will move up.`;
   if (!confirm(msg)) return;
-  DB.articles.forEach(a => { if (a.categoryId === cid) a.categoryId = null; });
+  // Clear categoryId in both meta and cache
+  DB.articleMeta.forEach(m => { if (m.categoryId === cid) m.categoryId = null; });
+  Object.values(DB.articleCache).forEach(a => { if (a.categoryId === cid) a.categoryId = null; });
   DB.getChildCats(cid).forEach(c => { c.parentId = cat.parentId || null; });
   DB.categories = DB.categories.filter(c => c.id !== cid);
   await DB.saveCategories(); UI.renderSidebar(); renderManager(); UI.toast('Category deleted.');
 }
 
 async function deleteArticleById(id) {
-  const art = DB.articles.find(a => a.id === id);
-  if (!confirm(`Delete "${art?.title || 'this article'}"? This cannot be undone.`)) return;
+  const meta = DB.articleMeta.find(m => m.id === id);
+  if (!confirm(`Delete "${meta?.title || 'this article'}"? This cannot be undone.`)) return;
+  // deleteArticleFile removes from meta, cache, and updates index.json
   await DB.deleteArticleFile(id);
-  DB.articles = DB.articles.filter(a => a.id !== id);
-  await DB.saveCategories(); UI.renderSidebar(); renderManager(); UI.toast('Article deleted.');
+  UI.renderSidebar(); renderManager(); UI.toast('Article deleted.');
 }
 
 // ── ARTICLE TEMPLATE MANAGER ─────────────────────────────────────
