@@ -12,5 +12,6 @@
     "maxTokens": 2000,
     "autoRefreshOnSave": true,
     "topK": 5
-  }
+  },
+  "editorAutosave": true
 }
