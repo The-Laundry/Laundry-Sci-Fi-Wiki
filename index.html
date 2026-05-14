@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Access Terminal — Republic Information Relay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/shell.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #07080d;
+    color: #c8bfa8;
+    font-family: 'DM Sans', 'PTSans', sans-serif;
+    min-height: 100vh;
+    padding-top: var(--pat-header-h);
+    display: flex;
+    flex-direction: column;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Scanline overlay for terminal feel ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, .06) 2px,
+      rgba(0, 0, 0, .06) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 56px 24px 80px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ── Hero ── */
+  .portal-hero {
+    text-align: center;
+    margin-bottom: 64px;
+    max-width: 600px;
+  }
+
+  .portal-hero-emblem {
+    position: relative;
+    width: 72px; height: 72px;
+    margin: 0 auto 24px;
+    border: 2px solid var(--pat-gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pat-gold);
+    font-size: 28px;
+    box-shadow: 0 0 24px rgba(201, 168, 76, .18), 0 0 60px rgba(201, 168, 76, .06);
+  }
+  .portal-hero-emblem::before {
+    content: '';
+    position: absolute;
+    width: 54px; height: 54px;
+    border: 1px solid var(--pat-gold-dim);
+    border-radius: 50%;
+  }
+  .portal-hero-emblem::after {
+    content: '';
+    position: absolute;
+    width: 84px; height: 84px;
+    border: 1px solid rgba(201, 168, 76, .15);
+    border-radius: 50%;
+  }
+
+  .portal-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--pat-gold-dim);
+    margin-bottom: 12px;
+  }
+
+  .portal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    font-weight: 400;
+    color: var(--pat-gold);
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+    text-shadow: 0 0 40px rgba(201, 168, 76, .2);
+  }
+
+  .portal-subtitle {
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--pat-text-muted);
+    margin-bottom: 20px;
+  }
+
+  .portal-rule {
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--pat-gold-dim), transparent);
+    margin: 0 auto;
+  }
+
+  /* ── Tool cards ── */
+  .portal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 960px;
+    width: 100%;
+    margin-bottom: 64px;
+  }
+
+  .portal-card {
+    background: rgba(255, 255, 255, .024);
+    border: 1px solid rgba(201, 168, 76, .14);
+    border-radius: 4px;
+    padding: 28px 24px 24px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .2s, background .2s, box-shadow .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .portal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--pat-gold-dim), transparent);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .portal-card:hover::before { opacity: 1; }
+
+  a.portal-card:hover {
+    border-color: rgba(201, 168, 76, .4);
+    background: rgba(201, 168, 76, .04);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .4), 0 0 0 1px rgba(201, 168, 76, .1);
+  }
+
+  .portal-card-disabled {
+    opacity: .45;
+    cursor: default;
+  }
+
+  .portal-card-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--pat-gold-dim);
+    margin-bottom: 2px;
+  }
+
+  .portal-card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--pat-gold);
+    line-height: 1.25;
+  }
+
+  .portal-card-pub {
+    font-size: 10.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--pat-text-muted);
+    font-style: italic;
+  }
+
+  .portal-card-desc {
+    font-size: 13px;
+    color: rgba(200, 191, 168, .7);
+    line-height: 1.65;
+    flex: 1;
+    margin-top: 4px;
+  }
+
+  .portal-card-cta {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: var(--pat-gold);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: .8;
+    transition: opacity .15s, gap .15s;
+  }
+  a.portal-card:hover .portal-card-cta {
+    opacity: 1;
+    gap: 8px;
+  }
+  .portal-card-disabled .portal-card-cta {
+    color: var(--pat-text-muted);
+  }
+
+  /* Card accent stripe colours */
+  .portal-card-wiki  { --card-accent: #3a6ea8; }
+  .portal-card-atlas { --card-accent: #3a6ea8; }
+  .portal-card-tools { --card-accent: #5a5a6a; }
+
+  /* ── Status strip ── */
+  .portal-status {
+    font-size: 10px;
+    letter-spacing: .14em;
+    color: var(--pat-text-muted);
+    text-transform: uppercase;
+    text-align: center;
+    opacity: .5;
+    line-height: 2;
+  }
+  .portal-status a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(200, 191, 168, .2);
+  }
+  .portal-status a:hover { color: var(--pat-gold); border-color: var(--pat-gold); }
+
+  .portal-divider {
+    width: 1px;
+    height: 12px;
+    background: var(--pat-gold-dim);
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 10px;
+    opacity: .4;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 720px) {
+    .portal-grid { grid-template-columns: 1fr; max-width: 420px; }
+    .portal-title { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="portal-hero">
+    <div class="portal-hero-emblem">◆</div>
+    <div class="portal-eyebrow">Republic Communications Authority</div>
+    <h1 class="portal-title">Public Access Terminal</h1>
+    <div class="portal-subtitle">Class-IV Information Relay · Authorized Public Access</div>
+    <div class="portal-rule"></div>
+  </div>
+
+  <div class="portal-grid">
+
+    <a href="wiki/index.html" class="portal-card portal-card-wiki">
+      <div class="portal-card-label">Archive 001</div>
+      <div class="portal-card-title">Encyclopedia of Many Things</div>
+      <div class="portal-card-pub">Published by Phodd Communications</div>
+      <p class="portal-card-desc">
+        A comprehensive record of species, worlds, factions, historical events,
+        constructed languages, and cultural knowledge spanning the known galaxy.
+      </p>
+      <div class="portal-card-cta">Access Archive <span>→</span></div>
+    </a>
+
+    <a href="map/index.html" class="portal-card portal-card-atlas">
+      <div class="portal-card-label">Archive 002</div>
+      <div class="portal-card-title">Reference Atlas of the Milky Way</div>
+      <div class="portal-card-pub">Compiled by the Institute of Galactic Cultures</div>
+      <p class="portal-card-desc">
+        Interactive cartographic data covering star systems, territorial boundaries,
+        sector regions, nebulae, and conflict zones across recorded galactic history.
+      </p>
+      <div class="portal-card-cta">Open Atlas <span>→</span></div>
+    </a>
+
+    <div class="portal-card portal-card-tools portal-card-disabled">
+      <div class="portal-card-label">Archive 003</div>
+      <div class="portal-card-title">Tools</div>
+      <div class="portal-card-pub">Republic Utilities Division</div>
+      <p class="portal-card-desc">
+        Additional utilities and applications for authorized terminal users.
+        Access pending module authorization.
+      </p>
+      <div class="portal-card-cta">Pending Authorization</div>
+    </div>
+
+  </div>
+
+  <div class="portal-status">
+    Republic Transparency Act, 2943
+    <span class="portal-divider"></span>
+    Terminal uptime nominal
+    <span class="portal-divider"></span>
+    All records subject to Republic oversight
+  </div>
+</main>
+
+<script src="assets/js/pat-shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tools — Public Access Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/shell.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #07080d;
+    color: #c8bfa8;
+    font-family: 'DM Sans', 'PTSans', sans-serif;
+    min-height: 100vh;
+    padding-top: var(--pat-header-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .tools-placeholder {
+    text-align: center;
+    padding: 48px 24px;
+    max-width: 420px;
+  }
+
+  .tools-icon {
+    font-size: 40px;
+    margin-bottom: 24px;
+    opacity: .35;
+  }
+
+  .tools-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: var(--pat-gold);
+    margin-bottom: 12px;
+    opacity: .6;
+  }
+
+  .tools-desc {
+    font-size: 13px;
+    color: var(--pat-text-muted);
+    line-height: 1.7;
+    margin-bottom: 28px;
+  }
+
+  .tools-label {
+    display: inline-block;
+    padding: 5px 14px;
+    border: 1px solid var(--pat-gold-border);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--pat-gold-dim);
+  }
+</style>
+</head>
+<body>
+
+<div class="tools-placeholder">
+  <div class="tools-icon">⚙</div>
+  <div class="tools-title">Tools</div>
+  <p class="tools-desc">
+    Additional utilities and applications for authorized terminal users.
+    This module is currently pending authorization and will be available in a future release.
+  </p>
+  <div class="tools-label">Access Pending</div>
+</div>
+
+<script src="../assets/js/pat-shell.js"></script>
+</body>
+</html>

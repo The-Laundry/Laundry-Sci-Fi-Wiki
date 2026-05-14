@@ -5,12 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="../assets/css/shell.css">
     <style>
         /* --- 1. FONT LOADING --- */
-        @font-face { font-family: 'Constantia'; src: url('constan.ttf'); }
-        @font-face { font-family: 'Poppins'; src: url('Poppins-Light.ttf'); }
-        @font-face { font-family: 'PoppinsExtraLight'; src: url('Poppins-ExtraLight.ttf'); }
-        @font-face { font-family: 'PTSans'; src: url('PTSans-Regular.ttf'); }
+        /* Fonts now served from shared assets/fonts/ — @font-face declared in shell.css */
 
         :root {
             --font-title: 'Constantia', serif;
@@ -790,6 +788,7 @@
     </div>
 </div>
 
+<script src="../assets/js/pat-shell.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="star_systems.js"></script>

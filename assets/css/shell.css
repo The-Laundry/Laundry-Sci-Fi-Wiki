@@ -1,0 +1,211 @@
+/* ══════════════════════════════════════════════════════════════════
+   Public Access Terminal — Shell Styles
+   Outer chrome that wraps both the Encyclopedia and Reference Atlas.
+   Gold/amber palette; always dark regardless of wiki theme state.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Map fonts (shared here so map/index.html doesn't need local refs) ── */
+@font-face { font-family: 'Constantia'; src: url('../fonts/constan.ttf'); }
+@font-face { font-family: 'Poppins';    src: url('../fonts/Poppins-Light.ttf'); font-weight: 300; }
+@font-face { font-family: 'PoppinsExtraLight'; src: url('../fonts/Poppins-ExtraLight.ttf'); font-weight: 200; }
+@font-face { font-family: 'PTSans';     src: url('../fonts/PTSans-Regular.ttf'); }
+
+/* ── PAT custom properties ── */
+:root {
+  --pat-header-h: 44px;
+  --pat-bg:          #09090e;
+  --pat-gold:        #c9a84c;
+  --pat-gold-dim:    #7a6430;
+  --pat-gold-glow:   rgba(201, 168, 76, .10);
+  --pat-gold-border: rgba(201, 168, 76, .22);
+  --pat-text:        #ddd3b8;
+  --pat-text-muted:  #857a62;
+  --pat-radius:      3px;
+}
+
+/* ── PAT header bar ── */
+#pat-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 2500;
+  height: var(--pat-header-h);
+  background: var(--pat-bg);
+  border-bottom: 1px solid var(--pat-gold-border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 0;
+  font-family: 'DM Sans', 'PTSans', sans-serif;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .7);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* ── Republic seal / brand ── */
+.pat-seal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  text-decoration: none;
+  padding-right: 14px;
+  border-right: 1px solid var(--pat-gold-border);
+  margin-right: 14px;
+  height: 100%;
+}
+
+.pat-seal-emblem {
+  position: relative;
+  width: 26px; height: 26px;
+  border: 1.5px solid var(--pat-gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pat-gold);
+  font-size: 11px;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--pat-gold-glow);
+}
+.pat-seal-emblem::before {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 1px solid var(--pat-gold-dim);
+  border-radius: 50%;
+}
+
+.pat-seal-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.pat-seal-text .pat-class {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--pat-gold-dim);
+}
+.pat-seal-text .pat-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--pat-gold);
+}
+
+/* ── Tab nav ── */
+.pat-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.pat-tab {
+  padding: 5px 12px;
+  border-radius: var(--pat-radius);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .03em;
+  color: var(--pat-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s, box-shadow .15s;
+  text-decoration: none;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.pat-tab:hover {
+  color: var(--pat-gold);
+  background: var(--pat-gold-glow);
+  border-color: var(--pat-gold-border);
+}
+.pat-tab.active {
+  color: var(--pat-gold);
+  background: rgba(201, 168, 76, .08);
+  border-color: rgba(201, 168, 76, .35);
+  box-shadow: 0 0 10px var(--pat-gold-glow);
+}
+
+/* ── Attribution text (right of tabs) ── */
+.pat-attribution {
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: var(--pat-text-muted);
+  text-transform: uppercase;
+  font-style: italic;
+  white-space: nowrap;
+  padding: 0 12px;
+  opacity: .65;
+}
+
+/* ── Theme toggle ── */
+.pat-theme-btn {
+  width: 28px; height: 28px;
+  border-radius: var(--pat-radius);
+  border: 1px solid var(--pat-gold-border);
+  background: transparent;
+  color: var(--pat-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .15s, border-color .15s, background .15s;
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 0;
+}
+.pat-theme-btn:hover {
+  color: var(--pat-gold);
+  border-color: rgba(201, 168, 76, .5);
+  background: var(--pat-gold-glow);
+}
+.pat-theme-btn svg { width: 13px; height: 13px; }
+/* Sun shown in dark mode, moon shown in light mode */
+.pat-theme-btn .icon-sun  { display: none; }
+.pat-theme-btn .icon-moon { display: block; }
+[data-theme="dark"] .pat-theme-btn .icon-sun  { display: block; }
+[data-theme="dark"] .pat-theme-btn .icon-moon { display: none; }
+/* On map, theme toggle is hidden */
+#pat-header.on-map .pat-theme-btn { display: none; }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   WIKI LAYOUT — push content below the PAT header
+   main.css uses var(--pat-header-h) in its calc()s; the variable
+   is defined above so it resolves correctly on first paint.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* (No extra rules needed — main.css already references --pat-header-h
+   via var() with a 0px fallback; shell.css defining the variable is
+   sufficient to activate the correct offsets.) */
+
+
+/* ══════════════════════════════════════════════════════════════════
+   MAP LAYOUT — adjustments when PAT header is present
+   pat-shell.js adds .pat-map-page to <body> on the map page.
+   ══════════════════════════════════════════════════════════════════ */
+
+body.pat-map-page {
+  /* Push map content below the fixed PAT header */
+  padding-top: calc(var(--pat-header-h) + 10px) !important;
+}
+
+body.pat-map-page #map {
+  /* Reduce height to account for PAT header (original padding was 10px top+bottom = 20px) */
+  height: calc(100vh - 20px - var(--pat-header-h)) !important;
+}
+
+/* Floating overlays anchored to top — shift down by PAT header height */
+body.pat-map-page #galactic-header,
+body.pat-map-page #search-container,
+body.pat-map-page #top-toolbar {
+  top: calc(25px + var(--pat-header-h)) !important;
+}
+
+body.pat-map-page #editor-info {
+  top: calc(100px + var(--pat-header-h)) !important;
+}
