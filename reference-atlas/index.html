@@ -1,0 +1,3215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reference Atlas of the Milky Way Galaxy</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* --- 1. FONT LOADING --- */
+        @font-face { font-family: 'Constantia'; src: url('constan.ttf'); }
+        @font-face { font-family: 'Poppins'; src: url('Poppins-Light.ttf'); }
+        @font-face { font-family: 'PoppinsExtraLight'; src: url('Poppins-ExtraLight.ttf'); }
+        @font-face { font-family: 'PTSans'; src: url('PTSans-Regular.ttf'); }
+
+        :root {
+            --font-title: 'Constantia', serif;
+            --font-body: 'Poppins', sans-serif;
+            --font-ui: 'PTSans', sans-serif;
+        }
+
+        body { 
+            margin: 0; 
+            background: #000; 
+            font-family: var(--font-ui); 
+            overflow: hidden; 
+            color: white;
+            /* This creates a small gap between the browser edge and the map frame */
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #map { 
+            height: calc(100vh - 20px); 
+            width: calc(100vw - 20px); 
+            background: #000;
+            /* The Frame: A subtle grey border with a faint outer glow */
+            border: 5px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        
+
+        /* --- 2. DYNAMIC HEADER STYLING (REBALANCED) --- */
+        #galactic-header {
+            position: absolute; top: 25px; left: 25px; z-index: 2000;
+            width: 500px; pointer-events: none;
+            background: linear-gradient(to right, rgba(0,13,20,0.9), rgba(0,13,20,0.6) 97%, transparent);
+            padding: 15px 20px; border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        #header-details {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 1;
+            /* Allows you to click things inside the header when expanded */
+            pointer-events: auto; 
+        }
+
+        #header-details.collapsed {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Subtle indicator that the title is clickable */
+        .galaxy-name:hover {
+            text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+        }
+        .atlas-title { font-family: var(--font-title); font-size: 18px; text-align: center; letter-spacing: 1px; }
+        .galaxy-name { 
+            font-family: var(--font-title); font-size: 46px; text-align: center; 
+            letter-spacing: 3px; border-bottom: 1px solid rgba(255,255,255,0.8); 
+            margin-bottom: 12px; padding-bottom: 4px;
+        }
+        #era-title {
+            font-family: var(--font-body);
+            font-size: 18px;
+            color: #aaa; /* Matches your accent color */
+            text-align: center;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            letter-spacing: 1px;
+            
+        }
+        .display-label { font-family: var(--font-ui); font-size: 20px; margin-bottom: 18px; color: #4facfe; text-shadow: 0 0 5px rgba(79, 172, 254, 0.3); }
+        .date-grid { display: flex; justify-content: space-between; margin-bottom: 16px; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.8); }
+        .date-item { text-align: center; flex: 1; font-family: var(--font-ui); font-size: 16px; line-height: 0.7; }
+        .date-item span { font-weight: bold; display: block; margin-bottom: 2px; }
+        .date-item small { font-family: var(--font-body); font-style: italic; font-size: 10px; color: #aaa; display: block; line-height: 1.2; }
+        .header-footer-text { font-family: var(--font-body); font-style: italic; font-size: 12px; color: #ccc; line-height: 1.4; max-width: 95%; }
+
+        /* --- 3. SEARCH & UI CONTROLS --- */
+        #search-container { position: absolute; top: 25px; right: 25px; z-index: 2000; width: 220px; }
+        #system-search { 
+            background: rgba(15, 15, 15, 0.95); border: 1px solid rgba(79, 172, 254, 0.6); 
+            color: white; font-family: var(--font-ui); padding: 8px; width: 100%; box-sizing: border-box; outline: none;
+        }
+        #search-results { 
+            background: rgba(15, 15, 15, 0.95); border: 1px solid rgba(79, 172, 254, 0.6); 
+            border-top: none; max-height: 250px; overflow-y: auto; display: none;
+        }
+        .search-item { padding: 8px; cursor: pointer; font-family: var(--font-ui); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .search-item:hover { background: #4facfe; color: black; }
+
+
+        /* --- NEW TIMELINE STYLES --- */
+        #timeline-container {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; width: 1100; /* Slightly wider */
+            display: flex; align-items: center; /* Vertically center items */
+            gap: 15px; /* Space between selector and timeline */
+            background: rgba(0, 0, 0, 0.6); /* Optional: distinct background for the bar */
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(79, 172, 254, 0.3);
+        }
+
+        #timeline-wrapper {
+            flex-grow: 1; /* Take up remaining space */
+            position: relative;
+            height: 40px; /* Define height to contain the absolute track */
+            display: flex; align-items: center;
+        }
+
+        /* The subtle bar running through */
+        .timeline-track {
+            position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
+            background: rgba(79, 172, 254, 0.3); z-index: 0; transform: translateY(-50%);
+        }
+
+        #timeline-steps {
+            display: flex; justify-content: space-between; width: 100%; position: relative; z-index: 1;
+            /* Cursor indicates dragging is possible */
+            cursor: ew-resize; 
+        }
+
+        .timeline-box {
+            background: #050a0f;
+            border: 1px solid #444;
+            color: #888;
+            padding: 4px 8px;
+            font-family: var(--font-ui);
+            font-size: 11px;
+            transition: all 0.1s ease; /* Faster transition for dragging */
+            min-width: 60px; text-align: center;
+            user-select: none; /* Prevent text selection while dragging */
+        }
+
+        .timeline-box:hover { border-color: #4facfe; color: #fff; }
+
+        /* Active State (Highlighted + Arrow) */
+        .timeline-box.active {
+            background: #0a1e28;
+            border-color: #4facfe;
+            color: #4facfe;
+            transform: scale(1.1);
+            box-shadow: 0 0 8px rgba(79, 172, 254, 0.3);
+            z-index: 10;
+        }
+        /* The Triangle Arrow */
+        .timeline-box.active::before {
+            content: '';
+            position: absolute;
+            top: -12px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #4facfe; /* Points down */
+        }
+
+        /* Calendar Selector Menu */
+        #calendar-selector {
+            position: relative; /* Reset from absolute */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        #cal-toggle {
+            background: rgba(15, 15, 15, 0.9); border: 1px solid #444; color: #4facfe;
+            padding: 8px 12px; cursor: pointer; font-family: var(--font-ui); font-size: 13px;
+            display: flex; gap: 8px; align-items: center; transition: 0.2s;
+            border-radius: 4px; font-weight: bold;
+        }
+        #cal-toggle:hover { border-color: #4facfe; background: #222; }
+
+        #cal-menu {
+            position: absolute; bottom: 100%; left: 0; width: 220px;
+            background: rgba(10, 10, 10, 0.95); border: 1px solid #4facfe;
+            display: none; flex-direction: column; margin-bottom: 5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #cal-menu.show { display: flex; }
+
+        .cal-option {
+            padding: 8px; cursor: pointer; font-size: 11px; color: #ccc; border-bottom: 1px solid #333;
+        }
+        .cal-option:hover { background: #4facfe; color: #000; }
+        .cal-option:last-child { border-bottom: none; }
+
+        #custom-zoom-controls { position: absolute; bottom: 30px; right: 30px; z-index: 2000; display: flex; flex-direction: column; gap: 6px; }
+        #custom-zoom-controls button {
+            width: 38px; height: 38px; background: rgba(15, 15, 15, 0.95); 
+            border: 1px solid rgba(79, 172, 254, 0.6); color: white; font-size: 20px; 
+            cursor: pointer; font-family: monospace; transition: all 0.2s ease;
+        }
+        #custom-zoom-controls button:hover { background: #4facfe; color: #000; }
+
+        /* --- 4. MAP & POPUP STYLING --- */
+        .leaflet-popup-content-wrapper { background: #1a1a1a; color: #ccc; border: 1px solid #444; border-radius: 0; font-family: var(--font-body); }
+        .leaflet-popup-tip { background: #1a1a1a; }
+        .popup-header { color: #4facfe; font-size: 1.4em; font-family: var(--font-ui); font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px; margin-bottom: 5px; text-transform: uppercase; }
+        .popup-desc { font-size: 13px; line-height: 1.4; margin-bottom: 10px; }
+        .popup-meta-label { font-family: var(--font-ui); font-weight: bold; font-size: 0.85em; color: #888; text-transform: uppercase; }
+        .popup-faction-name { font-weight: bold; }
+        .planet-header { font-family: var(--font-ui); font-weight: bold; font-size: 0.85em; color: #888; text-transform: uppercase; }
+        .planet-list { margin: 2px 0; padding-left: 15px; color: #ccc; font-size: 13px; }
+        .region-label {
+            font-family: 'PoppinsExtraLight', sans-serif;
+            color: #a0a0a0;
+            letter-spacing: 1px; /* Wide spacing for that "Space Map" look */
+            transition: font-size 0.2s ease-out, opacity 0.5s ease-in-out; /* Add font-size transition */
+            text-align: center;
+            pointer-events: none; /* Clicking passes through to the map */
+            line-height: 1.2;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+
+            /* Center Content */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nebula-label {
+            font-family: 'PoppinsExtraLight', sans-serif;
+            color: #99aabb; /* Slightly blue-grey to differentiate from Regions */
+            text-transform: uppercase;
+            letter-spacing: 0.15em; /* Tighter spacing than regions */
+            text-align: center;
+            pointer-events: none;
+            white-space: normal;
+            line-height: 1.1;
+            text-shadow: 0 0 8px rgba(0,0,0,1); /* Stronger shadow for readability over nebulae */
+            display: flex; align-items: center; justify-content: center;
+            transition: font-size 0.2s ease-out, opacity 0.5s ease-in-out;
+        }
+        /* GALACTIC REGION LABELS */
+        .galactic-region-label {
+            font-family: 'Poppins', sans-serif;
+            color: #d3d3e5;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            line-height: 1.5;
+            text-shadow: 0 0 10px rgba(0,0,0,1);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* LOD Transitions */
+        .leaflet-tooltip.star-label { 
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            font-family: var(--font-ui);
+            text-shadow: 0 0 3px #000; 
+            opacity: 0 !important;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+            text-align: center;  /* Centers the stacked text */
+            line-height: 1.1;
+        }
+        .label-major {
+            color: #fff; 
+            font-size: 13px;
+            letter-spacing: 0.8px;
+        }
+        .label-minor {
+            text-align: right;
+            color: #ddd; 
+            font-size: 12px;
+        }
+        .label-capital {
+            font-size: 14px;
+            color: #ffd700;
+            letter-spacing: 1px;
+        }
+        #map.show-major-labels .label-major,
+        #map.show-major-labels .label-capital { 
+            opacity: 1 !important; 
+        }
+
+        #map.show-minor-labels .label-minor { 
+            opacity: 1 !important; 
+        }
+        .custom-star-icon { opacity: 0; transition: opacity 0.5s ease-in-out; }
+        .custom-star-icon.visible { opacity: 1; }
+
+        /* Conflict Mode Icons */
+        .movement-arrow { pointer-events: none; }
+        .battle-icon { 
+            pointer-events: none; 
+            opacity: 0; 
+            transition: opacity 0.3s ease; 
+        }
+        #map.show-major-icons .battle-icon { 
+            opacity: 1; 
+        }
+
+        /* Inner wrappers to protect Leaflet's transform positioning */
+        .arrow-inner {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%;
+        }
+        .pulse-inner { 
+            display: flex; align-items: center; justify-content: center; 
+            width: 100%; height: 100%;
+            animation: pulse-battle 2s infinite; 
+        }
+        @keyframes pulse-battle { 
+            0% { transform: scale(1); } 
+            50% { transform: scale(1.2); } 
+            100% { transform: scale(1); } 
+        }
+        /* Static Conflict Infrastructure */
+        .shipyard-icon { 
+            pointer-events: none; 
+            overflow: visible !important; 
+            opacity: 0; 
+            transition: opacity 0.3s ease; 
+        }
+        #map.show-major-labels .shipyard-icon { 
+            opacity: 1; 
+        }
+        /* Prevent clicking invisible shipyards */
+        #map:not(.show-major-labels) .shipyard-inner { 
+            pointer-events: none !important; 
+        }
+
+        .shipyard-inner {
+            position: absolute;
+            left: 10px;
+            bottom: 10px; /* Pushes the icon above the star */
+            width: 23px;
+            height: 23px;
+            pointer-events: auto; /* Re-enables clicking just for this shape */
+            cursor: pointer;
+            filter: drop-shadow(0px 0px 4px rgba(0,0,0,0.8));
+            transition: transform 0.2s ease;
+        }
+
+        .shipyard-inner:hover {
+            transform: scale(1.15);
+        }
+
+        /* Editor Mode */
+        .crosshair-cursor { cursor: crosshair !important; }
+        #editor-info {
+            position: absolute; top: 100px; right: 25px; z-index: 2000;
+            background: rgba(0, 0, 0, 0.8); border-left: 3px solid #0f0; color: #0f0;
+            padding: 10px; font-family: var(--font-ui); display: none; pointer-events: none;
+        }
+        .modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 350px; z-index: 3000; background: #000; border: 2px solid #0f0; 
+            padding: 20px; font-family: var(--font-ui); color: #0f0; display: none;
+        }
+        /* Toast Notification Styling */
+        #toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px 20px;
+            font-family: var(--font-ui);
+            font-size: 14px;
+            z-index: 5000;
+            display: none;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* --- DATABASE MANAGER STYLES --- */
+        #db-manager {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #050a0f; z-index: 5000; display: none;
+            flex-direction: column; padding: 20px; box-sizing: border-box;
+        }
+
+        .db-toolbar {
+            display: flex; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;
+        }
+
+        /* Database Tabs */
+        .db-tabs { display: flex; gap: 5px; }
+        .btn-tab {
+            background: #111; border: 1px solid #333; border-bottom: none;
+            color: #888; padding: 8px 20px; cursor: pointer;
+            font-family: var(--font-ui); text-transform: uppercase;
+            font-size: 12px; letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        .btn-tab:hover { background: #222; color: #ddd; }
+        .btn-tab.active {
+            background: #050a0f; border-color: #4facfe; color: #4facfe;
+            border-bottom: 2px solid #050a0f; /* Blends with container */
+            margin-bottom: -11px; z-index: 10; font-weight: bold;
+        }
+
+        .db-container {
+            flex: 1; overflow: auto; border: 1px solid #333; background: #111;
+        }
+
+        table.db-table {
+            width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 12px;
+        }
+
+        .db-table th {
+            background: #1a1a1a; color: #4facfe; position: sticky; top: 0; z-index: 10;
+            padding: 10px; text-align: left; border-bottom: 2px solid #4facfe;
+            white-space: nowrap;
+        }
+
+        .db-table td { border-bottom: 1px solid #222; padding: 0; }
+        .db-table tr:hover td { background: #1a2a3a; }
+
+        /* Input Styling inside cells */
+        .db-input {
+            width: 100%; background: transparent; border: none; color: #ddd;
+            padding: 8px; font-family: var(--font-ui); box-sizing: border-box; outline: none;
+        }
+        .db-input:focus { background: #000; color: #fff; box-shadow: inset 0 0 0 1px #4facfe; }
+
+        /* Database Validator Styles */
+        #db-error-banner {
+            display: none; 
+            background: rgba(200, 0, 0, 0.15); 
+            border: 1px solid #ff4444; 
+            color: #ff8888; 
+            padding: 10px 15px; 
+            margin-bottom: 15px; 
+            border-radius: 4px;
+            font-family: var(--font-ui); 
+            font-size: 13px; 
+            align-items: center; 
+            gap: 10px;
+        }
+
+        #db-error-banner.show {
+            display: flex;
+        }
+
+        /* Red tint for rows missing data */
+        .db-table tr.row-error td {
+            background: rgba(200, 0, 0, 0.2); 
+            border-bottom: 1px solid #ff4444;
+        }
+
+        .db-table tr.row-error:hover td {
+            background: rgba(200, 0, 0, 0.35);
+        }
+
+        /* Column Widths */
+        .col-tiny { width: 50px; text-align: center; }
+        .col-small { width: 80px; }
+        .col-med { width: 150px; }
+        .col-wide { width: 300px; }
+
+        /* Button Styles */
+        .btn-db {
+            background: #1a1a1a; border: 1px solid #4facfe; color: #4facfe;
+            padding: 8px 15px; cursor: pointer; font-family: var(--font-ui);
+            text-transform: uppercase; font-size: 12px; letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        .btn-db:hover { background: #4facfe; color: #000; }
+        .btn-export { border-color: #0f0; color: #0f0; }
+        .btn-export:hover { background: #0f0; color: #000; }
+        .btn-close { border-color: #f00; color: #f00; margin-left: auto; }
+        .btn-close:hover { background: #f00; color: #000; }
+    </style>
+</head>
+<body>
+<div id="toast">Code Copied to Clipboard</div>
+
+<div id="galactic-header">
+    <div class="atlas-title" id="main-atlas-title">Reference Atlas of the</div>
+    <div class="galaxy-name" id="main-galaxy-name" onclick="toggleHeader()" style="cursor: pointer; pointer-events: auto;" title="Click to Expand/Collapse">
+        MILKY WAY GALAXY
+    </div>
+    
+    <div id="header-details">
+        <div class="date-display-section">
+            <div class="display-label">Currently Displayed Date:&nbsp;&nbsp;&nbsp;<span id="era-title"></span></div>
+            
+            <div class="date-grid">
+                <div class="date-item"><span id="date-brf"></span><br><small>Republic Foundational</small></div>
+                <div class="date-item"><span id="date-ce"></span><br><small>Human Common</small></div>
+                <div class="date-item"><span id="date-cyp"></span><br><small>Equestrian Banishment</small></div>
+                <div class="date-item"><span id="date-et"></span><br><small>Tzenki Imperial</small></div>
+                <div class="date-item"><span id="date-sa"></span><br><small>Preserver Activation</small></div>
+            </div>
+        </div>
+        <div class="header-footer-text">
+            • Compiled and drafted by the <b>Institute of Galactic Cultures</b> on Archer at the behest of the Legislative Committee for Public Knowledge.<br><br>
+            • Datums and place names sourced from the most recent <b>DCIA Astrological Survey</b>, and thus may be anachronistic.
+        </div>
+    </div>
+
+    <div id="conflict-header-details" style="display: none;">
+        <div id="conflict-title" style="font-family: var(--font-title); font-size: 32px; text-align: center; letter-spacing: 2px; margin-bottom: 8px;"></div>
+        <div style="border-bottom: 1px solid rgba(255,255,255,0.8); margin-bottom: 12px;"></div>
+        <div id="conflict-event-name" style="font-family: var(--font-ui); font-size: 18px; color: #4facfe; font-weight: bold; margin-bottom: 2px;"></div>
+        <div id="conflict-event-date" style="font-family: var(--font-ui); font-size: 14px; color: #aaa; margin-bottom: 12px; font-style: italic;"></div>
+        <div id="conflict-description" style="font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: #ccc;"></div>
+    </div>
+</div>
+
+<div id="search-container">
+    <input type="text" id="system-search" placeholder="Locate system or planet..." onkeyup="searchSystems(event)">
+    <div id="search-results"></div>
+</div>
+
+<div id="top-toolbar" style="position: absolute; top: 25px; right: 260px; z-index: 2000; display: flex; gap: 10px;">
+    <button onclick="toggleGalacticRegions()" style="background: rgba(15, 15, 15, 0.95); border: 1px solid rgba(79, 172, 254, 0.6); color: #4facfe; padding: 8px 12px; cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: bold; border-radius: 4px; transition: 0.2s;">
+        Toggle Sector Overlay
+    </button>
+    
+    <div id="conflict-mode-container" style="display: flex; gap: 5px;">
+        <select id="conflict-selector" style="background: rgba(15, 15, 15, 0.95); border: 1px solid rgba(79, 172, 254, 0.6); color: white; font-family: var(--font-ui); padding: 8px; outline: none; width: 155px;">
+            <option value="">Select conflict...</option>
+        </select>
+        <button id="toggle-conflict-btn" onclick="toggleConflictMode()" style="background: rgba(15, 15, 15, 0.95); border: 1px solid rgba(79, 172, 254, 0.6); color: #4facfe; padding: 8px 12px; cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: bold; border-radius: 4px; transition: 0.2s; opacity: 0.5; pointer-events: none;">
+            Engage
+        </button>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<div id="timeline-container">
+    <div id="calendar-selector">
+        <button id="cal-toggle" onclick="toggleCalMenu()">📅 <span id="cur-cal-name">CE</span> ▾</button>
+        <div id="cal-menu">
+            <div class="cal-option" onclick="changeCalendar('CE')">Human Common Calendar (CE)</div>
+            <div class="cal-option" onclick="changeCalendar('BRF')">Republic Foundational (BRF/RF)</div>
+            <div class="cal-option" onclick="changeCalendar('CYP')">Equestrian Lunar Banishment (CYP)</div>
+            <div class="cal-option" onclick="changeCalendar('ET')">Tzenki Imperial Calendar (ET)</div>
+            <div class="cal-option" onclick="changeCalendar('SA')">Preserver Activation (SA)</div>
+        </div>
+    </div>
+
+    <div id="timeline-wrapper">
+        <div class="timeline-track"></div>
+        <div id="timeline-steps">
+            </div>
+    </div>
+</div>
+
+<div id="conflict-timeline-container" style="display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 2000; width: 800px; background: rgba(0, 0, 0, 0.8); padding: 15px 25px; border-radius: 8px; border: 1px solid #ff4444; flex-direction: column; gap: 15px; font-family: var(--font-ui);">
+    <div style="display: flex; justify-content: space-between; gap: 10px;">
+        <button class="btn-db" style="border-color: #ff4444; color: #ff4444;" onclick="navConflict('start')">|◄ Start</button>
+        <button class="btn-db" style="border-color: #ff4444; color: #ff4444;" onclick="navConflict('prevYear')">◄◄ Year</button>
+        <button class="btn-db" style="border-color: #ff4444; color: #ff4444;" onclick="navConflict('prev')">◄ Prev Event</button>
+        <div style="flex-grow: 1;"></div>
+        <button class="btn-db" style="border-color: #ff4444; color: #ff4444;" onclick="navConflict('next')">Next Event ►</button>
+        <button class="btn-db" style="border-color: #ff4444; color: #ff4444;" onclick="navConflict('nextYear')">Year ►►</button>
+        <button class="btn-db" style="border-color: #ff4444; color: #ff4444;" onclick="navConflict('end')">End ►|</button>
+    </div>
+    <div style="position: relative; height: 4px; background: #333; width: 100%; border-radius: 2px;">
+        <div id="conflict-progress-fill" style="position: absolute; left: 0; top: 0; height: 100%; background: #ff4444; width: 0%; transition: width 0.3s ease;"></div>
+        <div id="conflict-progress-marker" style="position: absolute; left: 0%; top: -5px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transform: translateX(-50%); box-shadow: 0 0 8px #ff4444; transition: left 0.3s ease;"></div>
+    </div>
+</div>
+
+<div id="custom-zoom-controls">
+    <button onclick="map.zoomIn()">+</button>
+    <button onclick="goHome()" title="Reset View">⌂</button>
+    <button onclick="map.zoomOut()">-</button>
+</div>
+
+<div id="editor-info">
+    <div><strong>EDITOR MODE (ON)</strong></div>
+    <div id="coords">X: -- | Y: --</div>
+    <div id="zoom-val">Zoom: --</div>
+    <div style="font-size:0.85em; color:#0a0; margin-top:8px; border-top: 1px solid #0a0; padding-top:5px;">
+        Shift+Click: New Star<br>
+        Alt+Click: Edit Star<br>
+        Shift+R+Click: New Region<br>
+        Shift+F: New Faction<br>
+        Shift+D: Open Database<br> 
+        E: Toggle Editor
+    </div>
+</div>
+
+<div id="creator-modal" class="modal" style="max-height: 90vh; overflow-y: auto;">
+    <h3 style="margin-top:0; border-bottom:1px solid #0f0;">System Creator</h3>
+    
+    <div style="margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#0a0;">System Name</label>
+        <input type="text" id="input-name" placeholder="e.g. Wolf 359">
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-bottom:10px;">
+        <div style="flex:1; min-width: 0;">
+            <label style="font-size:0.8em; color:#0a0;">Type</label>
+            <select id="input-type" style="width: 100%; box-sizing: border-box;">
+                <option value="minor">Minor System</option>
+                <option value="major">Major System</option>
+            </select>
+        </div>
+        <div style="flex:1; min-width: 0;">
+            <label style="font-size:0.8em; color:#0a0;">Sector</label>
+            <select id="input-sector" style="width: 100%; box-sizing: border-box;">
+                <option value="">None</option>
+                </select>
+        </div>
+    </div>
+
+    <div style="margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#0a0;">Planets</label>
+        <input type="text" id="p_input" placeholder="Comma separated" style="width: 100%; box-sizing: border-box;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#0a0;">Description</label>
+        <textarea id="input-desc" rows="2"></textarea>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 2238</label>
+            <input type="text" id="input-2238" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 2428</label>
+            <input type="text" id="input-2428" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 2640</label>
+            <input type="text" id="input-2640" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 2695</label>
+            <input type="text" id="input-2695" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 2943</label>
+            <input type="text" id="input-2943" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 2969</label>
+            <input type="text" id="input-2969" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 3144</label>
+            <input type="text" id="input-3144" list="all-factions" placeholder="Faction...">
+        </div>
+        <div>
+            <label style="font-size:0.8em; color:#0a0;">Owner 3921</label>
+            <input type="text" id="input-3921" list="all-factions" placeholder="Faction...">
+        </div>
+    </div>
+
+    <input type="hidden" id="input-lat"><input type="hidden" id="input-lng">
+    
+    <button class="btn-save" onclick="saveSystemToDatabase()">Save to Database</button>
+    <button style="background:#333; color:white; border:none; padding:10px; width:100%; margin-top:5px; cursor:pointer; font-family:var(--font-ui);" onclick="closeModal('creator-modal')">Cancel</button>
+</div>
+
+<div id="faction-modal" class="modal" style="max-height:90vh; overflow-y:auto;">
+    <h3 style="margin-top:0; border-bottom:1px solid #0f0;">Faction Creator</h3>
+    
+    <div style="margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#0a0;">Default Name (The Key)</label>
+        <input type="text" id="fac-name" placeholder="e.g. United Systems">
+    </div>
+    
+    <div style="margin-bottom:15px;">
+        <label style="font-size:0.8em; color:#0a0;">Faction Color</label>
+        <input type="color" id="fac-color" value="#ffffff" style="height:40px; cursor:pointer; width:100%;">
+    </div>
+
+    <div style="border-top:1px solid #333; padding-top:10px; margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#4facfe;">Dynamic Era Names (Optional)</label>
+        <input type="text" id="fac-2238" placeholder="Name in 2238..." style="margin-bottom:5px;">
+        <input type="text" id="fac-2428" placeholder="Name in 2428..." style="margin-bottom:5px;">
+        <input type="text" id="fac-2640" placeholder="Name in 2640..." style="margin-bottom:5px;">
+        <input type="text" id="fac-2695" placeholder="Name in 2695..." style="margin-bottom:5px;">
+        <input type="text" id="fac-2943" placeholder="Name in 2943..." style="margin-bottom:5px;">
+        <input type="text" id="fac-2969" placeholder="Name in 2969..." style="margin-bottom:5px;">
+        <input type="text" id="fac-3144" placeholder="Name in 3144..." style="margin-bottom:5px;">
+        <input type="text" id="fac-3921" placeholder="Name in 3921...">
+    </div>
+
+    <button class="btn-save" onclick="generateFactionCode()">Save & Copy Code</button>
+    <button style="background:#333; color:white; border:none; padding:10px; width:100%; margin-top:5px; cursor:pointer; font-family:var(--font-ui);" onclick="closeModal('faction-modal')">Cancel</button>
+</div>
+
+<datalist id="all-factions"></datalist>
+
+<div id="region-modal" class="modal">
+    <h3 style="margin-top:0; border-bottom:1px solid #0f0;">Region Creator</h3>
+    
+    <div style="margin-bottom:15px;">
+        <label style="font-size:0.8em; color:#0a0;">Region Name</label>
+        <input type="text" id="reg-name" placeholder="e.g. The Outer Rim" style="font-family:'PoppinsExtraLight'; font-size:1.2em;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#0a0;">Visible Eras</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-top:5px;">
+            <label><input type="checkbox" id="reg-2238" checked> 2238</label>
+            <label><input type="checkbox" id="reg-2428" checked> 2428</label>
+            <label><input type="checkbox" id="reg-2640" checked> 2640</label>
+            <label><input type="checkbox" id="reg-2695" checked> 2695</label>
+            <label><input type="checkbox" id="reg-2943" checked> 2943</label>
+            <label><input type="checkbox" id="reg-2969" checked> 2969</label>
+            <label><input type="checkbox" id="reg-3144" checked> 3144</label>
+            <label><input type="checkbox" id="reg-3921" checked> 3921</label>
+        </div>
+    </div>
+
+    <input type="hidden" id="reg-lat"><input type="hidden" id="reg-lng">
+    
+    <button class="btn-save" onclick="generateRegionCode()">Copy Region Code</button>
+    <button style="background:#333; color:white; border:none; padding:10px; width:100%; margin-top:5px; cursor:pointer; font-family:var(--font-ui);" onclick="closeModal('region-modal')">Cancel</button>
+</div>
+
+<div id="nebula-modal" class="modal">
+    <h3 style="margin-top:0; border-bottom:1px solid #4facfe; color:#4facfe;">Nebula Creator</h3>
+    
+    <div style="margin-bottom:15px;">
+        <label style="font-size:0.8em; color:#4facfe;">Nebula Name</label>
+        <input type="text" id="neb-name" placeholder="e.g. The Veil" style="font-family:'PoppinsExtraLight'; font-size:1.2em;">
+    </div>
+
+    <div style="margin-bottom:10px;">
+        <label style="font-size:0.8em; color:#4facfe;">Visible Eras</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-top:5px;">
+            <label><input type="checkbox" id="neb-2238" checked> 2238</label>
+            <label><input type="checkbox" id="neb-2428" checked> 2428</label>
+            <label><input type="checkbox" id="neb-2640" checked> 2640</label>
+            <label><input type="checkbox" id="neb-2695" checked> 2695</label>
+            <label><input type="checkbox" id="neb-2943" checked> 2943</label>
+            <label><input type="checkbox" id="neb-2969" checked> 2969</label>
+            <label><input type="checkbox" id="neb-3144" checked> 3144</label>
+            <label><input type="checkbox" id="neb-3921" checked> 3921</label>
+        </div>
+    </div>
+
+    <input type="hidden" id="neb-lat"><input type="hidden" id="neb-lng">
+    
+    <button class="btn-save" style="border-color:#4facfe; color:#4facfe;" onclick="generateNebulaCode()">Copy Nebula Code</button>
+    <button style="background:#333; color:white; border:none; padding:10px; width:100%; margin-top:5px; cursor:pointer; font-family:var(--font-ui);" onclick="closeModal('nebula-modal')">Cancel</button>
+</div>
+
+<div id="db-manager">
+    <div class="db-toolbar">
+        <div style="font-family: var(--font-title); font-size: 24px; color: white; margin-right: 20px;">DATABASE</div>
+        
+        <div class="db-tabs">
+            <button id="tab-systems" class="btn-tab active" onclick="switchDbTab('systems')">Star Systems</button>
+            <button id="tab-regions" class="btn-tab" onclick="switchDbTab('regions')">Regions</button>
+            <button id="tab-nebulae" class="btn-tab" onclick="switchDbTab('nebulae')">Nebulae</button>
+            <button id="tab-conflicts" class="btn-tab" onclick="switchDbTab('conflicts')">Conflicts</button>
+        </div>
+
+        <datalist id="all-systems-regions"></datalist>
+
+        <div style="flex:1;"></div> <button class="btn-db" onclick="renderDatabaseTable()">🔄 Refresh</button>
+        <button id="db-global-add-btn" class="btn-db" onclick="addNewRow()">+ Add Item</button>
+        <button class="btn-db btn-export" onclick="exportDatabase()">💾 Export</button>
+        <button class="btn-db btn-close" onclick="toggleDatabaseMode()">Close</button>
+    </div>
+    
+    <div id="db-error-banner">
+        ⚠️ <strong>Missing Sector Data:</strong> <span id="db-error-list"></span>
+    </div>
+    
+    <div class="db-container">
+        <table class="db-table" id="db-table">
+            <thead id="db-head">
+                </thead>
+            <tbody id="db-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="star_systems.js"></script>
+
+<script src="conflicts/hydian_rebellion.js"></script>
+<script src="conflicts/human_civil_war.js"></script>
+<script src="conflicts/the_great_war.js"></script>
+
+<script>
+    // --- 1. CONFIG & DATA ---
+    const mapSize = 10000;
+    const REFERENCE_IMAGE_URL = 'reference_layout.png';
+    const LOD_MAJOR_ICON = 0, LOD_MAJOR_LABEL = 1, LOD_MINOR_ICON = 0.5, LOD_MINOR_LABEL = 2, LOD_SIMPLE_MAJOR_ICON = -1;
+    const offsets = { brf: 2243, cyp: 1325, et: 1707, sa: -68870 };
+    const greekAlphabet = {
+        'α': 'Alpha', 'β': 'Beta', 'γ': 'Gamma', 'δ': 'Delta', 'ε': 'Epsilon',
+        'ζ': 'Zeta', 'η': 'Eta', 'θ': 'Theta', 'ι': 'Iota', 'κ': 'Kappa',
+        'λ': 'Lambda', 'μ': 'Mu', 'ν': 'Nu', 'ξ': 'Xi', 'ο': 'Omicron',
+        'π': 'Pi', 'ρ': 'Rho', 'σ': 'Sigma', 'τ': 'Tau', 'υ': 'Upsilon',
+        'φ': 'Phi', 'χ': 'Chi', 'ψ': 'Psi', 'ω': 'Omega'
+    };
+
+    // --- MAP DATA ---
+    // Factions
+    const factionData = {
+        "Independent": { color: "#95a5a6" },
+        "Unclaimed": { color: "#555555" },
+        "Equus": { 
+            color: "#699455",
+            names: {
+                "2428": "United Equus", 
+                "2640": "United Equus"
+            } 
+        },
+        "United Systems": { 
+            color: "#d15454", 
+            names: { 
+                "2428": "United Systems Confederacy", 
+                "2640": "United Systems Confederacy",
+                "2695": "United Systems Confederacy"
+            } 
+        },
+        "Huachavi": { color: "#80151f" },
+        "Apleen": {
+            color: "#c652e7",
+            names: {
+                "2428": "Apleen State", 
+                "2640": "Nivaq Republic",
+                "2695": "Nivaq Republic"
+            } 
+        },
+        "Saventi": { color: "#61aa84" },
+        "Sarden": { color: "#254a25" },
+        "Preservers": { color: "#a5a5a5" },
+        "Ichizhou": { 
+            color: "#1f42a4",
+            names: {
+                "2238": "Ichizhou Empire", 
+                "2428": "Ichizhou Imperial Remnant", 
+                "2640": "Ichizhou Empire",
+                "2695": "Ichizhou Empire",
+                "3144": "Ichizhou Argonate",
+            } 
+        },
+        "Solar Empire": { color: "#ad6a22" },
+        "Morden": { color: "#d3d67d" },
+        "Tarvathian": { color: "#e6dd50" },
+        "Domedeus Alliance": { color: "#518bcb" },
+        "Phih'aidan": { color: "#986899" },
+        "Scallois": { color: "#f5586f" },
+        "Dral": { color: "#7e919d" },
+        "Frevon": { color: "#e46e1f" },
+        "Derzuni": { color: "#98b963" },
+        "Krivor": { color: "#a96550" },
+        "Reavers": { color: "#6fa948" },
+        "Monveli": { color: "#b98484" },
+        "Panneri": { color: "#ae9d6f" },
+        "Hislega": { color: "#25709f" },
+        "Vorg": { color: "#3f8aba" },
+        "Qarith": { color: "#1a5c87" },
+        "Niv": { color: "#366888" },
+        "Archeri": { color: "#cc7676" },
+        "Undili": { color: "#29c5a2" },
+        "Tuluk": { color: "#7b482c" },
+        "Shivae": { color: "#adf4a6" },
+        "Krev": { color: "#d15036" },
+        "Tzenki": {
+            color: "#c79d2e",
+            names: {
+                "2238": "Tzenkian Empire", 
+                "2428": "Tzenkian Empire", 
+                "2640": "Tzenkian Empire",
+                "2695": "Tzenkian Empire",
+                "3144": "Tzenkian Empire",
+            }
+        },
+    };
+    const availableFactions = Object.keys(factionData);
+    
+
+    // Regions
+    const regions = [
+        // Example: { name: "Sector 7", coords: [5000, 5000], eras: ["2238", "2428"] }
+        { name: "The Periphery", coords: [7624, 5004], eras: ["2238"] },
+        { name: "The Core Worlds", coords: [7491, 4995], eras: ["2238"] },
+        { name: "Sol Cluster", coords: [7491, 4995], eras: ["2428", "2640"] },
+        { name: "New Colonies", coords: [7272, 4982], eras: ["2428","2640","2695"] },
+        { name: "Hydian Reaches", coords: [7160, 5003], eras: ["2428","2640","2695","2943"] },
+        { name: "Disputed<br>Space", coords: [7291, 4741], eras: ["2428"] },
+        { name: "Celestine<br>Subcluster", coords: [7291, 4741], eras: ["2640","2695","2943"] },
+        { name: "Argoic<br>Cluster", coords: [7179, 4854], eras: ["2428","2640","2695","2943"] },
+        { name: "Meridian<br>Cluster", coords: [6867, 4777], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Monveli Spur", coords: [8419, 5350], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Hislega<br>Heartlands", coords: [8455, 4848], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Small<br>Magellenic<br>Cloud", coords: [4298, 319], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Large<br>Magellenic<br>Cloud", coords: [3182, 625], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Sagittarius<br>Dwarf Galaxy", coords: [3088, 9764], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Akkinnian<br>Cloud", coords: [6808, 7426], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+    ];
+
+    // Nebulae
+    const nebulae = [
+        { name: "Transitory Mists", coords: [7304, 4398], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Sparkle<br>Nebula", coords: [7337, 4701], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+        { name: "Pantorean<br>Nebula", coords: [7318, 4826], eras: ["2238","2428","2640","2695","2943","2969","3144","3921"] },
+    ];
+
+    // Sectors & Galactic Regions
+    const galacticRegionsData = [
+        { name: "Hydian Sector", coords: [6896, 5072] },
+        { name: "Espindek Sector", coords: [8523, 5250] },
+        { name: "Domedeus Sector", coords: [6785, 6764] },
+        { name: "Xichaki Sector", coords: [5704, 6568] },
+        { name: "Quenoriad<br>Sector", coords: [7549, 8084] },
+        { name: "Marnius Sector", coords: [4697, 8117] },
+        { name: "Grand Reaches<br>Sector", coords: [4008, 5736] },
+        { name: "East Rim<br>Sector", coords: [3707, 8568] },
+        { name: "Tzenkia Sector", coords: [3201, 6312] },
+        { name: "Lipec Sector", coords: [2087, 7206] },
+        { name: "Telleria Sector", coords: [2666, 3280] },
+        { name: "Ja'abin<br>Sector", coords: [4669, 3831] },
+        { name: "Don Jakaus Sector", coords: [5029, 2458] },
+        { name: "Pavraeu Sector", coords: [6334, 3257] },
+
+        { name: "Galactic Center", coords: [5046, 5063] },
+        { name: "Magellanic<br>Clouds", coords: [3268, 973] },
+        { name: "Sagittarius Dwarf Galaxy<br>& South Wild Space", coords: [992, 7440] },
+        { name: "Dead Space", coords: [7664, 1928] },
+        { name: "Northeast<br>Wild Space", coords: [9089, 8830] }
+    ];
+
+    // --- 2. MAP SETUP ---
+    const map = L.map('map', { 
+        crs: L.CRS.Simple, 
+        minZoom: -3, 
+        maxZoom: 5, 
+        zoomSnap: 0, 
+        zoomControl: false, 
+        attributionControl: false 
+    });
+
+    const bounds = [[0, 0], [mapSize, mapSize]];
+    map.fitBounds(bounds);
+
+    // 1. Bottom Layer: The solid blue-black base
+    L.imageOverlay("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='%23050a0f'/%3E%3C/svg%3E", bounds).addTo(map);
+
+    // 2. Middle Layer: Milky Way Raster (35% Opacity)
+    const galaxyBackground = L.imageOverlay('milky_way_bg.png', bounds, { 
+        opacity: 0.35, 
+        interactive: false 
+    }).addTo(map);
+
+    // 3. Top Layers: Borders and reference
+    // Define all border layers in one array
+    const borderLayers = [
+        L.imageOverlay('borders_2238.svg', bounds),
+        L.imageOverlay('borders_2428.svg', bounds),
+        L.imageOverlay('borders_2640.svg', bounds),
+        L.imageOverlay('borders_2695.svg', bounds),
+        L.imageOverlay('borders_2943.svg', bounds),
+        L.imageOverlay('borders_2969.svg', bounds),
+        L.imageOverlay('borders_3144.svg', bounds),
+        L.imageOverlay('borders_3921.svg', bounds)
+    ];
+    const galacticBordersLayer = L.imageOverlay('sector_borders.svg', bounds, {
+        opacity: 0.35, 
+        interactive: false 
+    });
+
+    let isGalacticRegionsVisible = false;
+
+    function toggleGalacticRegions() {
+        isGalacticRegionsVisible = !isGalacticRegionsVisible;
+        
+        if (isGalacticRegionsVisible) {
+            map.addLayer(galacticBordersLayer);
+        } else {
+            map.removeLayer(galacticBordersLayer);
+        }
+        updateMap(); 
+    }
+
+    // Add the default layer (Index 1 = 2428) to the map initially
+    borderLayers[1].addTo(map);
+
+    const referenceLayer = L.imageOverlay(REFERENCE_IMAGE_URL, bounds, { opacity: 0.4, interactive: false });
+
+    const starLayerGroup = L.layerGroup().addTo(map);
+    const activeMarkers = {};
+    let currentEra = "2428";
+    let editorMode = false;
+    let editingSystemIndex = -1; // -1 means "New System", otherwise it's the index in the array
+
+    // --- 3. UI FUNCTIONS ---
+    function updateAllDates(ceYear) {
+        // 1. UPDATE ERA TITLE
+        // We convert ceYear to string to look up the key
+        const title = eraTitles[ceYear.toString()] || "Unknown Era";
+        const titleEl = document.getElementById('era-title');
+        if (titleEl) titleEl.innerText = title;
+
+        // 2. BRF / RF LOGIC
+        // The Republic was founded in 3521 CE.
+        const FOUNDATION_YEAR = 3521;
+        let brfString = "";
+        
+        if (ceYear < FOUNDATION_YEAR) {
+            let diff = FOUNDATION_YEAR - ceYear;
+            brfString = `c. ${diff} BRF`;
+        } else {
+            let diff = ceYear - FOUNDATION_YEAR;
+            brfString = `c. ${diff} RF`;
+        }
+
+        document.getElementById('date-brf').innerText = brfString;
+        
+        // 3. OTHER DATES
+        document.getElementById('date-ce').innerText = `c. ${ceYear} CE`;
+        document.getElementById('date-cyp').innerText = `c. ${ceYear - offsets.cyp} CYP`;
+        document.getElementById('date-et').innerText = `c. ${ceYear - offsets.et} ET`;
+        document.getElementById('date-sa').innerText = `c. ${ceYear - offsets.sa} SA`;
+    }
+
+    function toggleHeader() {
+        const details = document.getElementById('header-details');
+        details.classList.toggle('collapsed');
+    }
+
+    function isModalOpen() {
+        return document.getElementById('creator-modal').style.display === 'block' ||
+            document.getElementById('faction-modal').style.display === 'block' ||
+            (typeof dbOpen !== 'undefined' && dbOpen);
+    }
+
+    function goHome() { map.flyTo([5000, 5000], 0, { duration: 1.5 }); }
+    
+    let tempPlacementMarker = null;
+
+    function createTempMarker(latlng) {
+        clearTempMarker();
+        tempPlacementMarker = L.circleMarker(latlng, {
+            radius: 5, 
+            color: '#ff0000', 
+            weight: 2, 
+            fillColor: '#ff0000', 
+            fillOpacity: 1, 
+            zIndexOffset: 1000, 
+            interactive: false
+        }).addTo(map);
+    }
+
+    function clearTempMarker() {
+        if (tempPlacementMarker) {
+            map.removeLayer(tempPlacementMarker);
+            tempPlacementMarker = null;
+        }
+    }
+
+    // Converts [Text](URL) into a clickable HTML link
+    function parseWikiLinks(text) {
+        if (!text) return "";
+        return text.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" style="color: #4facfe; text-decoration: none; border-bottom: 1px dotted #4facfe;">$1</a>');
+    }
+
+    // Converts YYYY.MM.DD dates into YYYY.decimal dates
+    function dateToDecimal(dateString) {
+        if (!dateString) return 0;
+        const parts = dateString.split('.');
+        if (parts.length !== 3) return parseInt(dateString) || 0;
+        
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const day = parseInt(parts[2]);
+
+        const daysInMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let dayOfYear = day;
+        for (let i = 1; i < month; i++) {
+            dayOfYear += daysInMonth[i];
+        }
+        
+        return year + (dayOfYear / 365);
+    }
+
+    //Converts YYYY.MM.DD dates into written dates
+    function formatWrittenDate(dateString) {
+        if (!dateString) return "";
+        const parts = dateString.split('.');
+        if (parts.length !== 3) return dateString + " CE"; 
+        
+        const year = parts[0];
+        const monthIndex = parseInt(parts[1], 10) - 1; 
+        const day = parseInt(parts[2], 10);
+        
+        const monthNames = [
+            "January", "February", "March", "April", "May", "June", 
+            "July", "August", "September", "October", "November", "December"
+        ];
+        
+        if (monthIndex < 0 || monthIndex > 11) return dateString + " CE";
+        
+        return `${monthNames[monthIndex]} ${day}, ${year} CE`;
+    }
+
+    // Path offset for simultaneous fleet movements
+    function applyPathOffset(coords, offsetAmount) {
+        if (!offsetAmount || offsetAmount === 0 || coords.length < 2) return coords;
+        let offsetCoords = [];
+        
+        for (let i = 0; i < coords.length; i++) {
+            let p1, p2;
+            // Figure out the trajectory of the line segment
+            if (i === 0) {
+                p1 = coords[i]; p2 = coords[i+1];
+            } else if (i === coords.length - 1) {
+                p1 = coords[i-1]; p2 = coords[i];
+            } else {
+                p1 = coords[i-1]; p2 = coords[i+1];
+            }
+            
+            let dLat = p2[0] - p1[0]; 
+            let dLng = p2[1] - p1[1]; 
+            
+            let len = Math.sqrt(dLat * dLat + dLng * dLng);
+            if (len === 0) { offsetCoords.push(coords[i]); continue; }
+            
+            // Calculate the perpendicular angle to push the line sideways
+            let normLat = dLng / len;
+            let normLng = -dLat / len;
+            
+            offsetCoords.push([
+                coords[i][0] + (normLat * offsetAmount),
+                coords[i][1] + (normLng * offsetAmount)
+            ]);
+        }
+        return offsetCoords;
+    }
+
+    // Strips the URL and brackets, leaving just the pure text for the search bar
+    function stripWikiLinks(text) {
+        if (!text) return "";
+        return text.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '$1');
+    }
+
+    // Helper: Get the correct display name for the current era
+    function getFactionName(key, era) {
+        // Safety check: if the key doesn't exist in data, return the key itself
+        if (!factionData[key]) return key; 
+        
+        // Check if there is a specific name for this era in the 'names' object
+        if (factionData[key].names && factionData[key].names[era]) {
+            return factionData[key].names[era];
+        }
+        
+        // Default to the key (e.g., "United Systems") if no specific era name exists
+        return key;
+    }
+
+    // Helper: Get color with safety fallback
+    function getFactionColor(key) {
+        if (factionData[key] && factionData[key].color) {
+            return factionData[key].color;
+        }
+        return "#555555"; // Default grey if faction is missing
+    }
+
+    function searchSystems(e) {
+        const originalQuery = e.target.value; // Keep exactly what the user typed
+        let searchLevelQuery = originalQuery.toLowerCase();
+        const resultsDiv = document.getElementById('search-results');
+        
+        if (originalQuery.length < 1) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        // --- Internal Translation Only ---
+        // We convert the search query to Greek characters for the logic check, 
+        // but we DO NOT update the e.target.value (the search bar itself).
+        for (const [symbol, name] of Object.entries(greekAlphabet)) {
+            const lowerName = name.toLowerCase();
+            if (searchLevelQuery.includes(lowerName)) {
+                searchLevelQuery = searchLevelQuery.replace(lowerName, symbol);
+            }
+        }
+
+        const matches = [];
+
+        systems.forEach(s => {
+            // Strip links from system name just in case you ever put a link in the system title
+            const cleanSysName = stripWikiLinks(s.name);
+            
+            if (cleanSysName.toLowerCase().includes(searchLevelQuery)) {
+                matches.push({ name: cleanSysName, coords: s.coords, type: 'System' });
+            }
+            
+            if (s.planets) {
+                s.planets.forEach(p => {
+                    // Strip the link so the search only checks the actual planet name
+                    const cleanPlanetName = stripWikiLinks(p);
+                    if (cleanPlanetName.toLowerCase().includes(searchLevelQuery)) {
+                        matches.push({ name: cleanPlanetName, systemName: cleanSysName, coords: s.coords, type: 'Planet' });
+                    }
+                });
+            }
+        });
+        
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.slice(0, 10).map(m => {
+                // Display the name as it exists in the data (e.g., "α Centauri")
+                const displayTitle = m.name; 
+                const secondary = m.type === 'Planet' ? `Planet in ${m.systemName}` : 'Star System';
+                
+                return `
+                    <div class="search-item" onclick="jumpToSystem(${m.coords[0]}, ${m.coords[1]})">
+                        <div style="font-weight:bold;">${displayTitle}</div>
+                        <div style="font-size:10px; color:#4facfe; text-transform:uppercase;">${secondary}</div>
+                    </div>`;
+            }).join('');
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.style.display = 'none';
+        }
+    }
+
+    function jumpToSystem(lat, lng) {
+        map.flyTo([lat, lng], 2.5, { duration: 2 });
+        document.getElementById('search-results').style.display = 'none';
+        document.getElementById('system-search').value = '';
+    }
+
+    // --- 4. MAP LOGIC ---
+    function createMajorIcon(color) {
+        return L.divIcon({ className: 'custom-star-icon', html: `<svg width="14" height="14"><circle cx="7" cy="7" r="6" fill="none" stroke="white" stroke-width="1.2"/><circle cx="7" cy="7" r="4" fill="${color}"/></svg>`, iconSize: [14, 14], iconAnchor: [7, 7] });
+    }
+
+    function createMinorIcon() {
+        return L.divIcon({ className: 'custom-star-icon', html: `<svg width="10" height="10"><circle cx="5" cy="5" r="3" fill="white" stroke="black"/></svg>`, iconSize: [10, 10], iconAnchor: [5, 5] });
+    }
+
+    function createCapitalIcon(color) {
+        return L.divIcon({ 
+            className: 'custom-star-icon', 
+            html: `<svg width="22" height="22" viewBox="0 0 22 22">
+                <circle cx="11" cy="11" r="9" fill="none" stroke="#ffd700" stroke-width="1.5" opacity="0.8"/>
+                <circle cx="11" cy="11" r="6" fill="none" stroke="white" stroke-width="1.2"/>
+                <circle cx="11" cy="11" r="4" fill="${color}"/>
+            </svg>`, 
+            iconSize: [22, 22], 
+            iconAnchor: [11, 11] 
+        });
+    }
+
+    function translateSystemName(name) {
+    // We check if the first character of the name is a Greek letter
+    const firstChar = name.charAt(0);
+        if (greekAlphabet[firstChar]) {
+            // Returns "Epsilon (ε) Indi" instead of "ε Indi"
+            return `${greekAlphabet[firstChar]}${name.substring(1)}`;
+        }
+        return name; // If no Greek letter, return the name as-is
+    }
+
+    function updateMap() {
+        const zoom = map.getZoom(), viewBounds = map.getBounds().pad(0.5), mapEl = document.getElementById('map');
+        if (editorMode) { document.getElementById('zoom-val').innerText = `Zoom: ${zoom.toFixed(2)}`; }
+        
+        // Toggle label visibility classes
+        zoom >= LOD_MAJOR_ICON ? mapEl.classList.add('show-major-icons') : mapEl.classList.remove('show-major-icons');
+        zoom >= LOD_MAJOR_LABEL ? mapEl.classList.add('show-major-labels') : mapEl.classList.remove('show-major-labels');
+        zoom >= LOD_MINOR_LABEL ? mapEl.classList.add('show-minor-labels') : mapEl.classList.remove('show-minor-labels');
+
+        const visibleSystems = new Set();
+
+        systems.forEach(sys => {
+            if (!viewBounds.contains(L.latLng(sys.coords))) return;
+
+            // --- 1. DETERMINE OWNER & CAPITAL STATUS ---
+            let rawOwner = sys.history[currentEra] || "Unclaimed";
+            let isCapital = rawOwner.startsWith("*"); 
+            
+            // The "Key" is used for logic and color lookup (e.g. "United Systems")
+            let ownerKey = isCapital ? rawOwner.substring(1) : rawOwner;
+
+            // --- 2. RETRIEVE DATA FROM NEW STRUCTURE ---
+            let color = getFactionColor(ownerKey); 
+            let displayName = getFactionName(ownerKey, currentEra);
+
+            // --- 2. DETERMINE VISIBILITY ---
+            // If it is a Capital, force it to behave like a Major system
+            let effectiveType = (isCapital || sys.type === 'major') ? 'major' : 'minor';
+            
+            let desiredState;
+            if (effectiveType === 'major') {
+                // NEW LOGIC: Dots only appear between -1 (LOD_SIMPLE_MAJOR_ICON) and 0 (LOD_MAJOR_ICON)
+                // If zoom is LESS than -1, they disappear to clean up the view.
+                if (zoom < LOD_SIMPLE_MAJOR_ICON) {
+                    desiredState = null; 
+                } else if (zoom < LOD_MAJOR_ICON) {
+                    desiredState = 'dot';
+                } else {
+                    desiredState = 'icon';
+                }
+            } else {
+                // Minor systems stay the same
+                desiredState = zoom < LOD_MINOR_ICON ? null : 'icon';
+            }
+
+            if (!desiredState) return;
+            visibleSystems.add(sys.name);
+
+            if (activeMarkers[sys.name] && activeMarkers[sys.name].state !== desiredState) {
+                starLayerGroup.removeLayer(activeMarkers[sys.name].marker);
+                delete activeMarkers[sys.name];
+            }
+
+            if (!activeMarkers[sys.name]) {
+                let marker;
+
+                if (desiredState === 'dot') {
+                    marker = L.circleMarker(sys.coords, { radius: 3, color: '#000', weight: 0.5, fillColor: color, fillOpacity: 0.8, interactive: false });
+                } else {
+                    // Choose Icon
+                    let icon;
+                    if (isCapital) icon = createCapitalIcon(color);
+                    else if (sys.type === 'major') icon = createMajorIcon(color);
+                    else icon = createMinorIcon();
+
+                    marker = L.marker(sys.coords, { icon: icon });
+                    
+                    // Popup & Tooltip Logic
+                    const translatedName = translateSystemName(sys.name);
+                    const rawDesc = sys.desc && sys.desc.trim() !== "" ? sys.desc : "No additional data recorded for this system.";
+                    const parsedDesc = parseWikiLinks(rawDesc); // Translates links in the description
+                    
+                    // Translates links in the planet list
+                    let pml = (sys.planets && sys.planets.length > 0) ? `<div style="margin-top:8px; border-top:1px solid #444; padding-top:5px;"><strong class="planet-header">PLANETS:</strong><ul class="planet-list">${sys.planets.map(p=>`<li>${parseWikiLinks(p)}</li>`).join('')}</ul></div>` : '';
+
+                    // Determine the layout for the sector subtitle
+                    const cleanSector = sys.sector ? sys.sector.replace(/<br\s*\/?>/gi, ' ') : '';
+                    const sectorHtml = cleanSector ? `<div style="font-size: 0.85em; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: -2px; padding-bottom: 5px;">${cleanSector}</div>` : `<div style="padding-bottom: 5px;"></div>`;
+
+                    // Update the popup HTML
+                    marker.bindPopup(`<div class="popup-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 2px;">${translatedName}</div>${sectorHtml}<div style="border-bottom: 1px solid #444; margin-bottom: 5px;"></div><div class="popup-desc">${parsedDesc}</div><div style="margin-top:5px;"><span class="popup-meta-label">Owner (${currentEra} CE):</span> <span class="popup-faction-name" style="color:${color};">${displayName}</span>${isCapital ? ' <span style="color:#ffd700; font-size:10px;">★ CAPITAL</span>' : ''}</div>${pml}`);
+                    
+                    // Determine Label Class
+                    let labelClass = 'label-minor';
+                    if (isCapital) labelClass = 'label-capital';
+                    else if (sys.type === 'major') labelClass = 'label-major';
+
+                    marker.bindTooltip(sys.name, { 
+                        permanent: true, 
+                        direction: (isCapital || sys.type === 'major') ? 'right' : 'left', 
+                        className: `star-label ${labelClass}`, 
+                        offset: (isCapital || sys.type === 'major') ? [14, 0] : [-10, 0] 
+                    });
+                }
+
+                // Editor Alt-Click Event
+                marker.on('click', (e) => {
+                    if (editorMode && e.originalEvent.altKey) {
+                        L.DomEvent.stopPropagation(e);
+                        e.originalEvent.preventDefault();
+                        loadSystemIntoEditor(sys);
+                    }
+                });
+
+                marker.addTo(starLayerGroup);
+                if (desiredState === 'icon') requestAnimationFrame(()=>requestAnimationFrame(()=>marker._icon?.classList.add('visible')));
+                activeMarkers[sys.name] = { marker, state: desiredState };
+            }
+        });
+
+        // --- UPDATE REGIONS ---
+        // Visibility Range: 
+        // Visible from Zoom -2 (far out) up to Zoom 2 (close in).
+        // Adjust '2' to a lower number (like 1.5) if you want them to disappear sooner when zooming in.
+        const showRegions = zoom >= -1 && zoom <= 2;
+
+        // SCALING LOGIC (Hybrid):
+        // 1. Math.pow(2, zoom): Shrinks text when zooming out (prevents overlap).
+        // 2. Math.min(30, ...): CAPS text size at 30px max. This prevents the "Giant Text" issue.
+        // 3. Math.max(10, ...): FLOORS text size at 10px min. This keeps it readable.
+        
+        // Result: 
+        // Zoom -2 = 10px (Floor hit)
+        // Zoom -1 = 12px
+        // Zoom  0 = 24px
+        // Zoom  1 = 30px (Cap hit - text stops growing, map spreads out)
+        // Zoom  2 = 30px (Text stays small while stars spread apart)
+        
+        let regionFontSize = Math.max(10, Math.min(18, 16 * Math.pow(2, zoom))); 
+
+        // Remove old region layers
+        starLayerGroup.eachLayer(layer => {
+            if (layer.options.isRegion) {
+                starLayerGroup.removeLayer(layer);
+            }
+        });
+
+        if (showRegions) {
+            regions.forEach(reg => {
+                if (reg.eras.includes(currentEra)) {
+                    
+                    const regionIcon = L.divIcon({
+                        className: 'region-label',
+                        html: `<div style="font-size:${regionFontSize}px; line-height:1.2;">${reg.name}</div>`,
+                        // Increased container width to prevent wrapping at high zoom
+                        iconSize: [600, 100], 
+                        iconAnchor: [300, 50] 
+                    });
+                    
+                    const marker = L.marker(reg.coords, { 
+                        icon: regionIcon, 
+                        interactive: false, 
+                        isRegion: true 
+                    });
+                    
+                    marker.addTo(starLayerGroup);
+                }
+            });
+        }
+
+        // --- UPDATE NEBULAE ---
+        // Visible from Zoom 0 (Standard view) down to Zoom 3.5 (Close up)
+        const showNebulae = zoom >= 0 && zoom <= 5;
+
+        // SCALING:
+        // Base 14px. Max 22px. Min 8px.
+        let nebFontSize = Math.max(8, Math.min(14, 12 * Math.pow(2, zoom))); 
+
+        // Remove old layers
+        starLayerGroup.eachLayer(layer => {
+            if (layer.options.isNebula) {
+                starLayerGroup.removeLayer(layer);
+            }
+        });
+
+        if (showNebulae) {
+            nebulae.forEach(neb => {
+                if (neb.eras.includes(currentEra)) {
+                    
+                    const nebIcon = L.divIcon({
+                        className: 'nebula-label',
+                        html: `<div style="font-size:${nebFontSize}px;">${neb.name}</div>`,
+                        iconSize: [300, 80], 
+                        iconAnchor: [150, 40] 
+                    });
+                    
+                    const marker = L.marker(neb.coords, { 
+                        icon: nebIcon, 
+                        interactive: false, 
+                        isNebula: true 
+                    });
+                    
+                    marker.addTo(starLayerGroup);
+                }
+            });
+        }
+
+        // --- UPDATE GALACTIC REGION LABELS ---
+        
+        // Visibility: Only show if the toggle is ON and zoom is very far out
+        const showGalacticLabels = isGalacticRegionsVisible && zoom <= -1;
+
+        // Scaling logic: Starts at 40px at zoom -1, and gets exponentially larger as you zoom out
+        // to stay anchored to the massive regions.
+        let galFontSize = Math.max(10, Math.min(150, 80 * Math.pow(2, zoom)));
+
+        // Cleanup old labels
+        starLayerGroup.eachLayer(layer => {
+            if (layer.options.isGalacticRegion) {
+                starLayerGroup.removeLayer(layer);
+            }
+        });
+
+        if (showGalacticLabels) {
+            galacticRegionsData.forEach(reg => {
+                const galIcon = L.divIcon({
+                    className: 'galactic-region-label',
+                    html: `<div style="font-size:${galFontSize}px;">${reg.name}</div>`,
+                    iconSize: [1200, 300], // Huge bounding box for huge text
+                    iconAnchor: [600, 150] 
+                });
+                
+                const marker = L.marker(reg.coords, { 
+                    icon: galIcon, 
+                    interactive: false, 
+                    isGalacticRegion: true 
+                });
+                
+                marker.addTo(starLayerGroup);
+            });
+        }
+        
+        // Cleanup
+        Object.keys(activeMarkers).forEach(name => { if (!visibleSystems.has(name)) { starLayerGroup.removeLayer(activeMarkers[name].marker); delete activeMarkers[name]; } });
+    }
+
+    // --- 5. TIMELINE & EVENTS ---
+    const eraKeys = ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"];
+    const eraTitles = {
+        "2238": "Early Human Exploration",
+        "2428": "Eve of the 1st Hydian War",
+        "2640": "The Hydian Peace",
+        "2695": "Rise of the Solar Empire",
+        "2943": "Height of the Solar Empire",
+        "2969": "Warring Systems Period",
+        "3144": "Hydian Unification Begins",
+        "3921": "The Galactic Republic"
+    };
+    let currentEraIndex = 1; 
+    let activeCalendar = 'CE';
+    let isDraggingTimeline = false;
+
+    // Sector Name Cleanup
+    function refreshSectorDropdowns() {
+        const sectorSelect = document.getElementById('input-sector');
+        if (!sectorSelect) return;
+        
+        sectorSelect.innerHTML = '<option value="">None</option>';
+        galacticRegionsData.forEach(reg => {
+            // Keep the line break stripper just in case you use them here too
+            const cleanName = reg.name.replace(/<br\s*\/?>/gi, ' ');
+            const opt = document.createElement('option');
+            opt.value = cleanName;
+            opt.textContent = cleanName;
+            sectorSelect.appendChild(opt);
+        });
+        
+        const systemDatalist = document.getElementById('all-systems-regions');
+        if (systemDatalist) {
+            systemDatalist.innerHTML = '';
+            systems.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                systemDatalist.appendChild(opt);
+            });
+            galacticRegionsData.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.name.replace(/<br\s*\/?>/gi, ' ');
+                systemDatalist.appendChild(opt);
+            });
+        }
+    }
+
+    // Configuration with Full Names vs Abbreviations
+    const calendarConfig = {
+        'CE': { 
+            fullName: 'Common Era', 
+            abbrev: 'CE', 
+            offset: 0, 
+            invert: false 
+        },
+        'BRF': { 
+            fullName: 'Republic Foundation', // Kept cleaner than "Before.../..." for the button
+            abbrev: 'BRF', // The suffix logic below handles the BRF/RF switch
+            type: 'republic' 
+        },
+        'CYP': { 
+            fullName: 'Celestial Years of Peace', 
+            abbrev: 'CYP', 
+            offset: 1325, 
+            invert: true 
+        },
+        'ET': { 
+            fullName: 'Era Tzenki', 
+            abbrev: 'ET', 
+            offset: 1707, 
+            invert: true 
+        },
+        'SA': { 
+            fullName: 'Since Preserver Activation', 
+            abbrev: 'SA', 
+            offset: 68870, 
+            invert: false 
+        }
+    };
+
+    function initTimeline() {
+        renderTimelineSteps();
+        selectEra(currentEraIndex);
+        setupDragEvents();
+        // Set initial button text
+        document.getElementById('cur-cal-name').innerText = calendarConfig['CE'].fullName;
+    }
+
+    // --- DRAG FUNCTIONALITY ---
+    function setupDragEvents() {
+        const stepsContainer = document.getElementById('timeline-steps');
+        
+        stepsContainer.addEventListener('mousedown', (e) => {
+            isDraggingTimeline = true;
+            handleDragInput(e); 
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingTimeline) {
+                e.preventDefault(); 
+                handleDragInput(e);
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDraggingTimeline = false;
+        });
+    }
+
+    function handleDragInput(e) {
+        const stepsContainer = document.getElementById('timeline-steps');
+        const rect = stepsContainer.getBoundingClientRect();
+        
+        let x = e.clientX - rect.left;
+        if (x < 0) x = 0;
+        if (x > rect.width) x = rect.width;
+
+        const totalEras = eraKeys.length;
+        const segmentWidth = rect.width / totalEras;
+        
+        let newIndex = Math.floor(x / segmentWidth);
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex >= totalEras) newIndex = totalEras - 1;
+
+        if (newIndex !== currentEraIndex) {
+            selectEra(newIndex);
+        }
+    }
+
+    // --- RENDERING & LOGIC ---
+
+    function toggleCalMenu() {
+        document.getElementById('cal-menu').classList.toggle('show');
+    }
+
+    function changeCalendar(calCode) {
+        activeCalendar = calCode;
+        // UPDATE: Use the Full Name for the button label
+        document.getElementById('cur-cal-name').innerText = calendarConfig[calCode].fullName;
+        document.getElementById('cal-menu').classList.remove('show');
+        renderTimelineSteps(); 
+    }
+
+    function getEraLabel(ceYearStr) {
+        const ce = parseInt(ceYearStr);
+        const conf = calendarConfig[activeCalendar];
+
+        if (activeCalendar === 'CE') return `${ce} ${conf.abbrev}`;
+
+        if (activeCalendar === 'BRF') {
+            // BRF/RF logic handles its own suffix switch
+            if (ce < 3521) return `${3521 - ce} BRF`;
+            return `${ce - 3521} RF`;
+        }
+
+        // Standard Offset Logic
+        let yearVal;
+        if (conf.invert) yearVal = Math.abs(ce - conf.offset);
+        else yearVal = ce + conf.offset;
+
+        // Use the abbreviation for the box (e.g. "SA") not the full name
+        return `${yearVal} ${conf.abbrev}`;
+    }
+
+    function renderTimelineSteps() {
+        const container = document.getElementById('timeline-steps');
+        container.innerHTML = '';
+
+        eraKeys.forEach((year, index) => {
+            const labelText = getEraLabel(year);
+            
+            const box = document.createElement('div');
+            box.className = 'timeline-box';
+            if (index === currentEraIndex) box.classList.add('active');
+            
+            box.innerText = labelText;
+            
+            box.onmousedown = (e) => {
+                e.stopPropagation(); 
+                selectEra(index);
+                isDraggingTimeline = true; 
+            };
+            
+            container.appendChild(box);
+        });
+    }
+
+    function selectEra(index) {
+        currentEraIndex = index;
+        currentEra = eraKeys[index];
+
+        // 1. Update Visuals
+        const boxes = document.querySelectorAll('.timeline-box');
+        boxes.forEach((b, i) => {
+            if (i === index) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+
+        // 2. Map Logic
+        borderLayers.forEach((l, i) => {
+            if (i === index) {
+                if (!map.hasLayer(l)) map.addLayer(l);
+            } else {
+                if (map.hasLayer(l)) map.removeLayer(l);
+            }
+        });
+
+        // 3. Update Data
+        updateAllDates(parseInt(currentEra));
+        starLayerGroup.clearLayers();
+        for (let key in activeMarkers) delete activeMarkers[key];
+        updateMap();
+    }
+    
+    // Initialize
+    initTimeline();
+
+    // Close menu on outside click
+    document.addEventListener('click', function(e) {
+        const calContainer = document.getElementById('calendar-selector');
+        if (!calContainer.contains(e.target)) {
+            document.getElementById('cal-menu').classList.remove('show');
+        }
+    });
+
+    document.addEventListener('keydown', e => {
+        // Check if user is currently typing in a text field
+        const tagName = document.activeElement.tagName;
+        const isInput = tagName === 'INPUT' || tagName === 'TEXTAREA';
+
+        // --- 1. Toggle Editor Mode (E) ---
+        // Prevent toggling if typing OR if a modal is open (locks the map state)
+        if (e.key.toLowerCase() === 'e' && !isInput && !isModalOpen()) {
+            editorMode = !editorMode;
+            document.getElementById('editor-info').style.display = editorMode ? 'block' : 'none';
+            document.getElementById('map').classList.toggle('crosshair-cursor');
+            
+            if (editorMode) {
+                map.addLayer(referenceLayer);
+            } else {
+                map.removeLayer(referenceLayer);
+            }
+            updateMap();
+        }
+
+        // --- 2. Database Toggle (Shift+D) ---
+        if (e.key.toLowerCase() === 'd' && e.shiftKey && editorMode) {
+            if (isInput) return; // STOP if typing "D" in a field
+            
+            // If another modal (like Faction Creator) is open, ignore this
+            if (isModalOpen() && !dbOpen) return; 
+
+            e.preventDefault();
+            toggleDatabaseMode();
+        }
+
+        // --- 3. Faction Creator (Shift+F) ---
+        if (e.key.toLowerCase() === 'f' && e.shiftKey && editorMode) {
+            if (isInput) return; // STOP if typing "F" in a field
+            if (isModalOpen()) return; // STOP if Database or Star Creator is open
+
+            e.preventDefault();
+            
+            // Open Faction Modal
+            document.getElementById('faction-modal').style.display = 'block';
+            document.getElementById('fac-name').focus();
+            map.dragging.disable();
+        }
+
+        if (e.key.toLowerCase() === 'n' && !['INPUT','TEXTAREA'].includes(tagName)) {
+            nKeyDown = true;
+        }
+        if (e.key.toLowerCase() === 'r' && !e.shiftKey && !isInput && !isModalOpen()) {
+            toggleGalacticRegions();
+        }
+    });
+
+    // Track 'R' key state for the Shift+R+Click shortcut
+    let rKeyDown = false;
+    let nKeyDown = false;
+
+    document.addEventListener('keydown', e => {
+        if (e.key.toLowerCase() === 'r' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+            rKeyDown = true;
+        }
+    });
+
+    document.addEventListener('keyup', e => {
+        if (e.key.toLowerCase() === 'r') {
+            rKeyDown = false;
+        }
+    });
+
+    document.addEventListener('keyup', e => {
+        if (e.key.toLowerCase() === 'n') nKeyDown = false;
+    });
+
+    // --- 6. EDITOR ---
+    // Function to handle the temporary toast notification
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 2000);
+    }
+    map.on('mousemove', e => { if (editorMode) document.getElementById('coords').innerText = `X: ${Math.round(e.latlng.lng)} | Y: ${Math.round(e.latlng.lat)}`; });
+    map.on('click', function(e) {
+        if (!editorMode) return;
+        if (isModalOpen()) return; 
+
+        // CHECK FOR SHORTCUTS
+        if (e.originalEvent.shiftKey) {
+            if (rKeyDown) {
+                // Shift + R + Click -> Region Creator
+                openRegionModal(e.latlng);
+            } else if (nKeyDown) {
+                // Shift + N + Click -> Nebulae Creator
+                openNebulaModal(e.latlng);
+            } else {
+                // Shift + Click -> Star Creator
+                openStarModal(e.latlng);
+            }
+        } else {
+            // Standard Left Click -> Copy Coords
+            const y = Math.round(e.latlng.lat);
+            const x = Math.round(e.latlng.lng);
+            const coordString = `[${y}, ${x}]`;
+            navigator.clipboard.writeText(coordString).then(() => showToast(`Coords ${coordString} Copied`));
+        }
+    });
+    function openStarModal(ll) {
+        editingSystemIndex = -1; 
+        document.getElementById('input-lat').value = Math.round(ll.lat);
+        document.getElementById('input-lng').value = Math.round(ll.lng);
+        document.getElementById('input-name').value = "";
+        document.getElementById('input-sector').value = "";
+        document.getElementById('input-desc').value = "";
+        document.getElementById('p_input').value = "";
+        
+        ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"].forEach(era => {
+            document.getElementById(`input-${era}`).value = "";
+        });
+
+        document.getElementById('creator-modal').style.display = 'block';
+        document.getElementById('input-name').focus();
+        map.dragging.disable();
+        createTempMarker(ll);
+    }
+    function closeModal(id) { 
+        const modal = document.getElementById(id);
+        modal.style.display = 'none'; 
+        
+        // Reset position so it doesn't open off-screen next time
+        modal.style.top = '50%';
+        modal.style.left = '50%';
+        
+        map.dragging.enable(); 
+        clearTempMarker();
+    }
+    function saveSystemToDatabase() {
+        const name = document.getElementById('input-name').value || "Unknown System";
+        const desc = document.getElementById('input-desc').value || "";
+        const sector = document.getElementById('input-sector').value || "";
+        const planetsStr = document.getElementById('p_input').value;
+        const planets = planetsStr.split(',').map(p => p.trim()).filter(p => p !== '');
+        
+        const history = {};
+        ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"].forEach(era => {
+            history[era] = document.getElementById(`input-${era}`).value.trim(); 
+        });
+        
+        const newSystemObj = {
+            name: name,
+            coords: [parseInt(document.getElementById('input-lat').value), parseInt(document.getElementById('input-lng').value)],
+            type: document.getElementById('input-type').value,
+            sector: sector,
+            desc: desc,
+            planets: planets,
+            history: history
+        };
+        
+        if (editingSystemIndex > -1) {
+            systems[editingSystemIndex] = newSystemObj;
+            showToast(`Updated ${name}`);
+        } else {
+            systems.push(newSystemObj);
+            showToast(`Created ${name}`);
+        }
+        
+        updateMap();
+        if (dbOpen) renderDatabaseTable();
+        closeModal('creator-modal');
+    }
+
+    function loadSystemIntoEditor(sys) {
+        editingSystemIndex = systems.indexOf(sys);
+        document.getElementById('input-name').value = sys.name;
+        document.getElementById('input-lat').value = sys.coords[0];
+        document.getElementById('input-lng').value = sys.coords[1];
+        document.getElementById('input-type').value = sys.type;
+        document.getElementById('input-sector').value = sys.sector || "";
+        document.getElementById('input-desc').value = sys.desc || "";
+        document.getElementById('p_input').value = sys.planets ? sys.planets.join(', ') : "";
+        
+        ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"].forEach(era => {
+            document.getElementById(`input-${era}`).value = sys.history[era] || "";
+        });
+
+        document.getElementById('creator-modal').style.display = 'block';
+        map.dragging.disable();
+        createTempMarker(sys.coords);
+        showToast(`Editing ${sys.name}`);
+    }
+
+    function openRegionModal(ll) {
+        document.getElementById('reg-lat').value = Math.round(ll.lat);
+        document.getElementById('reg-lng').value = Math.round(ll.lng);
+        document.getElementById('reg-name').value = "";
+        document.getElementById('region-modal').style.display = 'block';
+        // Focus the name input
+        document.getElementById('reg-name').focus();
+        map.dragging.disable();
+        createTempMarker(ll);
+    }
+
+    function generateRegionCode() {
+        const name = document.getElementById('reg-name').value;
+        const lat = document.getElementById('reg-lat').value;
+        const lng = document.getElementById('reg-lng').value;
+        
+        const selectedEras = [];
+        ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"].forEach(era => {
+            if (document.getElementById(`reg-${era}`).checked) {
+                selectedEras.push(era);
+            }
+        });
+
+        const code = `{ name: "${name}", coords: [${lat}, ${lng}], eras: ${JSON.stringify(selectedEras)} },`;
+        
+        navigator.clipboard.writeText(code).then(() => {
+            showToast("Region Code Copied");
+            closeModal('region-modal');
+        });
+    }
+    function openNebulaModal(ll) {
+        document.getElementById('neb-lat').value = Math.round(ll.lat);
+        document.getElementById('neb-lng').value = Math.round(ll.lng);
+        document.getElementById('neb-name').value = "";
+        document.getElementById('nebula-modal').style.display = 'block';
+        document.getElementById('neb-name').focus();
+        map.dragging.disable();
+        createTempMarker(ll);
+    }
+
+    function generateNebulaCode() {
+        const name = document.getElementById('neb-name').value;
+        const lat = document.getElementById('neb-lat').value;
+        const lng = document.getElementById('neb-lng').value;
+        
+        const selectedEras = [];
+        ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"].forEach(era => {
+            if (document.getElementById(`neb-${era}`).checked) {
+                selectedEras.push(era);
+            }
+        });
+
+        const code = `{ name: "${name}", coords: [${lat}, ${lng}], eras: ${JSON.stringify(selectedEras)} },`;
+        
+        navigator.clipboard.writeText(code).then(() => {
+            showToast("Nebula Code Copied");
+            closeModal('nebula-modal');
+        });
+    }
+
+    // Function to keep faction search lists up to date
+    function refreshFactionDropdowns() {
+        const datalist = document.getElementById('all-factions');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        Object.keys(factionData).forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            datalist.appendChild(opt);
+        });
+    }
+
+    // Generate code for a new faction
+    function generateFactionCode() {
+        const key = document.getElementById('fac-name').value;
+        const color = document.getElementById('fac-color').value;
+        if (!key) return;
+
+        const names = {};
+        const eras = ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"];
+        let hasDynamic = false;
+
+        eras.forEach(era => {
+            const val = document.getElementById(`fac-${era}`).value;
+            if (val && val.trim() !== "") {
+                names[era] = val.trim();
+                hasDynamic = true;
+            }
+        });
+
+        factionData[key] = { color: color };
+        if (hasDynamic) factionData[key].names = names;
+        
+        refreshFactionDropdowns();
+
+        let code = `"${key}": { color: "${color}"`;
+        if (hasDynamic) {
+            code += `, names: ${JSON.stringify(names)}`;
+        }
+        code += ` },`;
+
+        navigator.clipboard.writeText(code).then(() => {
+            showToast("Faction Code Copied");
+            closeModal('faction-modal');
+        });
+    }
+
+    // Ensure Shift+F works for the faction modal
+    document.addEventListener('keydown', e => {
+        if (e.key.toLowerCase() === 'f' && e.shiftKey && editorMode) {
+            if (!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+                document.getElementById('faction-modal').style.display = 'block';
+                document.getElementById('fac-name').focus();
+                map.dragging.disable();
+            }
+        }
+    });
+
+    document.querySelectorAll('.modal input, .modal select, .modal textarea').forEach(input => {
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (document.getElementById('creator-modal').style.display === 'block') {
+                    saveSystemToDatabase(); // Update this line
+                } else if (document.getElementById('faction-modal').style.display === 'block') {
+                    generateFactionCode();
+                }
+            }
+        });
+    });
+
+    // Initialize search lists on load
+    refreshFactionDropdowns();
+    refreshSectorDropdowns();
+
+    // Prevent clicks on the editor widget from triggering map events
+    const editorWidget = document.getElementById('editor-info');
+    if (editorWidget) {
+        editorWidget.addEventListener('click', function(e) {
+            e.stopPropagation(); // Stops the click from reaching the map
+        });
+        editorWidget.addEventListener('dblclick', function(e) {
+            e.stopPropagation();
+        });
+        // Also prevent scroll zooming if mouse is over the widget
+        editorWidget.addEventListener('wheel', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    updateAllDates(2428);
+    updateMap();
+    map.on('zoomend moveend', updateMap);
+
+    // --- 7. CONFLICT MODE ---
+    const masterConflictList = [
+        hydianRebellion,
+        humanCivilWar,
+        theGreatWar,       
+    ];
+
+    let isConflictMode = false;
+    let activeConflict = null;
+    let currentEventIndex = -1; 
+    let conflictLayerGroup = L.layerGroup().addTo(map);
+    let conflictStaticLayerGroup = L.layerGroup().addTo(map);
+
+    function initConflictSelector() {
+        const selector = document.getElementById('conflict-selector');
+        const toggleBtn = document.getElementById('toggle-conflict-btn');
+        if (!selector || !toggleBtn) return;
+
+        selector.innerHTML = '<option value="">Select conflict...</option>';
+        masterConflictList.forEach(conflict => {
+            const opt = document.createElement('option');
+            opt.value = conflict.id;
+            opt.textContent = conflict.name;
+            selector.appendChild(opt);
+        });
+
+        selector.addEventListener('change', (e) => {
+            if (e.target.value !== "") {
+                toggleBtn.style.opacity = '1';
+                toggleBtn.style.pointerEvents = 'auto';
+            } else {
+                toggleBtn.style.opacity = '0.5';
+                toggleBtn.style.pointerEvents = 'none';
+            }
+        });
+    }
+
+    function toggleConflictMode() {
+        const selector = document.getElementById('conflict-selector');
+        const toggleBtn = document.getElementById('toggle-conflict-btn');
+        const standardTimeline = document.getElementById('timeline-container');
+        const conflictTimeline = document.getElementById('conflict-timeline-container');
+        
+        const mainTitle = document.getElementById('main-atlas-title');
+        const mainName = document.getElementById('main-galaxy-name');
+        const mainDetails = document.getElementById('header-details');
+        const conflictHeader = document.getElementById('conflict-header-details');
+        
+        if (!isConflictMode) {
+            const selectedId = selector.value;
+            activeConflict = masterConflictList.find(c => c.id === selectedId);
+            if (!activeConflict) return;
+
+            isConflictMode = true;
+            currentEventIndex = -1; 
+            
+            toggleBtn.innerText = "Exit";
+            toggleBtn.style.color = "#ff4444";
+            toggleBtn.style.borderColor = "#ff4444";
+            selector.disabled = true; 
+
+            standardTimeline.style.display = 'none';
+            conflictTimeline.style.display = 'flex';
+
+            if (mainTitle) mainTitle.style.display = 'none';
+            if (mainName) mainName.style.display = 'none';
+            if (mainDetails) mainDetails.style.display = 'none';
+            if (conflictHeader) conflictHeader.style.display = 'block';
+
+            const eraIndex = eraKeys.indexOf(activeConflict.baseEra);
+            if (eraIndex !== -1) {
+                currentEra = activeConflict.baseEra;
+                borderLayers.forEach((l, i) => {
+                    if (i === eraIndex) { if (!map.hasLayer(l)) map.addLayer(l); } 
+                    else { if (map.hasLayer(l)) map.removeLayer(l); }
+                });
+                starLayerGroup.clearLayers();
+                for (let key in activeMarkers) delete activeMarkers[key];
+                updateMap();
+            }
+
+            // Draw the persistent static infrastructure
+            conflictStaticLayerGroup.clearLayers();
+            if (activeConflict.shipyards) {
+                activeConflict.shipyards.forEach(sy => {
+                    let syCoord = null;
+                    if (sy.system) {
+                        let sys = systems.find(s => s.name.toLowerCase() === sy.system.toLowerCase());
+                        if (sys) syCoord = sys.coords;
+                    }
+                    if (syCoord) {
+                        let syColor = sy.faction ? getFactionColor(sy.faction) : '#aaaaaa';
+                        
+                        let syIcon = L.divIcon({
+                            className: 'shipyard-icon',
+                            html: `<div class="shipyard-inner">
+                                <svg viewBox="0 0 30 30" width="100%" height="100%">
+                                    <path d="M5 13 h20 v4 h-20 z" fill="${syColor}" opacity="0.8"/>
+                                    <path d="M13 5 h4 v20 h-4 z" fill="${syColor}" opacity="0.8"/>
+                                    <circle cx="15" cy="15" r="4" fill="#ffffff" />
+                                    <path d="M2 10 h4 v10 h-4 z" fill="${syColor}" />
+                                    <path d="M24 10 h4 v10 h-4 z" fill="${syColor}" />
+                                </svg>
+                            </div>`,
+                            iconSize: [0, 0] 
+                        });
+                        
+                        let popupHtml = `<div style="min-width: 200px;">
+                            <div style="font-size: 16px; font-family: var(--font-ui); font-weight: bold; text-transform: uppercase; color: ${syColor}; margin-bottom: 5px;">${sy.name}</div>
+                            <div style="font-size: 0.85em; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: -2px; border-bottom: 1px solid #444; padding-bottom: 5px;">Controlled by: ${sy.faction || 'Unknown'}</div>
+                            <div style="font-size: 13px; var(--font-body); color: #ccc; line-height: 1.4; margin-top: 5px;">${parseWikiLinks(sy.desc || '')}</div>
+                        </div>`;
+
+                        L.marker(syCoord, {icon: syIcon})
+                         .bindPopup(popupHtml, { className: 'custom-popup', offset: [24, -24] })
+                         .addTo(conflictStaticLayerGroup);
+                    }
+                });
+            }
+
+            renderConflictEvent();
+
+        } else {
+            isConflictMode = false;
+            activeConflict = null;
+            conflictLayerGroup.clearLayers();
+            conflictStaticLayerGroup.clearLayers(); // Wipe the static bases when exiting
+            
+            toggleBtn.innerText = "Engage";
+            toggleBtn.style.color = "#4facfe";
+            toggleBtn.style.borderColor = "rgba(79, 172, 254, 0.6)";
+            selector.disabled = false;
+
+            standardTimeline.style.display = 'flex';
+            conflictTimeline.style.display = 'none';
+            
+            if (mainTitle) mainTitle.style.display = 'block';
+            if (mainName) mainName.style.display = 'block';
+            if (mainDetails) mainDetails.style.display = 'block';
+            if (conflictHeader) conflictHeader.style.display = 'none';
+
+            selectEra(currentEraIndex); 
+        }
+    }
+
+    function navConflict(action) {
+        if (!activeConflict) return;
+        const maxIdx = activeConflict.events.length - 1;
+        
+        if (action === 'start') currentEventIndex = -1;
+        else if (action === 'end') currentEventIndex = maxIdx;
+        else if (action === 'prev') currentEventIndex = Math.max(-1, currentEventIndex - 1);
+        else if (action === 'next') currentEventIndex = Math.min(maxIdx, currentEventIndex + 1);
+        else if (action === 'nextYear') {
+            let currentYear = parseInt((currentEventIndex === -1 ? activeConflict.startDate : activeConflict.events[currentEventIndex].date).split('.')[0]);
+            let found = false;
+            // Search ahead for the next 'summary' event in a future year
+            for (let i = currentEventIndex + 1; i <= maxIdx; i++) {
+                let evYear = parseInt(activeConflict.events[i].date.split('.')[0]);
+                if (evYear > currentYear && activeConflict.events[i].type === 'summary') {
+                    currentEventIndex = i;
+                    found = true; break;
+                }
+            }
+            // If no future summary found, jump to the absolute end
+            if (!found) currentEventIndex = maxIdx;
+        }
+        else if (action === 'prevYear') {
+             let currentYear = parseInt((currentEventIndex === -1 ? activeConflict.startDate : activeConflict.events[currentEventIndex].date).split('.')[0]);
+            let found = false;
+            // Search backward for the previous 'summary' event in a past year
+            for (let i = currentEventIndex - 1; i >= 0; i--) {
+                let evYear = parseInt(activeConflict.events[i].date.split('.')[0]);
+                if (evYear < currentYear && activeConflict.events[i].type === 'summary') {
+                    currentEventIndex = i;
+                    found = true; break;
+                }
+            }
+            // If no past summary found, jump to the absolute start
+            if (!found) currentEventIndex = -1;
+        }
+        
+        renderConflictEvent();
+    }
+
+    function renderConflictEvent() {
+        conflictLayerGroup.clearLayers();
+        
+        const startDec = dateToDecimal(activeConflict.startDate);
+        const endDec = dateToDecimal(activeConflict.endDate);
+        const totalSpan = endDec - startDec || 1; 
+        let currentDec = startDec;
+        
+        if (currentEventIndex === -1) {
+            document.getElementById('conflict-title').innerText = activeConflict.name;
+            document.getElementById('conflict-event-name').innerText = "Historical Background";
+            document.getElementById('conflict-event-date').innerText = `Conflict span: ${formatWrittenDate(activeConflict.startDate)} - ${formatWrittenDate(activeConflict.endDate)}`;
+            document.getElementById('conflict-description').innerHTML = activeConflict.desc;
+            map.flyTo(activeConflict.centerCoords, 1, { duration: 1.5 });
+        } else {
+            const ev = activeConflict.events[currentEventIndex];
+            document.getElementById('conflict-event-name').innerText = ev.name;
+            
+            // Format the date header to show the span if an invasion has an end date
+            if (ev.type === 'invasion' && ev.endDate) {
+                document.getElementById('conflict-event-date').innerText = `${formatWrittenDate(ev.date)} - ${formatWrittenDate(ev.endDate)}`;
+            } else {
+                document.getElementById('conflict-event-date').innerText = formatWrittenDate(ev.date);
+            }
+            
+            document.getElementById('conflict-description').innerHTML = parseWikiLinks(ev.desc);
+            currentDec = dateToDecimal(ev.date);
+            
+            if (ev.type === 'summary' || ev.type === 'diplomacy' || ev.type === 'development') {
+                let focusCoord = activeConflict.centerCoords; 
+                let zoomLevel = 1;
+
+                if (ev.type === 'development' && ev.system) {
+                    // Check systems first
+                    let sys = systems.find(s => s.name.toLowerCase() === ev.system.toLowerCase());
+                    if (sys) {
+                        focusCoord = sys.coords;
+                        zoomLevel = 2.5; 
+                    } else {
+                        // Fall back to checking regions if a system isn't found
+                        let reg = galacticRegionsData.find(r => r.name.replace(/<br\s*\/?>/gi, ' ').toLowerCase() === ev.system.toLowerCase());
+                        if (reg) {
+                            focusCoord = reg.coords;
+                            zoomLevel = 1.5; 
+                        }
+                    }
+                }
+                map.flyTo(focusCoord, zoomLevel, { duration: 1.5 });
+                
+            } else if (ev.type === 'movement') {
+                let eventColor = ev.faction ? getFactionColor(ev.faction) : '#ff4444';
+                let pathCoords = [];
+                
+                if (ev.path) {
+                    ev.path.forEach(sysName => {
+                        let sys = systems.find(s => s.name.toLowerCase() === sysName.toLowerCase());
+                        if (sys) pathCoords.push(sys.coords);
+                    });
+                }
+                if (pathCoords.length === 0 && ev.coords) pathCoords = ev.coords;
+                
+                if (pathCoords.length > 0) {
+                    L.polyline(pathCoords, {color: eventColor, weight: 3, dashArray: '5, 10', opacity: 0.8}).addTo(conflictLayerGroup);
+                    
+                    for (let i = 0; i < pathCoords.length - 1; i++) {
+                        let lat1 = pathCoords[i][0], lng1 = pathCoords[i][1];
+                        let lat2 = pathCoords[i+1][0], lng2 = pathCoords[i+1][1];
+                        let angle = Math.atan2(-(lat2 - lat1), lng2 - lng1) * (180 / Math.PI);
+                        
+                        let arrowIcon = L.divIcon({
+                            className: 'movement-arrow',
+                            html: `<div class="arrow-inner" style="transform: rotate(${angle}deg); color: ${eventColor}; font-size: 20px; text-shadow: 0 0 5px #000;">➤</div>`,
+                            iconSize: [20, 20], iconAnchor: [10, 10]
+                        });
+                        L.marker([(lat1+lat2)/2, (lng1+lng2)/2], {icon: arrowIcon, interactive: false}).addTo(conflictLayerGroup);
+                    }
+                    map.flyTo(pathCoords[pathCoords.length - 1], 2, { duration: 1.5 });
+                }
+                
+            } else if (ev.type === 'multi_movement') {
+                let lastDestinationCoords = null;
+                
+                if (ev.fleets) {
+                    ev.fleets.forEach(fleet => {
+                        let eventColor = fleet.faction ? getFactionColor(fleet.faction) : '#ff4444';
+                        let pathCoords = [];
+                        
+                        if (fleet.path) {
+                            fleet.path.forEach(sysName => {
+                                let sys = systems.find(s => s.name.toLowerCase() === sysName.toLowerCase());
+                                if (sys) pathCoords.push(sys.coords);
+                            });
+                        }
+                        if (pathCoords.length === 0 && fleet.coords) pathCoords = fleet.coords;
+                        
+                        if (pathCoords.length > 0) {
+                            let offsetCoords = applyPathOffset(pathCoords, fleet.offset || 0);
+
+                            L.polyline(offsetCoords, {color: eventColor, weight: 3, dashArray: '5, 10', opacity: 0.8}).addTo(conflictLayerGroup);
+                            
+                            for (let i = 0; i < offsetCoords.length - 1; i++) {
+                                let lat1 = offsetCoords[i][0], lng1 = offsetCoords[i][1];
+                                let lat2 = offsetCoords[i+1][0], lng2 = offsetCoords[i+1][1];
+                                let angle = Math.atan2(-(lat2 - lat1), lng2 - lng1) * (180 / Math.PI);
+                                
+                                let arrowIcon = L.divIcon({
+                                    className: 'movement-arrow',
+                                    html: `<div class="arrow-inner" style="transform: rotate(${angle}deg); color: ${eventColor}; font-size: 20px; text-shadow: 0 0 5px #000;">➤</div>`,
+                                    iconSize: [20, 20], iconAnchor: [10, 10]
+                                });
+                                L.marker([(lat1+lat2)/2, (lng1+lng2)/2], {icon: arrowIcon, interactive: false}).addTo(conflictLayerGroup);
+                            }
+                            lastDestinationCoords = offsetCoords[offsetCoords.length - 1];
+                        }
+                    });
+                }
+                
+                if (lastDestinationCoords) {
+                    map.flyTo(lastDestinationCoords, 2, { duration: 1.5 });
+                }
+
+            } else if (ev.type === 'battle' || ev.type === 'invasion') {
+                let battleColor = ev.faction ? getFactionColor(ev.faction) : '#ffaa00';
+                let battleCoord = null;
+                
+                if (ev.system) {
+                    let sys = systems.find(s => s.name.toLowerCase() === ev.system.toLowerCase());
+                    if (sys) battleCoord = sys.coords;
+                }
+                if (!battleCoord && ev.coords) battleCoord = ev.coords;
+                
+                if (battleCoord) {
+                    let battleIcon = L.divIcon({
+                        className: 'battle-icon',
+                        html: `<div class="pulse-inner">
+                            <svg width="40" height="40" viewBox="0 0 40 40">
+                                <circle cx="20" cy="20" r="14" fill="none" stroke="${battleColor}" stroke-width="2" stroke-dasharray="4,4" />
+                                <path d="M20 4 L23 17 L36 20 L23 23 L20 36 L17 23 L4 20 L17 17 Z" fill="${battleColor}" opacity="0.8"/>
+                                <circle cx="20" cy="20" r="5" fill="#fff"/>
+                            </svg>
+                        </div>`,
+                        iconSize: [40, 40], iconAnchor: [20, 20]
+                    });
+                    L.marker(battleCoord, {icon: battleIcon}).addTo(conflictLayerGroup);
+                    map.flyTo(battleCoord, 2.5, { duration: 1.5 });
+                }
+            }
+        }
+        
+        let percent = ((currentDec - startDec) / totalSpan) * 100;
+        percent = Math.max(0, Math.min(100, percent));
+        document.getElementById('conflict-progress-fill').style.width = `${percent}%`;
+        document.getElementById('conflict-progress-marker').style.left = `${percent}%`;
+    }
+
+    initConflictSelector();
+    
+    // --- DATABASE MANAGER FUNCTIONS ---
+    let dbOpen = false;
+    let currentDbTab = 'systems'; // 'systems', 'regions', or 'nebulae'
+
+    function toggleDatabaseMode() {
+        // ... (Keep your existing toggle logic unchanged) ...
+        // Just ensure you include the logic to hide/show the database div
+        const db = document.getElementById('db-manager');
+        const editorInfo = document.getElementById('editor-info');
+        dbOpen = !dbOpen;
+
+        if (dbOpen) {
+            db.style.display = 'flex';
+            renderDatabaseTable();
+            
+            map.dragging.disable();
+            map.scrollWheelZoom.disable();
+            map.doubleClickZoom.disable();
+            map.boxZoom.disable();
+            map.keyboard.disable();
+            if (map.tap) map.tap.disable();
+
+            if (editorInfo) editorInfo.style.display = 'none';
+            
+            starLayerGroup.clearLayers();
+            for (let key in activeMarkers) delete activeMarkers[key];
+            
+        } else {
+            db.style.display = 'none';
+            
+            map.dragging.enable();
+            map.scrollWheelZoom.enable();
+            map.doubleClickZoom.enable();
+            map.boxZoom.enable();
+            map.keyboard.enable();
+            if (map.tap) map.tap.enable();
+            
+            if (editorMode && editorInfo) editorInfo.style.display = 'block';
+
+            setTimeout(() => {
+                map.invalidateSize();
+                updateMap();
+            }, 10);
+        }
+    }
+
+    function switchDbTab(tab) {
+        currentDbTab = tab;
+        document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        renderDatabaseTable();
+    }
+
+    let currentConflictId = 'hydian_rebellion';
+
+    function renderDatabaseTable() {
+        const thead = document.getElementById('db-head');
+        const tbody = document.getElementById('db-body');
+        const table = document.getElementById('db-table');
+        const container = document.querySelector('.db-container');
+
+        if (!thead || !tbody || !table) return;
+
+        // Create a hidden container for the conflict editor if it doesn't exist yet
+        let conflictView = document.getElementById('db-conflict-view');
+        if (!conflictView) {
+            conflictView = document.createElement('div');
+            conflictView.id = 'db-conflict-view';
+            conflictView.style.padding = '15px';
+            container.appendChild(conflictView);
+        }
+
+        // Swap between the grid table and the custom conflict layout
+        if (currentDbTab === 'conflicts') {
+            table.style.display = 'none';
+            conflictView.style.display = 'block';
+            renderConflictsTab(conflictView);
+            return;
+        } else {
+            table.style.display = 'table';
+            conflictView.style.display = 'none';
+        }
+
+        tbody.innerHTML = '';
+        thead.innerHTML = '';
+
+        if (currentDbTab === 'systems') renderSystemsTable(thead, tbody);
+        else if (currentDbTab === 'regions') renderRegionsTable(thead, tbody);
+        else if (currentDbTab === 'nebulae') renderNebulaeTable(thead, tbody);
+    }
+
+    // --- RENDERERS ---g
+
+    function renderSystemsTable(thead, tbody) {
+        thead.innerHTML = `<tr><th class="col-med">Name</th><th class="col-tiny">X</th><th class="col-tiny">Y</th><th class="col-small">Type</th><th class="col-small">Sector</th><th class="col-wide">Description</th><th class="col-wide">Planets</th><th class="col-med">2238 Owner</th><th class="col-med">2428 Owner</th><th class="col-med">2640 Owner</th><th class="col-med">2695 Owner</th><th class="col-med">2943 Owner</th><th class="col-med">2969 Owner</th><th class="col-med">3144 Owner</th><th class="col-med">3921 Owner</th><th class="col-tiny">Actions</th></tr>`;
+        const checkVal = (val) => (val === 'Unclaimed' || !val) ? '' : val;
+        
+        let missingSectors = [];
+
+        systems.forEach((sys, index) => {
+            const isMissingSector = !sys.sector || sys.sector.trim() === "";
+            if (isMissingSector) {
+                missingSectors.push(sys.name);
+            }
+
+            const row = document.createElement('tr');
+            if (isMissingSector) row.classList.add('row-error');
+
+            row.innerHTML = `
+                <td><input class="db-input" value="${sys.name}" onchange="updateSys(${index}, 'name', this.value)"></td>
+                <td><input class="db-input" type="number" value="${sys.coords[1]}" onchange="updateSys(${index}, 'lng', this.value)"></td>
+                <td><input class="db-input" type="number" value="${sys.coords[0]}" onchange="updateSys(${index}, 'lat', this.value)"></td>
+                <td><select class="db-input" onchange="updateSys(${index}, 'type', this.value)"><option value="major" ${sys.type === 'major' ? 'selected' : ''}>Major</option><option value="minor" ${sys.type === 'minor' ? 'selected' : ''}>Minor</option></select></td>
+                <td>
+                    <select class="db-input" onchange="updateSys(${index}, 'sector', this.value); renderDatabaseTable();">
+                        <option value="">None</option>
+                        ${galacticRegionsData.map(r => {
+                            const cleanName = r.name.replace(/<br\s*\/?>/gi, ' ');
+                            return `<option value="${cleanName}" ${sys.sector === cleanName ? 'selected' : ''}>${cleanName}</option>`;
+                        }).join('')}
+                    </select>
+                </td>
+                <td><input class="db-input" value="${sys.desc || ''}" onchange="updateSys(${index}, 'desc', this.value)"></td>
+                <td><input class="db-input" value="${sys.planets ? sys.planets.join(', ') : ''}" onchange="updateSys(${index}, 'planets', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['2238'])}" onchange="updateHistory(${index}, '2238', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['2428'])}" onchange="updateHistory(${index}, '2428', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['2640'])}" onchange="updateHistory(${index}, '2640', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['2695'])}" onchange="updateHistory(${index}, '2695', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['2943'])}" onchange="updateHistory(${index}, '2943', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['2969'])}" onchange="updateHistory(${index}, '2969', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['3144'])}" onchange="updateHistory(${index}, '3144', this.value)"></td>
+                <td><input class="db-input" list="all-factions" placeholder="Unclaimed" value="${checkVal(sys.history['3921'])}" onchange="updateHistory(${index}, '3921', this.value)"></td>
+                <td style="text-align:center;"><button style="color:red; background:none; border:none; cursor:pointer;" onclick="deleteRow(${index})">✖</button></td>`;
+            tbody.appendChild(row);
+        });
+
+        updateValidatorBanner(missingSectors);
+    }
+
+    function renderRegionsTable(thead, tbody) {
+        updateValidatorBanner([]);
+        thead.innerHTML = `<tr><th class="col-wide">Region Name</th><th class="col-tiny">X</th><th class="col-tiny">Y</th><th class="col-small">2238</th><th class="col-small">2428</th><th class="col-small">2640</th><th class="col-small">2695</th><th class="col-small">2943</th><th class="col-small">2969</th><th class="col-small">3144</th><th class="col-small">3921</th><th class="col-tiny">Actions</th></tr>`;
+        regions.forEach((reg, index) => {
+            const row = document.createElement('tr');
+            const isVis = (era) => reg.eras.includes(era) ? 'checked' : '';
+            row.innerHTML = `
+                <td><input class="db-input" value="${reg.name}" onchange="updateReg(${index}, 'name', this.value)"></td>
+                <td><input class="db-input" type="number" value="${reg.coords[1]}" onchange="updateReg(${index}, 'lng', this.value)"></td>
+                <td><input class="db-input" type="number" value="${reg.coords[0]}" onchange="updateReg(${index}, 'lat', this.value)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2238')} onchange="updateRegEra(${index}, '2238', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2428')} onchange="updateRegEra(${index}, '2428', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2640')} onchange="updateRegEra(${index}, '2640', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2695')} onchange="updateRegEra(${index}, '2695', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2943')} onchange="updateRegEra(${index}, '2943', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2969')} onchange="updateRegEra(${index}, '2969', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('3144')} onchange="updateRegEra(${index}, '3144', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('3921')} onchange="updateRegEra(${index}, '3921', this.checked)"></td>
+                <td style="text-align:center;"><button style="color:red; background:none; border:none; cursor:pointer;" onclick="deleteRow(${index})">✖</button></td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderNebulaeTable(thead, tbody) {
+        updateValidatorBanner([]);
+        thead.innerHTML = `<tr><th class="col-wide">Nebula Name</th><th class="col-tiny">X</th><th class="col-tiny">Y</th><th class="col-small">2238</th><th class="col-small">2428</th><th class="col-small">2640</th><th class="col-small">2695</th><th class="col-small">2943</th><th class="col-small">2969</th><th class="col-small">3144</th><th class="col-small">3921</th><th class="col-tiny">Actions</th></tr>`;
+        nebulae.forEach((neb, index) => {
+            const row = document.createElement('tr');
+            const isVis = (era) => neb.eras.includes(era) ? 'checked' : '';
+            row.innerHTML = `
+                <td><input class="db-input" value="${neb.name}" onchange="updateNeb(${index}, 'name', this.value)"></td>
+                <td><input class="db-input" type="number" value="${neb.coords[1]}" onchange="updateNeb(${index}, 'lng', this.value)"></td>
+                <td><input class="db-input" type="number" value="${neb.coords[0]}" onchange="updateNeb(${index}, 'lat', this.value)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2238')} onchange="updateNebEra(${index}, '2238', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2428')} onchange="updateNebEra(${index}, '2428', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2640')} onchange="updateNebEra(${index}, '2640', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2695')} onchange="updateNebEra(${index}, '2695', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2943')} onchange="updateNebEra(${index}, '2943', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('2969')} onchange="updateNebEra(${index}, '2969', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('3144')} onchange="updateNebEra(${index}, '3144', this.checked)"></td>
+                <td style="text-align:center;"><input type="checkbox" ${isVis('3921')} onchange="updateNebEra(${index}, '3921', this.checked)"></td>
+                <td style="text-align:center;"><button style="color:red; background:none; border:none; cursor:pointer;" onclick="deleteRow(${index})">✖</button></td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    // --- CONFLICT FUNCTIONS ---
+    let draggedEventIndex = null;
+
+    function dragEventStart(e, idx) {
+        draggedEventIndex = idx;
+        e.dataTransfer.effectAllowed = "move";
+        // This slight opacity change makes it obvious which item you picked up
+        e.target.style.opacity = '0.5'; 
+    }
+
+    function dropEvent(e, dropIdx) {
+        e.preventDefault();
+        e.target.style.opacity = '1';
+        if (draggedEventIndex === null || draggedEventIndex === dropIdx) return;
+        
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events) {
+            // Cut the event out of its old position and splice it into the new one
+            const movedEvent = conf.events.splice(draggedEventIndex, 1)[0];
+            conf.events.splice(dropIdx, 0, movedEvent);
+            renderDatabaseTable();
+        }
+        draggedEventIndex = null;
+    }
+
+    function renderConflictsTab(container) {
+        if (masterConflictList.length === 0) {
+            container.innerHTML = '<button class="btn-db" onclick="addNewConflict()">+ Create First Conflict</button>';
+            return;
+        }
+
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (!conf) {
+            currentConflictId = masterConflictList[0].id;
+            conf = masterConflictList[0];
+        }
+
+        let shipyardsHtml = (conf.shipyards || []).map((sy, idx) => {
+            return `<div style="background:#111; border:1px solid #333; padding:10px; margin-bottom:10px; border-radius:4px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+                    <input class="db-input" style="flex:1;" placeholder="Facility Name" value="${sy.name || ''}" onchange="updateShipyard(${idx}, 'name', this.value)">
+                    <div style="width:150px;">
+                        <input class="db-input" list="all-systems-regions" placeholder="System" value="${sy.system || ''}" onchange="updateShipyard(${idx}, 'system', this.value)">
+                    </div>
+                    <div style="width:150px;">
+                        <input class="db-input" list="all-factions" placeholder="Faction" value="${sy.faction || ''}" onchange="updateShipyard(${idx}, 'faction', this.value)">
+                    </div>
+                    <button style="background:none; border:none; color:red; cursor:pointer;" onclick="removeShipyard(${idx})">✖</button>
+                </div>
+                <div>
+                    <input class="db-input" placeholder="Description" value="${sy.desc || ''}" onchange="updateShipyard(${idx}, 'desc', this.value)">
+                </div>
+            </div>`;
+        }).join('');
+
+        let eventsHtml = (conf.events || []).map((ev, idx) => {
+            let body = '';
+            
+            if (ev.type === 'movement') {
+                const pathHtml = (ev.path || []).map((node, pIdx) =>
+                    `<div style="display:flex; gap:5px; align-items:center; margin-bottom:5px;">
+                        <span style="color:#888;">→</span>
+                        <input class="db-input" list="all-systems-regions" value="${node}" onchange="updateEventPath(${idx}, ${pIdx}, this.value)">
+                        <button style="background:none; border:none; color:red; cursor:pointer;" onclick="removeEventPathNode(${idx}, ${pIdx})">✖</button>
+                    </div>`
+                ).join('');
+
+                body = `<div style="margin-bottom: 10px;">
+                        <label style="color:#4facfe; font-size:11px;">Faction Moving</label>
+                        <input class="db-input" list="all-factions" value="${ev.faction || ''}" onchange="updateEvent(${idx}, 'faction', this.value)">
+                    </div>
+                    <div>
+                        <label style="color:#4facfe; font-size:11px;">Movement Path</label>
+                        ${pathHtml}
+                        <button class="btn-db" style="padding: 2px 8px; margin-top: 5px;" onclick="addEventPathNode(${idx})">+ Add Waypoint</button>
+                    </div>`;
+                    
+            } else if (ev.type === 'multi_movement') {
+                const fleetsHtml = (ev.fleets || []).map((fleet, fIdx) => {
+                    const fPathHtml = (fleet.path || []).map((node, pIdx) =>
+                        `<div style="display:flex; gap:5px; align-items:center; margin-bottom:2px;">
+                            <span style="color:#888;">→</span>
+                            <input class="db-input" style="padding:4px;" list="all-systems-regions" value="${node}" onchange="updateFleetPath(${idx}, ${fIdx}, ${pIdx}, this.value)">
+                            <button style="background:none; border:none; color:red; cursor:pointer;" onclick="removeFleetPathNode(${idx}, ${fIdx}, ${pIdx})">✖</button>
+                        </div>`
+                    ).join('');
+
+                    return `<div style="background:rgba(0,0,0,0.3); padding:8px; margin-bottom:8px; border-left:2px solid #555;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px; gap: 5px;">
+                            <input class="db-input" list="all-factions" placeholder="Faction" value="${fleet.faction || ''}" onchange="updateFleet(${idx}, ${fIdx}, 'faction', this.value)" style="flex: 2;">
+                            <input type="number" class="db-input" placeholder="Offset" title="Parallel shift distance (e.g. 15 or -15)" value="${fleet.offset || 0}" onchange="updateFleet(${idx}, ${fIdx}, 'offset', parseInt(this.value) || 0)" style="flex: 1;">
+                            <button style="background:none; border:none; color:red; cursor:pointer;" onclick="removeFleet(${idx}, ${fIdx})">Remove Fleet</button>
+                        </div>
+                        ${fPathHtml}
+                        <button class="btn-db" style="padding: 2px 8px; margin-top: 5px; font-size:10px;" onclick="addFleetPathNode(${idx}, ${fIdx})">+ Add Waypoint</button>
+                    </div>`;
+                }).join('');
+
+                body = `<div>
+                    <label style="color:#4facfe; font-size:11px;">Participating Fleets</label>
+                    ${fleetsHtml}
+                    <button class="btn-db" style="padding: 2px 8px;" onclick="addFleet(${idx})">+ Add Fleet</button>
+                </div>`;
+                
+            } else if (ev.type === 'battle' || ev.type === 'invasion') {
+                let invasionDateHtml = '';
+                if (ev.type === 'invasion') {
+                    invasionDateHtml = `<div style="flex:1;">
+                        <label style="color:#ffaa00; font-size:11px;">End Date</label>
+                        <input class="db-input" placeholder="YYYY.MM.DD" value="${ev.endDate || ''}" onchange="updateEvent(${idx}, 'endDate', this.value)">
+                    </div>`;
+                }
+
+                body = `<div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label style="color:#ffaa00; font-size:11px;">Target System</label>
+                        <input class="db-input" list="all-systems-regions" value="${ev.system || ''}" onchange="updateEvent(${idx}, 'system', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="color:#ffaa00; font-size:11px;">Primary Attacker/Faction</label>
+                        <input class="db-input" list="all-factions" value="${ev.faction || ''}" onchange="updateEvent(${idx}, 'faction', this.value)">
+                    </div>
+                    ${invasionDateHtml}
+                </div>`;
+                
+            } else if (ev.type === 'development') {
+                body = `<div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label style="color:#4facfe; font-size:11px;">Focus System or Region</label>
+                        <input class="db-input" list="all-systems-regions" value="${ev.system || ''}" onchange="updateEvent(${idx}, 'system', this.value)">
+                    </div>
+                </div>`;
+            }
+
+            return `<div draggable="true" ondragstart="dragEventStart(event, ${idx})" ondragend="this.style.opacity='1'" ondragover="event.preventDefault()" ondrop="dropEvent(event, ${idx})" style="background:#111; border:1px solid #333; padding:10px; margin-bottom:15px; border-radius:4px; cursor:grab; transition: opacity 0.2s;">
+                <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+                    <span style="color:#555; font-size:18px;" title="Drag to reorder">☰</span>
+                    <select class="db-input" style="width:120px;" onchange="changeEventType(${idx}, this.value)">
+                        <option value="summary" ${ev.type==='summary'?'selected':''}>Summary</option>
+                        <option value="diplomacy" ${ev.type==='diplomacy'?'selected':''}>Diplomacy</option>
+                        <option value="development" ${ev.type==='development'?'selected':''}>Development</option>
+                        <option value="movement" ${ev.type==='movement'?'selected':''}>Movement</option>
+                        <option value="multi_movement" ${ev.type==='multi_movement'?'selected':''}>Multi-Movement</option>
+                        <option value="battle" ${ev.type==='battle'?'selected':''}>Battle</option>
+                        <option value="invasion" ${ev.type==='invasion'?'selected':''}>Invasion</option>
+                    </select>
+                    <input class="db-input" style="flex:1;" placeholder="Event Name" value="${ev.name || ''}" onchange="updateEvent(${idx}, 'name', this.value)">
+                    <input class="db-input" style="width:120px;" placeholder="Date (YYYY.MM.DD)" value="${ev.date || ''}" onchange="updateEvent(${idx}, 'date', this.value)">
+                    <button style="background:none; border:none; color:red; cursor:pointer;" onclick="removeEvent(${idx})">✖</button>
+                </div>
+                ${body}
+                <div style="margin-top:10px;">
+                    <label style="color:#888; font-size:11px;">Description</label>
+                    <textarea class="db-input" rows="2" onchange="updateEvent(${idx}, 'desc', this.value)">${ev.desc || ''}</textarea>
+                </div>
+            </div>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px;">
+                <select class="db-input" style="width: 300px; font-size: 14px;" onchange="currentConflictId = this.value; renderDatabaseTable();">
+                    ${masterConflictList.map(c => `<option value="${c.id}" ${c.id === currentConflictId ? 'selected' : ''}>${c.name}</option>`).join('')}
+                </select>
+                <button class="btn-db" onclick="addNewConflict()">+ New Conflict</button>
+                <div style="flex:1;"></div>
+                <button class="btn-db" style="color: red; border-color: red;" onclick="deleteConflict('${conf.id}')">✖ Delete</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label style="color:#0a0; font-size:11px;">Conflict Name</label>
+                    <input class="db-input" value="${conf.name || ''}" onchange="updateConflict('name', this.value)">
+                </div>
+                <div>
+                    <label style="color:#0a0; font-size:11px;">Conflict ID (Code Name)</label>
+                    <input class="db-input" value="${conf.id || ''}" onchange="updateConflict('id', this.value)">
+                </div>
+                <div>
+                    <label style="color:#0a0; font-size:11px;">Base Era Borders</label>
+                    <select class="db-input" onchange="updateConflict('baseEra', this.value)">
+                        ${eraKeys.map(era => `<option value="${era}" ${conf.baseEra === era ? 'selected' : ''}>${era}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="color:#0a0; font-size:11px;">Participants (Comma Separated)</label>
+                    <input class="db-input" value="${(conf.participants || []).join(', ')}" onchange="updateConflict('participants', this.value.split(',').map(s=>s.trim()))">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label style="color:#0a0; font-size:11px;">Start Date</label><input class="db-input" value="${conf.startDate || ''}" onchange="updateConflict('startDate', this.value)"></div>
+                    <div style="flex:1;"><label style="color:#0a0; font-size:11px;">End Date</label><input class="db-input" value="${conf.endDate || ''}" onchange="updateConflict('endDate', this.value)"></div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label style="color:#0a0; font-size:11px;">Center X</label><input type="number" class="db-input" value="${conf.centerCoords ? conf.centerCoords[1] : 5000}" onchange="updateConflictCoord(1, this.value)"></div>
+                    <div style="flex:1;"><label style="color:#0a0; font-size:11px;">Center Y</label><input type="number" class="db-input" value="${conf.centerCoords ? conf.centerCoords[0] : 5000}" onchange="updateConflictCoord(0, this.value)"></div>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="color:#0a0; font-size:11px;">Background Summary</label>
+                <textarea class="db-input" rows="3" onchange="updateConflict('desc', this.value)">${conf.desc || ''}</textarea>
+            </div>
+
+            <div style="border-top: 1px solid #333; margin-top: 20px; padding-top: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <span style="font-family: var(--font-title); font-size: 18px; color: white;">STATIC INFRASTRUCTURE</span>
+                    <button class="btn-db" onclick="addShipyard()">+ Add Facility</button>
+                </div>
+                ${shipyardsHtml}
+            </div>
+            
+            <div style="border-top: 1px solid #333; margin-top: 20px; padding-top: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <span style="font-family: var(--font-title); font-size: 18px; color: white;">TIMELINE EVENTS</span>
+                    <button class="btn-db" onclick="addConflictEvent()">+ Add Event</button>
+                </div>
+                ${eventsHtml}
+            </div>
+        `;
+    }
+
+    function addShipyard() {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf) {
+            if (!conf.shipyards) conf.shipyards = [];
+            conf.shipyards.push({ name: "New Facility", system: "", faction: "", desc: "" });
+            renderDatabaseTable();
+        }
+    }
+
+    function updateShipyard(idx, field, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.shipyards && conf.shipyards[idx]) {
+            conf.shipyards[idx][field] = value;
+        }
+    }
+
+    function removeShipyard(idx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.shipyards && confirm("Delete this facility?")) {
+            conf.shipyards.splice(idx, 1);
+            renderDatabaseTable();
+        }
+    }
+
+    function updateConflict(field, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf) {
+            conf[field] = value;
+            if (field === 'id') { currentConflictId = value; initConflictSelector(); }
+            if (field === 'name') initConflictSelector();
+        }
+    }
+    function updateConflictCoord(axis, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf) {
+            if (!conf.centerCoords) conf.centerCoords = [5000, 5000];
+            conf.centerCoords[axis] = parseInt(value) || 5000;
+        }
+    }
+    function addNewConflict() {
+        const newId = "new_conflict_" + Date.now();
+        masterConflictList.push({
+            id: newId, name: "New Conflict", baseEra: "2428", centerCoords: [5000, 5000],
+            startDate: "2428.01.01", endDate: "2428.12.31", participants: [], desc: "", events: []
+        });
+        currentConflictId = newId;
+        initConflictSelector();
+        renderDatabaseTable();
+    }
+    function deleteConflict(id) {
+        if (confirm("Are you sure you want to delete this conflict?")) {
+            const idx = masterConflictList.findIndex(c => c.id === id);
+            if (idx > -1) masterConflictList.splice(idx, 1);
+            currentConflictId = masterConflictList.length > 0 ? masterConflictList[0].id : null;
+            initConflictSelector();
+            renderDatabaseTable();
+        }
+    }
+    function addConflictEvent() {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf) {
+            if (!conf.events) conf.events = [];
+            conf.events.push({ type: 'summary', name: 'New Event', date: conf.startDate, desc: '' });
+            renderDatabaseTable();
+            
+            const container = document.querySelector('.db-container');
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+    }
+    function removeEvent(idx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && confirm("Delete this event?")) {
+            conf.events.splice(idx, 1);
+            renderDatabaseTable();
+        }
+    }
+    function updateEvent(idx, field, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx]) conf.events[idx][field] = value;
+    }
+    function changeEventType(idx, newType) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx]) {
+            conf.events[idx].type = newType;
+            renderDatabaseTable();
+        }
+    }
+    function addEventPathNode(idx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx]) {
+            if (!conf.events[idx].path) conf.events[idx].path = [];
+            conf.events[idx].path.push("");
+            renderDatabaseTable();
+        }
+    }
+    function updateEventPath(idx, pathIdx, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].path) conf.events[idx].path[pathIdx] = value;
+    }
+    function removeEventPathNode(idx, pathIdx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].path) {
+            conf.events[idx].path.splice(pathIdx, 1);
+            renderDatabaseTable();
+        }
+    }
+    function addFleet(idx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx]) {
+            if (!conf.events[idx].fleets) conf.events[idx].fleets = [];
+            conf.events[idx].fleets.push({ faction: "", path: [] });
+            renderDatabaseTable();
+        }
+    }
+    function removeFleet(idx, fleetIdx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].fleets) {
+            conf.events[idx].fleets.splice(fleetIdx, 1);
+            renderDatabaseTable();
+        }
+    }
+    function updateFleet(idx, fleetIdx, field, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].fleets) conf.events[idx].fleets[fleetIdx][field] = value;
+    }
+    function addFleetPathNode(idx, fleetIdx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].fleets) {
+            if (!conf.events[idx].fleets[fleetIdx].path) conf.events[idx].fleets[fleetIdx].path = [];
+            conf.events[idx].fleets[fleetIdx].path.push("");
+            renderDatabaseTable();
+        }
+    }
+    function updateFleetPath(idx, fleetIdx, pathIdx, value) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].fleets) conf.events[idx].fleets[fleetIdx].path[pathIdx] = value;
+    }
+    function removeFleetPathNode(idx, fleetIdx, pathIdx) {
+        let conf = masterConflictList.find(c => c.id === currentConflictId);
+        if (conf && conf.events[idx] && conf.events[idx].fleets) {
+            conf.events[idx].fleets[fleetIdx].path.splice(pathIdx, 1);
+            renderDatabaseTable();
+        }
+    }
+
+    
+
+    // --- UPDATERS ---
+
+    function updateSys(index, field, value) {
+        if (field === 'lat') systems[index].coords[0] = parseInt(value);
+        else if (field === 'lng') systems[index].coords[1] = parseInt(value);
+        else if (field === 'planets') systems[index].planets = value.split(',').map(p => p.trim()).filter(p => p !== '');
+        else systems[index][field] = value;
+    }
+
+    function updateHistory(index, era, value) {
+        if (!systems[index].history) systems[index].history = {};
+        systems[index].history[era] = value;
+    }
+
+    function updateReg(index, field, value) {
+        if (field === 'lat') regions[index].coords[0] = parseInt(value);
+        else if (field === 'lng') regions[index].coords[1] = parseInt(value);
+        else regions[index][field] = value;
+    }
+
+    function updateRegEra(index, era, isChecked) {
+        const eraList = regions[index].eras;
+        if (isChecked) { if (!eraList.includes(era)) eraList.push(era); } 
+        else { const i = eraList.indexOf(era); if (i > -1) eraList.splice(i, 1); }
+    }
+
+    function updateNeb(index, field, value) {
+        if (field === 'lat') nebulae[index].coords[0] = parseInt(value);
+        else if (field === 'lng') nebulae[index].coords[1] = parseInt(value);
+        else nebulae[index][field] = value;
+    }
+
+    function updateNebEra(index, era, isChecked) {
+        const eraList = nebulae[index].eras;
+        if (isChecked) { if (!eraList.includes(era)) eraList.push(era); } 
+        else { const i = eraList.indexOf(era); if (i > -1) eraList.splice(i, 1); }
+    }
+
+    function updateValidatorBanner(missingList) {
+        const banner = document.getElementById('db-error-banner');
+        const listSpan = document.getElementById('db-error-list');
+        
+        if (!banner || !listSpan) return;
+
+        if (currentDbTab === 'systems' && missingList.length > 0) {
+            listSpan.innerText = missingList.join(', ');
+            banner.classList.add('show');
+        } else {
+            banner.classList.remove('show');
+        }
+    }
+
+    // --- SHARED ACTIONS (Initialize with 8 eras) ---
+    function addNewRow() {
+        if (currentDbTab === 'systems') {
+            systems.push({ 
+                name: "New System", coords: [5000, 5000], type: "minor", sector: "", desc: "", planets: [], 
+                history: { "2238": "", "2428": "", "2640": "", "2695": "", "2943": "", "2969": "", "3144": "", "3921": "" } 
+            });
+        } else if (currentDbTab === 'regions') {
+            regions.push({ 
+                name: "New Region", coords: [5000, 5000], 
+                eras: ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"] 
+            });
+        } else if (currentDbTab === 'nebulae') {
+            nebulae.push({ 
+                name: "New Nebula", coords: [5000, 5000], 
+                eras: ["2238", "2428", "2640", "2695", "2943", "2969", "3144", "3921"] 
+            });
+        } else if (currentDbTab === 'conflicts') {
+            addConflictEvent();
+            return; // Stops the function here since addConflictEvent handles its own rendering
+        }
+        renderDatabaseTable();
+        const container = document.querySelector('.db-container');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function deleteRow(index) {
+        let arr;
+        if (currentDbTab === 'systems') arr = systems;
+        else if (currentDbTab === 'regions') arr = regions;
+        else arr = nebulae;
+
+        if (confirm(`Delete "${arr[index].name}"?`)) {
+            arr.splice(index, 1);
+            renderDatabaseTable();
+        }
+    }
+
+    function exportDatabase() {
+        let output = "";
+
+        if (currentDbTab === 'systems') {
+            output = "const systems = [\n";
+            systems.forEach(sys => {
+                const cStr = `[${sys.coords[0]}, ${sys.coords[1]}]`;
+                const pStr = sys.planets ? JSON.stringify(sys.planets) : "[]";
+                const hStr = JSON.stringify(sys.history);
+                output += `    { name: "${sys.name}", coords: ${cStr}, type: "${sys.type}", sector: "${sys.sector || ''}", desc: "${sys.desc || ''}", planets: ${pStr}, history: ${hStr} },\n`;
+            });
+            output += "];";
+            
+        } else if (currentDbTab === 'regions') {
+            output = "const galacticRegionsData = [\n";
+            galacticRegionsData.forEach(reg => {
+                const eStr = JSON.stringify(reg.eras);
+                output += `    { name: "${reg.name}", coords: [${reg.coords[0]}, ${reg.coords[1]}], eras: ${eStr} },\n`;
+            });
+            output += "];";
+            
+        } else if (currentDbTab === 'nebulae') {
+            output = "const nebulaeData = [\n";
+            nebulaeData.forEach(neb => {
+                const eStr = JSON.stringify(neb.eras);
+                output += `    { name: "${neb.name}", coords: [${neb.coords[0]}, ${neb.coords[1]}], eras: ${eStr} },\n`;
+            });
+            output += "];";
+            
+        } else if (currentDbTab === 'conflicts') {
+            // Find the conflict you are currently editing
+            let conf = masterConflictList.find(c => c.id === currentConflictId);
+            if (conf) {
+                // Convert the snake_case ID into a camelCase variable name for javascript
+                let varName = conf.id.replace(/_([a-z])/g, function (match) { return match[1].toUpperCase(); });
+                
+                // Export just this single conflict as its own variable
+                output = `const ${varName} = ` + JSON.stringify(conf, null, 4) + ";";
+            } else {
+                output = "// No conflict selected.";
+            }
+        }
+        
+        navigator.clipboard.writeText(output).then(() => {
+            alert(`${currentDbTab.toUpperCase()} Database Copied!\n\nPaste this into your correct data file (index.html or your separate js files) replacing the relevant array block.`);
+        });
+    }
+
+    // This tells Leaflet: "Ignore ANY clicks inside the editor-info box"
+    L.DomEvent.disableClickPropagation(document.getElementById('editor-info'));
+
+    // Optional: Also stops the map from zooming if you scroll while hovering over the widget
+    L.DomEvent.disableScrollPropagation(document.getElementById('editor-info'));
+
+    // Global text formatting shortcuts for database inputs
+    document.addEventListener('keydown', function(e) {
+        const target = e.target;
+        const isTextInput = (target.tagName === 'INPUT' && target.type === 'text') || target.tagName === 'TEXTAREA';
+        
+        // We only want these shortcuts to run if you are actively typing in a text field
+        if (!isTextInput) return;
+
+        // Check if Ctrl (or Cmd on Mac) is being held down
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key.toLowerCase() === 'b') {
+                e.preventDefault();
+                applyTextFormatting(target, 'b');
+            } else if (e.key.toLowerCase() === 'i') {
+                e.preventDefault();
+                applyTextFormatting(target, 'i');
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                applyTextFormatting(target, 'br');
+            }
+        }
+    });
+
+    function applyTextFormatting(target, tag) {
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const value = target.value;
+        const selectedText = value.substring(start, end);
+        
+        let newText = '';
+        let newCursorPos = start;
+
+        if (tag === 'br') {
+            // A line break just drops the tag at the cursor and moves on
+            newText = value.substring(0, start) + '<br>' + value.substring(end);
+            newCursorPos = start + 4; 
+        } else {
+            // Bold and italics wrap the highlighted text, or just drop empty tags if nothing is highlighted
+            const openTag = `<${tag}>`;
+            const closeTag = `</${tag}>`;
+            newText = value.substring(0, start) + openTag + selectedText + closeTag + value.substring(end);
+            
+            if (start === end) {
+                // Plop the cursor right between the tags so you can keep typing
+                newCursorPos = start + openTag.length;
+            } else {
+                // Move the cursor to the end of the newly wrapped word
+                newCursorPos = start + openTag.length + selectedText.length + closeTag.length;
+            }
+        }
+
+        target.value = newText;
+        target.setSelectionRange(newCursorPos, newCursorPos);
+        
+        // This forces the database to notice the change and save the array
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    let activeDragModal = null;
+    let modalDragStartX = 0, modalDragStartY = 0;
+    let modalStartLeft = 0, modalStartTop = 0;
+
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('mousedown', (e) => {
+            // Ignore the drag action if you are clicking an input, select, textarea, or button
+            if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) return;
+            
+            activeDragModal = modal;
+            modalDragStartX = e.clientX;
+            modalDragStartY = e.clientY;
+            
+            // Calculate the current visual position
+            const style = window.getComputedStyle(modal);
+            modalStartLeft = parseInt(style.left) || window.innerWidth / 2;
+            modalStartTop = parseInt(style.top) || window.innerHeight / 2;
+        });
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!activeDragModal) return;
+        
+        // Calculate how far the mouse has moved
+        const dx = e.clientX - modalDragStartX;
+        const dy = e.clientY - modalDragStartY;
+        
+        // Apply that movement to the modal
+        activeDragModal.style.left = (modalStartLeft + dx) + 'px';
+        activeDragModal.style.top = (modalStartTop + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        activeDragModal = null;
+    });
+</script>
+</body>
+</html>
