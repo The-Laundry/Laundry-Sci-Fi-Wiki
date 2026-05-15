@@ -115,9 +115,7 @@
 .article-card-img {
   width: 100%; aspect-ratio: 16/7;
   object-fit: cover; border-radius: 4px;
-  margin-bottom: 2px; background: var(--bg-sidebar);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-faint); font-size: 24px;
+  margin-bottom: 2px; display: block;
 }
 
 /* Empty state */
@@ -269,10 +267,10 @@
   if (articles.length) {
     document.getElementById('cat-articles-grid').innerHTML = articles.map(a => {
       const tagsHtml = (a.tags || []).slice(0, 3).map(t =>
-        `<a href="search.html?tag=${encodeURIComponent(t)}" class="tag" onclick="event.stopPropagation()">${escHtml(t)}</a>`
+        `<span class="tag" onclick="event.preventDefault();event.stopPropagation();location.href='search.html?tag=${encodeURIComponent(t)}'">${escHtml(t)}</span>`
       ).join('');
-      const imgHtml = a.hasImage
-        ? `<div class="article-card-img">🖼</div>`
+      const imgHtml = a.wikiboxImage
+        ? `<img class="article-card-img" src="${escHtml(a.wikiboxImage)}" alt="" loading="lazy">`
         : '';
       return `<a class="article-card" href="article.html?id=${a.id}">
         ${imgHtml}

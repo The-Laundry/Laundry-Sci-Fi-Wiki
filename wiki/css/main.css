@@ -343,8 +343,8 @@ body {
 .editor-main { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: visible; }
 /* Sticky side column */
 .editor-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: calc(var(--pat-header-h, 0px) + var(--header-h) + 16px); max-height: calc(100vh - var(--pat-header-h, 0px) - var(--header-h) - 32px); overflow-y: auto; scrollbar-width: thin; }
-/* Sticky Quill toolbar */
-.ql-toolbar { border: none !important; border-bottom: 1px solid var(--border) !important; background: var(--bg-sidebar); flex-wrap: wrap; position: sticky !important; top: calc(var(--pat-header-h, 0px) + var(--header-h)); z-index: 50; border-radius: var(--radius) var(--radius) 0 0; }
+/* Quill toolbar (sticky is on .ql-toolbar-wrap, its block parent) */
+.ql-toolbar { border: none !important; border-bottom: 1px solid var(--border) !important; background: var(--bg-sidebar); flex-wrap: wrap; border-radius: var(--radius) var(--radius) 0 0; }
 .ql-container { border: none !important; font-family: var(--font-body) !important; font-size: 14.5px !important; min-height: 400px; border-radius: 0 0 var(--radius) var(--radius); }
 .ql-editor { padding: 20px 24px !important; line-height: 1.75 !important; }
 .ql-editor.ql-blank::before { color: var(--text-faint) !important; font-style: normal !important; }

@@ -14,7 +14,9 @@
       "Bash(Format-Table -AutoSize)",
       "Bash(grep -v \":1$\")",
       "Bash(taskkill /PID 21428 /F)",
-      "PowerShell(Stop-Process -Id 21428 -Force)"
+      "PowerShell(Stop-Process -Id 21428 -Force)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\flynn\\\\Desktop\\\\Artsy Fartsy\\\\Ships\\\\Webtools\\\\Wiki Site\\\\encyclopedia\\\\wiki\" -Recurse -File)",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

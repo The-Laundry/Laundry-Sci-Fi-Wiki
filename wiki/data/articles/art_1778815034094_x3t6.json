@@ -1,0 +1,50 @@
+{
+  "id": "art_1778815034094_x3t6",
+  "title": "Milky Way Galaxy",
+  "content": "<p>The <strong>Milky Way </strong>is a galaxy within the Local Group of the Virgo Supercluster that contains the vast majority of the stars catalogued and visited by the Galactic Republic. Though it has been given many names by many different species, the name \"Milky Way\" seems to be the most popular. Originating from Humankind, the name describes the galaxy's appearance from [[Earth]] (and similarly on countless other worlds): a hazy band of light seen in the night sky formed from stars in other arms of the galaxy, which are so far away that they cannot be individually distinguished by the naked eye.</p><p>The Milky Way is a barred spiral galaxy with a diameter of approximately 87,400 light years. It is estimated to contain 300-400 billion stars, and at least as many planets. The outer spiral is roughly 1,000 light years thick, while the bulge around the galactic core is upwards of 4,000 light years thick. The central object of the galaxy is a supermassive black hole known as <strong>Sagittarius A*</strong>.</p><p>Most notably, it is the only confirmed area in the universe to be host to life; though scientific consensus agrees that other galaxies are likely just as populated as our own. The Milky Way is home to countless species spread across innumerable star systems. These species have long interacted with each other through travel, diplomacy, politics, trade, and war for many millennia, culminating in the near total unification of the galaxy under the <strong>Galactic Republic</strong>.</p><h1>Astrography</h1><h2><u>Galactic sectors</u></h2><h3>Hydian Sector</h3><p>aaa</p><h3>Espindek Sector</h3><p>aaa</p><h3>Domedeus Sector</h3><p>aaa</p><h3>Pavraeu Sector</h3><p>aaa</p><h3>Xichaki Sector</h3><p>aaa</p><h3>Quenoriad Sector</h3><p>aaa</p><h3>Marnius Sector</h3><p>aaa</p><h3>Grand Reaches Sector</h3><p>aaa</p><h3>Tzenkia Sector</h3><p>aaa</p><h3>East Rim Sector</h3><p>aaa</p><h3>Lipec Sector</h3><p>aaa</p><h3>Telleria Sector (\"The Frontier\")</h3><p>aaa</p><h3>Ja'abin Sector</h3><p>aaa</p><h3>Don Jakaus Sector</h3><p>aaa</p><h2><u>Other regions</u></h2><h3>Galactic Center</h3><p>aaa</p><h3>Dead Space (Northwest Wild Space)</h3><p>aaa</p><h3>Northeast Wild Space</h3><p>aaa</p><h3>South Wild Space</h3><p>aaa</p><h2><u>Milky Way Subgroup</u></h2><h3>Sagittarius Dwarf Galaxy</h3><p>aaa</p><h3>Magellanic Clouds</h3><p>aaa</p><h3>Other satellite galaxies</h3><p>aaa</p>",
+  "categoryId": null,
+  "tags": [],
+  "wikibox": {
+    "enabled": true,
+    "title": "The Milky Way",
+    "subtitle": "",
+    "image": "data/images/other/MilkyWayGalaxy.webp",
+    "imagePath": true,
+    "imgCaption": "",
+    "fields": [
+      {
+        "type": "section",
+        "key": "Astrographical information",
+        "val": ""
+      },
+      {
+        "type": "field",
+        "key": "Total stars",
+        "val": "Approx. 300-400 billion"
+      },
+      {
+        "type": "field",
+        "key": "Diameter",
+        "val": "Approx. 87,400 light years"
+      },
+      {
+        "type": "field",
+        "key": "Thickness",
+        "val": "• ~1,000 light years <i>(spiral arms)</i><br>• ~4,000 light years <i style=\"scrollbar-color: rgb(58, 63, 77) rgb(26, 29, 35);\">(galactic core)</i><br style=\"scrollbar-color: rgb(58, 63, 77) rgb(26, 29, 35);\"><i>&nbsp;</i><br>"
+      },
+      {
+        "type": "field",
+        "key": "Primary arms",
+        "val": "• Near-3kpc Arm<br>• Far-3kpc Arm<br>• Perseus Arm<br>• Norma-Outer Arm<br>• Scutum-Centaurus Arm<br>• Sagittarius-Carina Arm"
+      },
+      {
+        "type": "field",
+        "key": "Satellite Galaxies",
+        "val": "<div>• Sagittarius Dwarf Galaxy</div><div>• Large Magellanic Cloud</div><div>• Small Magellanic Cloud</div>• Approx. 60 others"
+      }
+    ]
+  },
+  "created": 1778815034094,
+  "updated": 1778818975736,
+  "summary": ""
+}

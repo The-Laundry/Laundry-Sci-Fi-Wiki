@@ -66,6 +66,9 @@
 .ql-toolbar-wrap {
   display: flex;
   align-items: stretch;
+  position: sticky;
+  top: calc(var(--pat-header-h, 0px) + var(--header-h));
+  z-index: 50;
 }
 .ql-toolbar-wrap .ql-toolbar {
   flex: 1;

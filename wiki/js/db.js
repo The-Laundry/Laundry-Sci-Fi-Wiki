@@ -390,7 +390,8 @@ const DB = {
       tags:       art.tags || [],
       summary:    art.summary || '',
       updated:    art.updated || 0,
-      hasImage:   !!(art.wikibox?.image),
+      hasImage:      !!(art.wikibox?.image),
+      wikiboxImage:  art.wikibox?.image || null,
     };
   },
 
