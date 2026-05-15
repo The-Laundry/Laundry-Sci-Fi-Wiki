@@ -7,7 +7,30 @@ A local-first worldbuilding wiki with articles, wikilinks, wikiboxes, nested cat
 
 ## Quick Start
 
-**Requirements:** Python 3 (built into macOS and most Linux; [download for Windows](https://python.org)) and Chrome, Edge, or Arc.
+### Windows — one-click launcher
+
+Double-click **`launch-wiki.bat`**. It starts a local server and opens the wiki in a chromeless Edge window. Closing that window shuts the server down automatically.
+
+### macOS — one-click launcher
+
+Open **Terminal**, navigate to this folder, and run:
+
+```bash
+bash launch-wiki.sh
+```
+
+Or make it executable once and double-click (or run without `bash`):
+
+```bash
+chmod +x launch-wiki.sh   # one-time setup
+./launch-wiki.sh
+```
+
+The script starts a Python HTTP server and opens the wiki in a chromeless browser window (tries Edge → Chrome → Chromium in that order, falls back to your default browser). Closing the browser window shuts the server down automatically.
+
+**Requirements:** Python 3 (built into macOS since Monterey) and any Chromium-based browser (Edge, Chrome, or Chromium) for the chromeless window — any browser works if you don't mind the normal toolbar.
+
+### Manual startup (any platform)
 
 1. Open a terminal and `cd` into this folder:
    ```
@@ -16,14 +39,14 @@ A local-first worldbuilding wiki with articles, wikilinks, wikiboxes, nested cat
 
 2. Start the local server:
    ```
-   python -m http.server 8000
+   python3 -m http.server 8000
    ```
 
 3. Open **http://localhost:8000** in your browser.
 
 4. Click the **No folder** button (top right) and select the `data/` subfolder inside this folder. The app will read and write your data as real JSON files from that point on.
 
-That's it. You only need to run the server command once per session.
+You only need to run the server command once per session.
 
 ---
 
